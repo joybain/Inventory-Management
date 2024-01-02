@@ -1,0 +1,761 @@
+﻿<%@ Page Title="Sales Bill / Invoice(BD).-SDL" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true" CodeFile="SalesVoucherBD.aspx.cs" Inherits="SalesVoucherBD" %>
+<%@ Register Assembly="AjaxControlToolkit" Namespace="AjaxControlToolkit" TagPrefix="cc" %>
+<asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
+    <script language="javascript" type="text/javascript" >
+        function OpenWindow(Url) {
+            var testwindow = window.open(Url, '', 'width=600px,height=400px,top=150,left=300,scrollbars=1');
+        }
+        function onListPopulated() {
+            var completionList1 = $find("AutoCompleteExtender1").get_completionList();
+            completionList1.style.width = 'auto';
+            var completionList2 = $find("AutoCompleteExtender2").get_completionList();
+            completionList2.style.width = 'auto';
+            var completionList3 = $find("AutoCompleteExtender10").get_completionList();
+            completionList3.style.width = 'auto';
+        }
+        //    function setValue(myVal) {
+        //        document.getElementById('<%=txtItemsCode.ClientID%>').value = myVal;
+        //    } 
+
+        //    function pad(str, max) {
+        //        return str.length < max ? pad("0" + str, max) : str;
+        //    }
+
+        //    function remLink() {
+        //        if (window.testwindow && window.testwindow.open && !window.testwindow.closed)
+        //            window.testwindow.opener = null;
+        //    }
+        //    function IsEmpty(aTextField) 
+        //    {
+        //        if ((aTextField.value.length == 0) || (aTextField.value == null)) {
+        //            return true;
+        //        }
+        //        else {
+        //                return false;
+        //             }
+        //        }
+
+        //        function LoadModalDiv() {
+
+        //            var bcgDiv = document.getElementById("divBackground");
+        //            bcgDiv.style.display = "block";
+
+        //        }
+        //        function HideModalDiv() {
+
+        //            var bcgDiv = document.getElementById("divBackground");
+        //            bcgDiv.style.display = "none";
+
+        //        }
+
+        function changetextbox() {
+            var valu = $('#<%=ddlPaymentMethord.ClientID%> option:selected').attr('value');
+            if (valu === "C") {
+
+                document.getElementById("<%=ddlBank.ClientID %>").disabled = true;
+                document.getElementById("<%=txtChequeNo.ClientID %>").disabled = true;
+                document.getElementById("<%=txtChequeDate.ClientID %>").disabled = true;
+                document.getElementById("<%=txtChequeAmount.ClientID %>").disabled = true;
+            }
+            else {
+
+                document.getElementById("<%=ddlBank.ClientID %>").disabled = false;
+                document.getElementById("<%=txtChequeNo.ClientID %>").disabled = false;
+                document.getElementById("<%=txtChequeDate.ClientID %>").disabled = false;
+                document.getElementById("<%=txtChequeAmount.ClientID %>").disabled = false;
+
+            }
+        }
+
+        function TotSumation() {
+            var txtSubTotal = document.getElementById("<%=txtSubTotal.ClientID %>"); var txtVat = document.getElementById("<%=txtVat.ClientID %>");
+            var txtDiscount = document.getElementById("<%=txtDiscount.ClientID %>"); var txtPayment = document.getElementById("<%=txtPayment.ClientID %>");
+            var txtDue = document.getElementById("<%=txtDue.ClientID %>");
+
+            var totv = parseFloat(txtSubTotal.value) + ((parseFloat(txtSubTotal.value) * parseFloat(txtVat.value)) / 100);
+            var todD = parseFloat(totv) - ((parseFloat(totv) * parseFloat(txtDiscount.value)) / 100);
+            txtPayment.value = todD.toFixed(2);
+
+        }
+
+        function Due() {
+
+            var txtSubTotal = document.getElementById("<%=txtSubTotal.ClientID %>");
+            var txtVat = document.getElementById("<%=txtVat.ClientID %>");
+            var txtDiscount = document.getElementById("<%=txtDiscount.ClientID %>");
+            var txtPayment = document.getElementById("<%=txtPayment.ClientID %>");
+            var txtDue = document.getElementById("<%=txtDue.ClientID %>");
+
+            var totv = parseFloat(txtSubTotal.value) + ((parseFloat(txtSubTotal.value) * parseFloat(txtVat.value)) / 100);
+            var todD = parseFloat(totv) - ((parseFloat(totv) * parseFloat(txtDiscount.value)) / 100);
+            if (parseFloat(todD) < parseFloat(txtPayment.value)) {
+                alert("Payment Amount Over This Total Charge.....!!!!!!");
+                txtTotPayment.value = "0";
+                txtTotPayment.focus();
+            }
+            else {
+                var tt = parseFloat(todD) - parseFloat(txtPayment.value)
+                txtDue.value = tt.toFixed(2);
+            }
+        }
+
+        function isNumber(evt) {
+            evt = (evt) ? evt : window.event;
+            var charCode = (evt.which) ? evt.which : evt.keyCode;
+            if (charCode != 46 && charCode > 31
+            && (charCode < 48 || charCode > 57)) {
+                return false;
+            }
+            return true;
+        }
+       
+</script>  
+<script language="javascript" type="text/javascript">
+
+    function LoadModalDiv() {
+
+        var bcgDiv = document.getElementById("divBackground");
+        bcgDiv.style.display = "block";
+
+    }
+    function HideModalDiv() {
+
+        var bcgDiv = document.getElementById("divBackground");
+        bcgDiv.style.display = "none";
+
+    }
+    
+ </script>
+    <div id="frmMainDiv" style="background-color:White; width:100%;">
+        <table  id="pageFooterWrapper">
+  <tr>  
+        <td align="center">
+        <asp:Button ID="btnDelete" runat="server" ToolTip="Delete"
+                onclientclick="javascript:return window.confirm('are u really want to delete these data')" Text="Delete" 
+        Height="35px" Width="110px" BorderStyle="Outset" onclick="btnDelete_Click"  />
+        </td>       
+        <td align="center" >
+            &nbsp;</td>       
+        <td align="center" >
+        <asp:Button ID="btnSave" runat="server" ToolTip="Save Purchase Record" Text="Save" 
+        Height="35px" Width="110px" BorderStyle="Outset" onclick="btnSave_Click"  />
+        </td>
+        <td align="center" >
+        <asp:Button ID="btnNew" runat="server" ToolTip="New"  Text="New" 
+        Height="35px" Width="110px" BorderStyle="Outset" onclick="btnNew_Click"  /> 
+        </td>
+        <td align="center" >
+        <asp:Button ID="btnClear" runat="server"  ToolTip="Clear" Text="Clear" 
+        Height="35px" Width="110px" BorderStyle="Outset" onclick="btnClear_Click"  />
+        </td>
+        <td align="center" >
+        <asp:Button ID="btnPrint" runat="server" ToolTip="Print PO" Text="Print" 
+        Height="35px" Width="110px" BorderStyle="Outset" onclick="btnPrint_Click"  />
+        </td>            
+        
+        <td align="center" >
+            <asp:Button ID="btnChallan" runat="server" onclick="btnChallan_Click" 
+                Text="Print Challan" Height="35px" />
+        </td>   
+        
+        <td align="center" >
+        <asp:Button ID="btnFind" runat="server" ToolTip="Find" Text="Find" 
+        Height="35px" Width="110px" BorderStyle="Outset" onclick="btnFind_Click" 
+                Visible="False" />
+        </td>         
+        
+   </tr>
+   </table>
+   
+   
+     
+        <table style="width: 100%">
+            <tr>
+                <td style="width: 2%; height: 4px;">
+                    </td>
+                <td style="width: 90%; height: 4px; vertical-align: top; font-size: 12pt; color: Maroon; font-weight: 800;"  align="left">
+                <asp:Label ID="lblInvNo" runat="server" Visible="False"></asp:Label>
+                    <asp:Label ID="lblBranchID" runat="server" Visible="False"></asp:Label>
+                    >> Sales Bill / Invoice(BD).</td>
+                <td style="width: 2%; height: 4px;">
+                    </td>
+            </tr>
+            <tr>
+                <td style="width: 2%">
+                    &nbsp;</td>
+                <td style="width: 90%">
+                     <div id="SalesMst" runat="server">
+                     <fieldset style="vertical-align: top; border: solid 1px #8BB381;text-align:left;"><legend style="color: maroon;"><b>Invoice Information</b> </legend>
+                    <table style="width: 100%">
+                        <tr>
+                            <td style="width: 10%; height: 28px;" align="right">
+                <asp:HiddenField ID="hfCustomerID" runat="server" />
+                <asp:Label ID="Label43" runat="server" style="font-weight: 700" 
+                    Text="Customer Name"></asp:Label>
+                            </td>
+                            <td style="width: 2%; height: 28px;">
+                                </td>
+                            <td style="width: 15%; height: 28px;">
+                <asp:TextBox ID="txtCustomer" runat="server" AutoPostBack="True" 
+                    ontextchanged="txtCustomer_TextChanged" placeHolder="Search By Customer..." 
+                    style="text-align:left;" TabIndex="11" Width="99%" 
+                    CssClass="txtVisibleAlign" Height="18px" ></asp:TextBox>
+                <ajaxToolkit:AutoCompleteExtender ID="AutoCompleteExtender2" runat="server" 
+                    CompletionInterval="20" CompletionSetCount="12" EnableCaching="true" 
+                    MinimumPrefixLength="1" ServiceMethod="GetCustomername_BD_PH" 
+                    ServicePath="AutoComplete.asmx" TargetControlID="txtCustomer" />
+                            </td>
+                            <td style="width: 2%; height: 28px;" align="center">
+                                </td>
+                            <td style="width: 10%; height: 28px;" align="right">
+                <asp:Label ID="Label46" runat="server" Text="Invoice No : "></asp:Label>
+                            </td>
+                            <td style="width: 2%; height: 28px;">
+                                </td>
+                            <td style="width: 15%; height: 28px;">
+                <asp:TextBox ID="txtInvoiceNo" runat="server" AutoPostBack="True" 
+                    ontextchanged="txtInvoiceNo_TextChanged" style="text-align:center;" 
+                    TabIndex="2" Width="60%"></asp:TextBox>
+                <ajaxToolkit:AutoCompleteExtender ID="autoComplete1" runat="server" 
+                    CompletionInterval="1000" CompletionSetCount="12" EnableCaching="true" 
+                    MinimumPrefixLength="1" ServiceMethod="GetInvoice" 
+                    ServicePath="AutoComplete.asmx" TargetControlID="txtInvoiceNo" />
+                            </td>
+                            <td style="width: 2%; height: 28px;">
+                             <asp:DropDownList ID="ddlDelevery" runat="server" Font-Size="8pt" Height="26px" 
+                                    onChange="changetextbox();" SkinID="ddlPlain" TabIndex="10" Visible="False" 
+                                    Width="102%">
+                                    <asp:ListItem Value="Y">Yes</asp:ListItem>
+                                    <asp:ListItem Value="N">No</asp:ListItem>
+                                </asp:DropDownList>
+                                </td>
+                        </tr>
+                        <tr>
+                            <td style="width: 10%; height: 27px;" align="right">
+                <asp:Label ID="Label45" runat="server" Text="Invoice Date : "></asp:Label>
+                            </td>
+                            <td style="width: 2%; height: 27px;">
+                                </td>
+                            <td style="width: 15%; height: 27px;">
+                <asp:TextBox ID="txtDate" runat="server" placeHolder="dd/MM/yyyy"
+                    ontextchanged="txtDate_TextChanged" style="text-align:center;" TabIndex="3" 
+                    Width="50%"></asp:TextBox>
+                <ajaxToolkit:CalendarExtender ID="Calendarextender1" runat="server" Format="dd/MM/yyyy" 
+                    TargetControlID="txtDate" />
+                            </td>
+                            <td style="width: 2%; height: 27px;" align="center">
+                                </td>
+                            <td style="width: 10%; height: 27px;" align="right">
+                DR No. :</td>
+                            <td style="width: 2%; height: 27px;">
+                                </td>
+                            <td style="width: 15%; height: 27px;">
+                <asp:TextBox ID="txtDRNo" runat="server" style="text-align:center;" 
+                    TabIndex="11" Width="60%"></asp:TextBox>
+                            </td>
+                            <td style="width: 2%; height: 27px;">
+                             <asp:TextBox ID="txtDiscount" runat="server" onChange="TotSumation();" 
+                                 onfocus="this.select();" onkeypress="return isNumber(event)" 
+                                 style="text-align:right;" TabIndex="6" Visible="False"></asp:TextBox>
+
+                                </td>
+                        </tr>
+                        <tr>
+                            <td style="width: 10%" align="right" valign="top">
+                 <asp:Label ID="LblSuppNo0" runat="server" Font-Size="9pt" style="font-weight: 700">Remarks/Particulars :
+                 </asp:Label>
+                            </td>
+                            <td style="width: 2%">
+                                &nbsp;</td>
+                            <td colspan="5">
+                <asp:TextBox ID="txtRemarks" runat="server" AutoPostBack="False" 
+                    Font-Size="8pt" Height="45px" SkinID="tbGray" TextMode="MultiLine" 
+                    Width="99%"></asp:TextBox>
+                <ajaxToolkit:AutoCompleteExtender ID="txtRemarks_AutoCompleteExtender" runat="server" 
+                    CompletionInterval="20" CompletionSetCount="12" EnableCaching="true" 
+                    MinimumPrefixLength="1" ServiceMethod="GetShowRemarks" 
+                    ServicePath="AutoComplete.asmx" TargetControlID="txtRemarks" />
+                            </td>
+                            <td style="width: 2%">
+                <asp:TextBox ID="txtDeleveryDate" runat="server" placeholder="dd/MM/yyyy" 
+                    style="text-align:center;" TabIndex="11" Width="95%" Visible="False"></asp:TextBox>
+                <cc:CalendarExtender ID="Calendarextender4" runat="server" Format="dd/MM/yyyy" 
+                    TargetControlID="txtDeleveryDate" />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="width: 10%; height: 3px;" align="right">
+                                </td>
+                            <td style="width: 2%; height: 3px;">
+                                </td>
+                            <td style="width: 15%; height: 3px;">
+                                </td>
+                            <td style="width: 2%; height: 3px;">
+                                </td>
+                            <td style="width: 10%; height: 3px;" align="right">
+                                </td>
+                            <td style="width: 2%; height: 3px;">
+                                </td>
+                            <td style="width: 15%; height: 3px;">
+                                </td>
+                            <td style="width: 2%; height: 3px;">
+                                </td>
+                        </tr>
+                    </table>
+                     </fieldset>
+                     </div>
+                </td>
+                <td style="width: 2%">
+                    &nbsp;</td>
+            </tr>
+            <tr>
+                <td style="width: 2%">
+                    &nbsp;</td>
+                <td style="width: 90%">
+                     <asp:Panel ID="Panel1" runat="server" style="vertical-align: top;">
+ <asp:UpdatePanel ID="UP1" runat="server" UpdateMode="Conditional">
+       <ContentTemplate>
+                      <fieldset style="vertical-align: top; border: solid 1px #8BB381;text-align:left;"><legend style="color: maroon;"><b>Item's Information</b> </legend>
+                    <table style="width: 100%">
+                        <tr>
+                            <td style="width: 16%; height: 28px;" align="right">
+                <asp:Label ID="Label1" runat="server" style="font-weight: 700" 
+                    Text="Search Item Code\Name : "></asp:Label>
+                            </td>
+                            <td style="width: 2%; height: 28px;">
+                                </td>
+                            <td style="height: 28px;" colspan="3">
+              
+                <asp:TextBox ID="txtItemsCode" runat="server" AutoPostBack="True" 
+                    CssClass="txtVisibleAlign" Height="18px"
+                    onfocus="this.select();" ontextchanged="txtItemsCode_TextChanged" 
+                    placeholder="Search By Items." TabIndex="1" Width="99%"></asp:TextBox>
+                 <ajaxToolkit:AutoCompleteExtender ServicePath="AutoComplete.asmx" runat="server" CompletionInterval="20"
+                                     ID="txtName_AutoCompleteExtender" TargetControlID="txtItemsCode"
+           ServiceMethod="GetItemSearchAllWithClosingStock" MinimumPrefixLength="1" 
+                                     CompletionSetCount="12" DelimiterCharacters="" 
+                        Enabled="True"/>
+                            </td>
+                            <td style="width: 1%; height: 28px;">
+                                </td>
+                            <td style="width: 15%; height: 28px;">
+               
+                <asp:HiddenField ID="hfItemsID" runat="server" />
+                            </td>
+                            <td style="width: 2%; height: 28px;">
+                                </td>
+                        </tr>
+                        <tr>
+                            <td style="height: 27px;" align="right" colspan="8">
+               
+    <asp:GridView ID="dgSV" runat="server" AutoGenerateColumns="False" 
+        BackColor="White" BorderColor="LightGray" BorderStyle="Solid" BorderWidth="1px" 
+        CellPadding="2" CssClass="mGrid" Font-Size="9pt" 
+        onrowdatabound="dgPVMst_RowDataBound" onrowdeleting="dgSV_RowDeleting" 
+        PageSize="30" Width="100%">
+        <Columns>
+            <asp:BoundField DataField="ID" HeaderText="ID">
+            <ItemStyle HorizontalAlign="Center" Width="60px" />
+            </asp:BoundField>
+            <asp:TemplateField>
+                <ItemTemplate>
+                    <asp:ImageButton ID="lbDelete" runat="server" CausesValidation="False" 
+                        CommandName="Delete" ImageAlign="Middle" ImageUrl="~/img/delete.png" 
+                        Text="Delete" />
+                </ItemTemplate>
+                <ItemStyle Font-Size="8pt" HorizontalAlign="Center" Width="4%" />
+            </asp:TemplateField>
+            <asp:BoundField DataField="ItemCode" HeaderText="Code">
+            <ItemStyle HorizontalAlign="Center" Width="60px" />
+            </asp:BoundField>
+            <asp:BoundField DataField="Name" HeaderText="Items">
+            <ItemStyle Height="20px" HorizontalAlign="Left" Width="200px" />
+            </asp:BoundField>
+            <asp:BoundField DataField="Tax" HeaderText="Vat(%)">
+            <ItemStyle Height="20px" HorizontalAlign="Center" Width="60px" />
+            </asp:BoundField>
+            <asp:TemplateField HeaderText="Dis(%)">
+                <ItemTemplate>
+                    <asp:TextBox ID="txtDiscount" runat="server" AutoPostBack="True" 
+                        onfocus="this.select();" onkeypress="return isNumber(event)" 
+                        placeHolder="0.00" 
+                        style="text-align:center;" Text='<%# Eval("DiscountAmount") %>' 
+                        Width="90%" ontextchanged="txtDiscount_TextChanged">
+                    </asp:TextBox>
+                </ItemTemplate>
+                <ItemStyle Height="20px" HorizontalAlign="Center" Width="60px" />
+            </asp:TemplateField>
+
+                                     <%--<asp:BoundField DataField="SPrice" HeaderText="Sale Price">
+                                     <ItemStyle Height="20px" Width="100px" HorizontalAlign="Right" />
+                                     </asp:BoundField>--%>
+                                     <asp:TemplateField HeaderText="Sale Price">
+                                         <ItemTemplate>
+                                             <asp:TextBox ID="txtSalesPrice" runat="server" AutoPostBack="True" 
+                                                 onfocus="this.select();" onkeypress="return isNumber(event)" 
+                                                 placeHolder="0.00" 
+                                                 style="text-align:center;" Text='<%# Eval("SPrice") %>' Width="90%" 
+                                                 ontextchanged="txtSalesPrice_TextChanged"></asp:TextBox>
+                                         </ItemTemplate>
+                                         <ItemStyle Height="20px" HorizontalAlign="Center" Width="60px" />
+            </asp:TemplateField>
+            <asp:TemplateField  HeaderText="Qty (Pcs)">
+                <ItemTemplate>
+                    <asp:TextBox ID="txtQty" runat="server" AutoPostBack="True" DataFormatString="{0:0}"
+                        onfocus="this.select();" onkeypress="return isNumber(event)" 
+                         placeHolder="0" 
+                        style="text-align:center;" Text='<%# Eval("Qty") %>' Width="90%" 
+                        ontextchanged="txtQty_TextChanged"></asp:TextBox>
+                </ItemTemplate>
+                <ItemStyle Height="20px" HorizontalAlign="Center" Width="80px" />
+            </asp:TemplateField>
+            <asp:BoundField DataField="Total" HeaderText="Total Amount">
+            <ItemStyle Height="20px" HorizontalAlign="Right" Width="80px" />
+            </asp:BoundField>
+            <asp:BoundField DataField="ClosingStock" DataFormatString="{0:0}" 
+                HeaderText="Closing Stock">
+            <ItemStyle Font-Bold="True" Font-Size="10pt" ForeColor="#CC3300" Height="20px" 
+                HorizontalAlign="Center" Width="80px" />
+            </asp:BoundField>
+            <asp:BoundField DataField="SaleQty" DataFormatString="{0:0}" 
+                HeaderText="SalesQty">
+            <ItemStyle Font-Bold="True" Font-Size="10pt" ForeColor="#CC3300" Height="20px" 
+                HorizontalAlign="Center" Width="80px" />
+            </asp:BoundField>
+        </Columns>
+        <RowStyle BackColor="White" />
+        <SelectedRowStyle Font-Bold="True" />
+        <PagerStyle BackColor="LightGray" CssClass="pgr" ForeColor="Black" 
+            HorizontalAlign="Center" />
+        <AlternatingRowStyle CssClass="alt" />
+        <HeaderStyle Font-Size="9pt" />
+    </asp:GridView>
+    
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="width: 16%; height: 3px;" align="left" valign="top">
+                                  <div style="display: none;">
+                                      <asp:TextBox ID="txtChequeAmount" runat="server" Enabled="False" 
+                   Font-Size="8pt" SkinID="tbPlain" style="text-align:right;" TabIndex="17" 
+                   Width="20px" Visible="False"></asp:TextBox>
+                    <fieldset style="vertical-align: top; border: solid 1px #8BB381;">
+                        <legend style="color: maroon;"><b>Payment Method</b> </legend>
+                        <asp:UpdatePanel ID="UPPaymentMtd" runat="server" UpdateMode="Conditional">
+                            <ContentTemplate>
+                                <table style="width: 100%;">
+                                    <tr>
+                                        <td align="right" style="width: 119px; height: 27px;">
+                                            <asp:Label ID="Label26" runat="server" Font-Size="9pt">Payment 
+                                            Methord</asp:Label>
+                                        </td>
+                                        <td style="width: 8px; height: 27px;">
+                                        </td>
+                                        <td align="left" style="height: 27px; width: 214px;">
+                                            <asp:DropDownList ID="ddlPaymentMethord" runat="server" AutoPostBack="True" 
+                                                Font-Size="8pt" Height="26px" 
+                                                SkinID="ddlPlain" TabIndex="13" Width="80%">
+                                                <asp:ListItem Text="Cash" Value="C"></asp:ListItem>
+                                                <asp:ListItem Value="Q">Cheque</asp:ListItem>
+                                            </asp:DropDownList>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td align="right" style="width: 119px; height: 27px;">
+                                            <asp:Label ID="lblBankName" runat="server" Font-Size="9pt">Bank Name</asp:Label>
+                                        </td>
+                                        <td style="width: 8px; height: 27px;">
+                                        </td>
+                                        <td align="left" style="height: 27px; width: 214px;">
+                                            <asp:DropDownList ID="ddlBank" runat="server" Font-Size="8pt" Height="26px" 
+                                                SkinID="ddlPlain" TabIndex="14" Width="80%">
+                                            </asp:DropDownList>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td align="right" style="width: 119px; height: 24px;">
+                                            <asp:Label ID="lblChequeNo" runat="server" Font-Size="9pt">Cheque No</asp:Label>
+                                        </td>
+                                        <td style="width: 8px; height: 24px;">
+                                        </td>
+                                        <td align="left" style="height: 24px; width: 214px;">
+                                            <asp:TextBox ID="txtChequeNo" runat="server" Font-Size="8pt" SkinID="tbPlain" 
+                                                TabIndex="15" Width="77%"></asp:TextBox>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td align="right" style="width: 119px; height: 29px;">
+                                            <asp:Label ID="lblChequeDate" runat="server" Font-Size="9pt">Cheque date</asp:Label>
+                                        </td>
+                                        <td style="width: 8px; height: 29px;">
+                                        </td>
+                                        <td align="left" style="height: 29px; width: 214px;">
+                                            <asp:TextBox ID="txtChequeDate" runat="server" Font-Size="8pt" SkinId="tbPlain" 
+                                                TabIndex="16" Width="77%"></asp:TextBox>
+                                            <cc:CalendarExtender ID="txtChequeDate_CalendarExtender" runat="server" 
+                                                Enabled="True" Format="dd/MM/yyyy" TargetControlID="txtChequeDate">
+                                            </cc:CalendarExtender>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td align="right" style="width: 119px; height: 27px;">
+                                            <asp:Label ID="lblChequeStatus" runat="server" Font-Size="9pt">Check Status</asp:Label>
+                                        </td>
+                                        <td style="width: 8px; height: 27px;">
+                                        </td>
+                                        <td align="left" style="height: 27px; width: 214px;">
+                                            <asp:DropDownList ID="ddlChequeStatus" runat="server" Font-Size="8pt" 
+                                                Height="26px" SkinID="ddlPlain" TabIndex="24" Width="80%">
+                                                <asp:ListItem></asp:ListItem>
+                                                <asp:ListItem Value="P">Pending</asp:ListItem>
+                                                <asp:ListItem Value="A">Approved</asp:ListItem>
+                                                <asp:ListItem Value="B">Bounce</asp:ListItem>
+                                            </asp:DropDownList>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </ContentTemplate>
+                        </asp:UpdatePanel>
+                    </fieldset>
+                </div>
+                            </td>
+                            <td style="width: 2%; height: 3px;">
+                                &nbsp;</td>
+                            <td style="width: 15%; height: 3px;">
+                                &nbsp;</td>
+                            <td style="width: 2%; height: 3px;">
+                                &nbsp;</td>
+                            <td style="width: 12%; height: 3px;" align="right">
+                                        &nbsp;</td>
+                            <td style="width: 1%; height: 3px;">
+                                &nbsp;</td>
+                            <td style="height: 3px;" align="left" colspan="2">
+                                 <fieldset style="vertical-align: top; border: solid 1px #8BB381;">
+                    <legend style="color: maroon;"><b>Sales Total</b> </legend>
+                                        <table style="width: 100%">
+                                            <tr>
+                                                <td style="width: 10%" align="right">
+                                                    <asp:Label ID="Label44" runat="server" Text="Sub Total"></asp:Label>
+                                                </td>
+                                                <td style="width: 2%">
+                                                    &nbsp;</td>
+                                                <td style="width: 15%" align="left">
+                                                    <asp:TextBox ID="txtSubTotal" runat="server" Enabled="False" 
+                                                        onkeypress="return isNumber(event)" style="text-align:right;" TabIndex="4" 
+                                                        Width="98%"></asp:TextBox>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td align="right" style="width: 10%">
+                                                    <asp:Label ID="Label47" runat="server" Text="VAT (%)"></asp:Label>
+                                                </td>
+                                                <td style="width: 2%">
+                                                    &nbsp;</td>
+                                                <td align="left" style="width: 15%">
+                                                    <asp:TextBox ID="txtVat" runat="server" align="right" Enabled="False" 
+                                                        onkeypress="return isNumber(event)" style="text-align:right;" TabIndex="5" 
+                                                        Width="98%"></asp:TextBox>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td align="right" style="width: 10%">
+                                                    <asp:Label ID="Label48" runat="server" Text="Total"></asp:Label>
+                                                </td>
+                                                <td style="width: 2%">
+                                                    &nbsp;</td>
+                                                <td align="left" style="width: 15%">
+                                                    <asp:TextBox ID="txtPayment" runat="server" onChange="Due();" 
+                                                        onfocus="this.select();" onkeypress="return isNumber(event)" 
+                                                        style="text-align:right;" TabIndex="7" Width="98%"></asp:TextBox>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td align="right" style="width: 10%">
+                                                    <asp:Label ID="Label42" runat="server" Text="Due"></asp:Label>
+                                                </td>
+                                                <td style="width: 2%">
+                                                    &nbsp;</td>
+                                                <td align="left" style="width: 15%">
+                                                    <asp:TextBox ID="txtDue" runat="server" align="right" 
+                                                        onkeypress="return isNumber(event)" style="text-align:right;" TabIndex="8" 
+                                                        Width="98%"></asp:TextBox>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                        </fieldset>
+                                </td>
+                        </tr>
+                        <tr>
+                            <td align="right" style="width: 16%; height: 3px;">
+                            </td>
+                            <td style="width: 2%; height: 3px;">
+                            </td>
+                            <td style="width: 15%; height: 3px;">
+                            </td>
+                            <td style="width: 2%; height: 3px;">
+                            </td>
+                            <td align="right" style="width: 12%; height: 3px;">
+                                &nbsp;</td>
+                            <td style="width: 1%; height: 3px;">
+                            </td>
+                            <td align="left" style="width: 15%; height: 3px;">
+                                &nbsp;</td>
+                            <td style="width: 2%; height: 3px;">
+                            </td>
+                        </tr>
+                    </table>
+                     </fieldset>
+                     
+                     </ContentTemplate>
+        </asp:UpdatePanel>
+        </asp:Panel>
+                </td>
+                <td style="width: 2%">
+                    &nbsp;</td>
+            </tr>
+            <tr>
+                <td style="width: 2%">
+                    &nbsp;</td>
+                <td style="width: 90%">
+                     <div id="tblSearch" runat="server">
+     <fieldset style="vertical-align: top; border: solid 1px #8BB381;text-align:left;"><legend style="color: maroon;"><b>Search Option</b> </legend>
+                    <table style="width: 100%">
+                        <tr>
+                            <td align="right">
+                                <%--  <asp:UpdatePanel ID="Up1" runat="server" UpdateMode="Conditional">
+                                <ContentTemplate>--%>
+                                <table style="width: 100%">
+                                    <tr>
+                                        <td align="left">
+                                            <asp:Label ID="Label2" runat="server" style="font-weight: 700" 
+                                                Text="Invoice No : "></asp:Label>
+                                        </td>
+                                        <td align="left" style=" font-weight: 700;">
+                                            Customer</td>
+                                        <td align="center" colspan="4" style="font-weight: 700">
+                                            Search By Invoice Date</td>
+                                        <td>
+                <asp:HiddenField ID="hfSearchCustomerID" runat="server" />
+                                        </td>
+                                        <td>
+                                            &nbsp;</td>
+                                    </tr>
+                                    <tr>
+                                        <td align="left" style="width: 18%">
+                                            <asp:TextBox ID="txtsearhInvoice" runat="server" placeholder="Search By Invoice" CssClass="txtVisibleAlign" Height="18px"
+                                                Width="90%"></asp:TextBox>
+                                            <ajaxToolkit:AutoCompleteExtender ServicePath="AutoComplete.asmx" runat="server" 
+                                     ID="AutoCompleteExtender4" TargetControlID="txtsearhInvoice"
+           ServiceMethod="GetInvoice" MinimumPrefixLength="1" CompletionInterval="20" EnableCaching="true" 
+                                     CompletionSetCount="12"/>
+                                        </td>
+                                        <td align="left" style="width: 38%">
+                                            
+                                                    <asp:TextBox ID="txtSearchCustomer" runat="server" AutoPostBack="True" CssClass="txtVisibleAlign" Height="18px"
+                                                        ontextchanged="txtSearchCustomer_TextChanged" placeholder="Search By Customer.." 
+                                                        Width="90%"></asp:TextBox>
+                                                   <cc:AutoCompleteExtender ID="AutoCompleteExtender40" runat="server" 
+                    CompletionInterval="20" CompletionSetCount="12" EnableCaching="true" 
+                    MinimumPrefixLength="1" ServiceMethod="GetCustomername_BD_PH" 
+                    ServicePath="AutoComplete.asmx" TargetControlID="txtSearchCustomer" />
+                                               
+                                        </td>
+                                        <td align="left" style="width: 3%; ">
+                                            &nbsp;</td>
+                                        <td align="left" style="width: 11%">
+                                            <asp:TextBox ID="txtFromDate" runat="server" Placeholder="Date From" CssClass="txtVisibleAlign" Height="18px"
+                                                Width="90%"></asp:TextBox>
+                                            <cc:CalendarExtender ID="Calender" runat="server" Format="dd/MM/yyyy" 
+                                                TargetControlID="txtFromDate">
+                                            </cc:CalendarExtender>
+                                        </td>
+                                        <td style="width: 2%">
+                                            &nbsp;</td>
+                                        <td align="left" style="width: 11%">
+                                            <asp:TextBox ID="txtToDate" runat="server" CssClass="txtVisibleAlign" Height="18px" Placeholder="Date TO" Width="90%"></asp:TextBox>
+                                            <cc:CalendarExtender ID="CalendarExtender3" runat="server" Format="dd/MM/yyyy" 
+                                                TargetControlID="txtToDate">
+                                            </cc:CalendarExtender>
+                                        </td>
+                                        <td align="center" style="width: 10%">
+                                            <asp:LinkButton ID="lbSearch" runat="server" BorderStyle="Solid" 
+                                                Font-Bold="True" Font-Size="12pt" onclick="BtnSearch_Click" Width="90%">Search</asp:LinkButton>
+                                        </td>
+                                        <td align="center" style="width: 10%">
+                                            <asp:LinkButton ID="lbClear" runat="server" BorderStyle="Solid" 
+                                                Font-Bold="True" Font-Size="12pt" onclick="Refresh_Click" Width="90%">Clear</asp:LinkButton>
+                                        </td>
+                                    </tr>
+                                </table>
+                                <%--  </ContentTemplate>
+                                </asp:UpdatePanel>--%>
+                            </td>
+                        </tr>
+                    </table></fieldset>
+</div>
+  <asp:GridView CssClass="mGrid" PagerStyle-CssClass="pgr"  
+        AlternatingRowStyle-CssClass="alt" ID="dgSVMst" runat="server" 
+        AutoGenerateColumns="False"  BackColor="White" BorderWidth="1px" BorderStyle="Solid"
+        CellPadding="2" BorderColor="LightGray" Font-Size="9pt" PageSize="50" 
+        Width="100%" AllowPaging="True" onrowdatabound="dgSVMst_RowDataBound" 
+        onselectedindexchanged="dgSVMst_SelectedIndexChanged" 
+        onpageindexchanging="dgSVMst_PageIndexChanging" >
+  <HeaderStyle Font-Size="9pt"  Font-Bold="True" BackColor="LightGray" HorizontalAlign="center"  ForeColor="Black" />
+  <Columns>  
+  <asp:CommandField ShowSelectButton="True"  ItemStyle-Width="40px" 
+          ItemStyle-HorizontalAlign="Center">
+<ItemStyle HorizontalAlign="Center" Width="40px"></ItemStyle>
+      </asp:CommandField>
+  <asp:BoundField  HeaderText="Invoice No"  DataField="InvoiceNo" ItemStyle-Width="100px" 
+          ItemStyle-HorizontalAlign="Center">    
+<ItemStyle HorizontalAlign="Center" Width="100px"></ItemStyle>
+      </asp:BoundField>
+  <asp:BoundField  HeaderText="Invoice Date"  DataFormatString="{0:dd/MM/yyyy}" ItemStyle-Width="100px" 
+          ItemStyle-HorizontalAlign="Center" DataField="OrderDate">
+          <ItemStyle HorizontalAlign="Center" Width="100px"></ItemStyle>
+      </asp:BoundField>
+      <asp:BoundField  HeaderText="Customer Name" DataField="CustomerName" >
+          <ItemStyle HorizontalAlign="Left" Width="200px"></ItemStyle>
+      </asp:BoundField>
+  <asp:BoundField  HeaderText="Amount" 
+          ItemStyle-Height="20" ItemStyle-Width="80px" 
+          ItemStyle-HorizontalAlign="Right" DataField="CashReceived">
+<ItemStyle HorizontalAlign="Right" Height="20px" Width="80px"></ItemStyle>
+      </asp:BoundField>
+      <asp:BoundField DataField="Status" HeaderText="Delivery Status">
+      <ItemStyle Height="20px" HorizontalAlign="Center" Width="80px" />
+      </asp:BoundField>
+      <asp:BoundField  HeaderText="ID" DataField="ID"  ItemStyle-Width="80px" 
+          ItemStyle-HorizontalAlign="Left" > 
+<ItemStyle HorizontalAlign="Left" Width="80px"></ItemStyle>
+      </asp:BoundField>
+  </Columns>
+                        <RowStyle BackColor="White" />
+                        <SelectedRowStyle BackColor="" Font-Bold="True" />
+                        <PagerStyle BackColor="LightGray" ForeColor="Black" HorizontalAlign="Center" />
+                        <AlternatingRowStyle BackColor="" />
+</asp:GridView>
+                </td>
+                <td style="width: 2%">
+                    &nbsp;</td>
+            </tr>
+            <tr>
+                <td style="width: 2%">
+                    &nbsp;</td>
+                <td style="width: 90%">
+                    &nbsp;</td>
+                <td style="width: 2%">
+                    &nbsp;</td>
+            </tr>
+            <tr>
+                <td style="width: 2%">
+                    &nbsp;</td>
+                <td style="width: 90%">
+                    &nbsp;</td>
+                <td style="width: 2%">
+                    &nbsp;</td>
+            </tr>
+        </table>
+    </div>
+</asp:Content>
+

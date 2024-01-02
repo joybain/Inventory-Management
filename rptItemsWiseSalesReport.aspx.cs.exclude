@@ -1,0 +1,379 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using Delve;
+using System.Data;
+using sales;
+using System.Data.SqlClient;
+
+
+public partial class rptItemsWiseSalesReport : System.Web.UI.Page
+{
+    private readonly SalesManager _aSalesManager=new SalesManager();
+    private readonly clsClientInfoManager _aclsClientInfoManager = new clsClientInfoManager();
+    private readonly clsBranchManager _clsBranchManager = new clsBranchManager();
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        if (Session["user"] == null)
+        {
+            if (Session.SessionID != "" | Session.SessionID != null)
+            {
+                clsSession ses = clsSessionManager.getSession(Session.SessionID);
+                if (ses != null)
+                {
+                    Session["user"] = ses.UserId;
+                    Session["book"] = "AMB";
+                    string connectionString = DataManager.OraConnString();
+                    SqlDataReader dReader;
+                    SqlConnection conn = new SqlConnection();
+                    conn.ConnectionString = connectionString;
+                    SqlCommand cmd = new SqlCommand();
+                    cmd.Connection = conn;
+                    cmd.CommandType = CommandType.Text;
+                    cmd.CommandText =
+                        "Select user_grp,[description],UserType,case when UserType=1 then 'Bangladesh' else 'Philippine' end AS[LoginCountry] from utl_userinfo where upper(user_name)=upper('" +
+                        Session["user"].ToString().ToUpper() + "') and status='A'";
+                    conn.Open();
+                    dReader = cmd.ExecuteReader();
+                    string wnot = "", userType = "";
+                    if (dReader.HasRows == true)
+                    {
+                        while (dReader.Read())
+                        {
+                            Session["userlevel"] = int.Parse(dReader["user_grp"].ToString());
+                            //Session["dept"] = dReader["dept"].ToString();
+                            wnot = "Welcome " + dReader["description"].ToString();
+                            Session["LoginCountry"] = dReader["LoginCountry"].ToString();
+                            userType = dReader["UserType"].ToString();
+                        }
+                        Session["wnote"] = wnot;
+                        cmd = new SqlCommand();
+                        cmd.Connection = conn;
+                        cmd.CommandType = CommandType.Text;
+                        //cmd.CommandText = "Select book_desc,company_address1,company_address2,separator_type from gl_set_of_books where book_name='" + Session["book"].ToString() + "' ";
+                        if (Convert.ToInt32(userType) == 2)
+                        {
+
+                            Session["bookMAN"] = "MAN";
+                        }
+                        else
+                        {
+                            Session["bookMAN"] = Session["book"].ToString();
+                        }
+                        cmd.CommandText = "Select book_desc,company_address1,company_address2,separator_type,ShotName from gl_set_of_books where book_name='" + Session["bookMAN"] + "' ";
+
+                        if (dReader.IsClosed == false)
+                        {
+                            dReader.Close();
+                        }
+                        dReader = cmd.ExecuteReader();
+                        if (dReader.HasRows == true)
+                        {
+                            while (dReader.Read())
+                            {
+                                Session["septype"] = dReader["separator_type"].ToString();
+                                Session["org"] = dReader["book_desc"].ToString();
+                                Session["add1"] = dReader["company_address1"].ToString();
+                                Session["add2"] = dReader["company_address2"].ToString();
+                            }
+                        }
+                    }
+                    dReader.Close();
+                    conn.Close();
+                }
+            }
+        }
+        ((Label)Page.Master.FindControl("lblLogin")).Text = Session["wnote"].ToString();
+        ((Label)Page.Master.FindControl("lblCountryName")).Text = Session["LoginCountry"].ToString();
+        ((LinkButton)Page.Master.FindControl("lbLogout")).Visible = true;
+        if (!IsPostBack)
+        {
+            ClearAll();
+        }
+    }
+
+    private void ClearAll()
+    {
+        rbReprtType.SelectedValue = "A";
+        txtFromDate.Attributes.Add("onBlur", "formatdate('" + txtFromDate.ClientID + "')");
+        txtToDate.Attributes.Add("onBlur", "formatdate('" + txtToDate.ClientID + "')");
+
+        dgRtnHistory.Visible = dgSalesHistory.Visible = rptAll.Visible =txtBranchName.Visible= false;
+        txtCustomer.Visible = true;
+        txtCustomer.Text = txtFromDate.Text = txtToDate.Text =lblItemsDtl.Text=txtBranchName.Text= string.Empty;
+        hfCustomerID.Value = hfItemsID.Value = null;
+        txtName.Text = string.Empty;
+        dgSalesHistory.DataSource = dgSalesHistoryAll.DataSource = dgRtnHistoryAll.DataSource = dgRtnHistory.DataSource = null;
+        dgSalesHistory.DataBind();
+        dgSalesHistoryAll.DataBind();
+        dgRtnHistoryAll.DataBind();
+        dgRtnHistory.DataBind();
+
+        txtName.Focus();
+    }
+
+    protected void txtName_TextChanged(object sender, EventArgs e)
+    {
+        int ItemsID = IdManager.GetShowSingleValueInt("ID", "UPPER(ItemsName)", "View_SalesItems",
+            txtName.Text.ToUpper());
+        if (ItemsID > 0)
+        {
+            hfItemsID.Value = ItemsID.ToString();
+        }
+        else
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('No Items Search....!!');", true);
+            return;
+        }
+    }
+
+    protected void brnSearch_Click(object sender, EventArgs e)
+    {
+        dgRtnHistory.Visible = dgSalesHistory.Visible = rptAll.Visible =dgTransferHistory.Visible= false;
+        DataTable dtItems = null;
+        DataTable dtItemsReturn = null;
+        DataTable dtItemsTransfer = null;
+        lblItemsDtl.Text = string.Empty;
+        dgTransferHistoryAll.DataSource = null;
+        dgTransferHistoryAll.DataBind();
+        if (rbReprtType.SelectedValue.Equals("A"))
+        {
+            dtItems = _aSalesManager.GetShowItemsWiseSalesReport(hfItemsID.Value.ToString(),
+                hfCustomerID.Value, txtFromDate.Text, txtToDate.Text, "1");
+            dtItemsReturn = _aSalesManager.GetShowItemsWiseSalesReport(hfItemsID.Value.ToString(),
+                hfCustomerID.Value, txtFromDate.Text, txtToDate.Text, "2");
+            dtItemsTransfer = _aSalesManager.GetShowItemsWiseSalesReport(hfItemsID.Value.ToString(),
+                hfCustomerID.Value, txtFromDate.Text, txtToDate.Text, "3");
+
+            if (dtItems.Rows.Count > 0)
+            {
+                if (string.IsNullOrEmpty(lblItemsDtl.Text))
+                {
+                    lblItemsDtl.Text = "<b> Items Name : " + dtItems.Rows[0]["ItemsName"] + ".\n Catagory : " +
+                                       dtItems.Rows[0]["Catagory"] + ".\n SubCatagory : " +
+                                       dtItems.Rows[0]["SubCatagory"] + ".\n Brand : " +
+                                       dtItems.Rows[0]["BrandName"] + " <b> ";
+                }
+                dgSalesHistoryAll.DataSource = dtItems;
+                dgSalesHistoryAll.DataBind();
+            }
+            if (dtItemsReturn.Rows.Count > 0)
+            {
+                if (string.IsNullOrEmpty(lblItemsDtl.Text))
+                {
+                    lblItemsDtl.Text = "<b> Items Name : " + dtItemsReturn.Rows[0]["ItemsName"] + ".\n Catagory : " +
+                                       dtItemsReturn.Rows[0]["Catagory"] + ".\n SubCatagory : " +
+                                       dtItemsReturn.Rows[0]["SubCatagory"] + ".\n Brand : " +
+                                       dtItemsReturn.Rows[0]["BrandName"] + " <b> ";
+                }
+                dgRtnHistoryAll.DataSource = dtItemsReturn;
+                dgRtnHistoryAll.DataBind();
+            }
+            if (dtItemsTransfer.Rows.Count > 0)
+            {
+                if (string.IsNullOrEmpty(lblItemsDtl.Text))
+                {
+                    lblItemsDtl.Text = "<b> Items Name : " + dtItemsTransfer.Rows[0]["ItemsName"] + ".\n Catagory : " +
+                                       dtItemsTransfer.Rows[0]["Catagory"] + ".\n SubCatagory : " +
+                                       dtItemsTransfer.Rows[0]["SubCatagory"] + ".\n Brand : " +
+                                       dtItemsTransfer.Rows[0]["BrandName"] + " <b> ";
+                }
+                dgTransferHistoryAll.DataSource = dtItemsTransfer;
+                dgTransferHistoryAll.DataBind();
+            }
+            rptAll.Visible = true;
+            ShowFooterTotal(dtItems, 3);
+            ShowFooterTotal(dtItemsReturn, 4);
+            ShowFooterTotal(dtItemsTransfer, 5);
+        }
+        else if (rbReprtType.SelectedValue.Equals("S"))
+        {
+            dtItems = _aSalesManager.GetShowItemsWiseSalesReport(hfItemsID.Value.ToString(),
+                hfCustomerID.Value, txtFromDate.Text, txtToDate.Text, "1");
+            if (dtItems.Rows.Count > 0)
+            {
+
+                dgSalesHistory.DataSource = dtItems;
+                dgSalesHistory.DataBind();
+                if (string.IsNullOrEmpty(lblItemsDtl.Text))
+                {
+                    lblItemsDtl.Text = "<b> Items Name : " + dtItems.Rows[0]["ItemsName"] + ".\n Catagory : " +
+                                       dtItems.Rows[0]["Catagory"] + ".\n SubCatagory : " +
+                                       dtItems.Rows[0]["SubCatagory"] + ".\n Brand : " +
+                                       dtItems.Rows[0]["BrandName"] + " <b> ";
+                }
+                ShowFooterTotal(dtItems, 1);
+                dgSalesHistory.Visible = true;
+            }
+        }
+        else if (rbReprtType.SelectedValue.Equals("R"))
+        {
+            dtItemsReturn = _aSalesManager.GetShowItemsWiseSalesReport(hfItemsID.Value.ToString(),
+                hfCustomerID.Value, txtFromDate.Text, txtToDate.Text, "2");
+            if (dtItemsReturn.Rows.Count > 0)
+            {
+
+
+                dgRtnHistory.DataSource = dtItemsReturn;
+                dgRtnHistory.DataBind();
+                if (string.IsNullOrEmpty(lblItemsDtl.Text))
+                {
+                    lblItemsDtl.Text = "<b> Items Name : " + dtItemsReturn.Rows[0]["ItemsName"] + ".\n Catagory : " +
+                                       dtItemsReturn.Rows[0]["Catagory"] + ".\n SubCatagory : " +
+                                       dtItemsReturn.Rows[0]["SubCatagory"] + ".\n Brand : " +
+                                       dtItemsReturn.Rows[0]["BrandName"] + " <b> ";
+                }
+                ShowFooterTotal(dtItemsReturn, 1);
+                dgRtnHistory.Visible = true;
+            }
+        }
+        else if (rbReprtType.SelectedValue.Equals("T"))
+        {
+            dtItemsTransfer = _aSalesManager.GetShowItemsWiseSalesReport(hfItemsID.Value.ToString(),
+                hfCustomerID.Value, txtFromDate.Text, txtToDate.Text, "3");
+            if (dtItemsTransfer.Rows.Count > 0)
+            {
+
+
+                dgTransferHistory.DataSource = dtItemsTransfer;
+                dgTransferHistory.DataBind();
+                if (string.IsNullOrEmpty(lblItemsDtl.Text))
+                {
+                    lblItemsDtl.Text = "<b> Items Name : " + dtItemsTransfer.Rows[0]["ItemsName"] + ".\n Catagory : " +
+                                       dtItemsTransfer.Rows[0]["Catagory"] + ".\n SubCatagory : " +
+                                       dtItemsTransfer.Rows[0]["SubCatagory"] + ".\n Brand : " +
+                                       dtItemsTransfer.Rows[0]["BrandName"] + " <b> ";
+                }
+                ShowFooterTotal(dtItemsTransfer, 6);
+                dgTransferHistory.Visible = true;
+            }
+        }
+    }
+
+    private void ShowFooterTotal(DataTable dtItems,int falg)
+    {
+        decimal Total = 0;
+
+        foreach (DataRow drp in dtItems.Rows)
+        {
+            if (drp["Quantity"].ToString() != "")
+            {
+                Total += decimal.Parse(drp["Quantity"].ToString());
+            }
+        }
+
+        GridViewRow row = new GridViewRow(0, 0, DataControlRowType.Footer, DataControlRowState.Normal);
+        TableCell cell;
+        cell = new TableCell();
+        cell.Text = "Total";
+        cell.ColumnSpan = 2;
+        cell.HorizontalAlign = HorizontalAlign.Right;
+        row.Font.Bold = true;
+        row.Cells.Add(cell);
+        cell = new TableCell();
+        cell.Text = Total.ToString("N0");
+        cell.HorizontalAlign = HorizontalAlign.Right;
+        row.Font.Bold = true;
+        row.Cells.Add(cell);
+        if (falg.Equals(1))
+        {
+            if (dgSalesHistory.Rows.Count > 0)
+            {
+                dgSalesHistory.Controls[0].Controls.Add(row);
+            }
+           
+        }
+        else  if (falg.Equals(2))
+        {
+            if (dgRtnHistory.Rows.Count > 0)
+            {
+                dgRtnHistory.Controls[0].Controls.Add(row);
+            }
+            
+        }
+        else if (falg.Equals(3))
+        {
+            
+            if (dgSalesHistoryAll.Rows.Count > 0)
+            {
+                dgSalesHistoryAll.Controls[0].Controls.Add(row);
+            }
+        }
+        else if (falg.Equals(4))
+        {
+            if (dgRtnHistoryAll.Rows.Count > 0)
+            {
+                dgRtnHistoryAll.Controls[0].Controls.Add(row);
+            }
+        }
+        else if (falg.Equals(5))
+        {
+            if (dgTransferHistoryAll.Rows.Count > 0)
+            {
+                dgTransferHistoryAll.Controls[0].Controls.Add(row);
+            }
+        }
+        else if (falg.Equals(6))
+        {
+            if (dgTransferHistory.Rows.Count > 0)
+            {
+                dgTransferHistory.Controls[0].Controls.Add(row);
+            }
+        }
+    }
+    protected void btnClear_Click(object sender, EventArgs e)
+    {
+        var pageName = System.IO.Path.GetFileName(Request.Url.ToString());
+        Response.Redirect(pageName);
+    }
+    protected void txtCustomer_TextChanged(object sender, EventArgs e)
+    {
+        DataTable dtCustomer = _aclsClientInfoManager.GetCustomerOnSearch("where UPPER(SearchName) = UPPER('" + txtCustomer.Text + "')");
+        if (dtCustomer.Rows.Count > 0)
+        {
+            hfCustomerID.Value = dtCustomer.Rows[0]["ID"].ToString();
+            txtCustomer.Text = dtCustomer.Rows[0]["ContactName"].ToString();
+            Session["Customer_COA"] = dtCustomer.Rows[0]["Gl_CoaCode"].ToString();
+        }
+        else
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('You are not Permitted this Step.!!');", true);
+            Session["Customer_COA"] = null;
+            hfCustomerID.Value = "";
+            return;
+        }
+    }
+    protected void txtBranchName_TextChanged(object sender, EventArgs e)
+    {
+        DataTable dtCustomer = _clsBranchManager.getBranch("where UPPER(BranchSearch) = UPPER('" + txtBranchName.Text + "')");
+        if (dtCustomer.Rows.Count > 0)
+        {
+            hfCustomerID.Value = dtCustomer.Rows[0]["ID"].ToString();
+            txtBranchName.Text = dtCustomer.Rows[0]["BranchName"].ToString();
+            
+        }
+        else
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('You are not Permitted this Step.!!');", true);
+            Session["Customer_COA"] = null;
+            hfCustomerID.Value = "";
+            return;
+        }
+    }
+    protected void rbReprtType_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        txtCustomer.Visible = txtBranchName.Visible = false;
+        if (rbReprtType.SelectedValue.Equals("T"))
+        {
+            txtBranchName.Visible = true;
+        }
+        else
+        {
+            txtCustomer.Visible = true;
+        }
+    }
+   
+}

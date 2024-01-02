@@ -1,0 +1,136 @@
+﻿<%@ Page Title="" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true" CodeFile="ItemsShiftmentStatus.aspx.cs" Inherits="ItemsShiftmentStatus" %>
+
+<asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
+    <div id="frmMainDiv" style="background-color:White; width:100%;">    
+    <table style="width: 100%">
+        <tr>
+            <td style="width:5%;">
+                &nbsp;</td>
+            <td style="width:90%;">
+                <asp:Label ID="lblMasterID" runat="server" Visible="False"></asp:Label>
+&nbsp;
+                <asp:Label ID="lblItemID" runat="server" Visible="False"></asp:Label>
+            &nbsp;
+                <asp:Label ID="lblShiftmentID" runat="server" Visible="False"></asp:Label>
+            </td>
+            <td style="width:5%;">
+                &nbsp;</td>
+        </tr>
+        <tr>
+            <td style="width:5%;">
+                &nbsp;</td>
+            <td style="width:90%;">
+             <fieldset style="vertical-align: top; border: solid 1px #8BB381; text-align:left;">
+                            <legend style="color: maroon;"><b>Search Option</b></legend>
+                <table style="width: 100%">
+                    <tr>
+                        <td style="width: 11%" align="right" valign="middle">
+                            <asp:Label ID="Label1" runat="server" Text="Carton No."></asp:Label>
+                        </td>
+                        <td style="width: 1%" valign="middle">
+                            &nbsp;</td>
+                        <td style="width: 15%" valign="middle">
+                            <asp:TextBox ID="txtCartoonNo" runat="server" Width="100%" 
+                                placeholder="Search by Carton No."></asp:TextBox>
+                        </td>
+                        <td style="width: 11%" align="right" valign="middle">
+                            <asp:Label ID="Label2" runat="server" Text="Shipment No."></asp:Label>
+                        </td>
+                        <td style="width: 1%" valign="middle">
+                            &nbsp;</td>
+                        <td style="width: 15%" valign="middle">
+                            <asp:TextBox ID="txtShiftmentNo" runat="server" Width="100%" 
+                                placeholder="Search by Shipment No." AutoPostBack="True" 
+                                ontextchanged="txtShiftmentNo_TextChanged"></asp:TextBox>
+                                <ajaxtoolkit:AutoCompleteExtender ID="AutoCompleteExtender2"
+                                                        runat="server" CompletionInterval="20" CompletionSetCount="30"
+                                                        EnableCaching="true" MinimumPrefixLength="2"
+                                                        ServiceMethod="GetShiftmentInfo" ServicePath="~/AutoComplete.asmx"
+                                                        TargetControlID="txtShiftmentNo">
+                                                    </ajaxtoolkit:AutoCompleteExtender>
+                        </td>
+                        <td td style="width: 15%" valign="middle" align="center">
+                            <asp:Button ID="BtnSearch" runat="server" Text="Search" 
+                                onclick="BtnSearch_Click" />
+                        </td>
+                        <td td style="width: 15%" valign="middle" align="left">
+                            <asp:Button ID="btnRefresh" runat="server" Text="Refresh" 
+                                onclick="btnRefresh_Click" />
+                        </td>
+                    </tr>
+                </table></fieldset>
+            </td>
+            <td style="width:10%;">
+                &nbsp;</td>
+        </tr>
+        <tr>
+            <td style="width:5%;">
+                &nbsp;</td>
+            <td style="width:80%;" valign="top" >
+           <div id="tbCartoon" runat="server">
+                            <fieldset style="vertical-align: top; border: solid 1px #8BB381; text-align:left;">
+                                                        <legend style="color: maroon;"><b>Carton Items</b></legend>
+                            <table style="width:100%">
+                            <tr>
+                            <td style="text-align:center;">
+                            
+                            <asp:GridView ID="dgShiftmentItems" runat="server" Width="100%" 
+                                AutoGenerateColumns="False" CssClass="mGrid" AllowPaging="True" 
+                                PageSize="50" 
+                                    onpageindexchanging="dgShiftmentItems_PageIndexChanging" 
+                                    onrowdatabound="dgShiftmentItems_RowDataBound" 
+                                    onselectedindexchanged="dgShiftmentItems_SelectedIndexChanged">
+                                <Columns>
+                                    <asp:CommandField ShowSelectButton="True" HeaderText="Print" SelectText="Print">
+                                    <ItemStyle Font-Size="8pt" HorizontalAlign="Center" Width="8%" />
+                                    </asp:CommandField>
+                                    <asp:BoundField HeaderText="Barcode ID" DataField="ID" >
+                                    <ItemStyle Font-Size="8pt" HorizontalAlign="Center" Width="15%" />
+                                    </asp:BoundField>
+                                    <asp:BoundField HeaderText="Carton Date" DataField="AddDate" >
+                                    <ItemStyle Font-Size="8pt" HorizontalAlign="Center" Width="15%" />
+                                    </asp:BoundField>
+                                    <asp:BoundField HeaderText="Carton No." DataField="CartoonNo" >
+                                    <ItemStyle Font-Size="8pt" HorizontalAlign="Center" Width="15%" />
+                                    </asp:BoundField>
+                                    <asp:BoundField HeaderText="Shipment No." DataField="ShiftmentNO" >
+                                    <ItemStyle Font-Size="8pt" HorizontalAlign="left" Width="15%" />
+                                    </asp:BoundField>
+                                    <asp:BoundField HeaderText="Remarks" DataField="Remarks" >
+                                     <ItemStyle Font-Size="8pt" HorizontalAlign="Left" Width="40%" />
+                                    </asp:BoundField>
+                                    <asp:BoundField HeaderText="Status" DataField="Flag" >
+                                    <ItemStyle Font-Size="8pt" HorizontalAlign="Center" Width="15%" 
+                                        Font-Bold="True" />
+                                    </asp:BoundField>
+                                </Columns>
+                            </asp:GridView>
+
+                                </td>
+                            </tr>
+                            </table></fieldset>
+                            </div>
+                        </td>
+            <td style="width:10%;">
+                &nbsp;</td>
+        </tr>
+        <tr>
+            <td style="width:5%;">
+                &nbsp;</td>
+            <td style="width:90%;">
+                            &nbsp;</td>
+            <td style="width:5%;">
+                &nbsp;</td>
+        </tr>
+        <tr>
+            <td style="width:5%;">
+                &nbsp;</td>
+            <td style="width:90%;">
+                &nbsp;</td>
+            <td style="width:5%;">
+                &nbsp;</td>
+        </tr>
+    </table>
+    </div>
+</asp:Content>
+

@@ -1,0 +1,122 @@
+﻿<%@ Page Title="" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true" CodeFile="frmSundousBranchSetup.aspx.cs" Inherits="frmSundousBranchSetup" %>
+
+<asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
+    <div></div>
+<div>
+    <table id="pageFooterWrapper">
+         <tr>
+	        <td style="vertical-align:middle; height:100%;" align="center">
+                <asp:Button  ID="BtnDelete" runat="server"  ToolTip="Delete Record"  TabIndex="903" 
+                    onclientclick="javascript:return window.confirm('are u really want to delete these data')"             
+                    Text="Delete" Width="110px" Height="30px" BorderStyle="Outset" 
+                    BorderWidth="1px" onclick="BtnDelete_Click" /></td>
+	
+	        <td style="vertical-align:middle;" align="center"><asp:Button ID="BtnSave" 
+                    runat="server" ToolTip="Save or Update Record" TabIndex="901" Text="Save"             
+                     Width="110px" Height="30px" BorderStyle="Outset" BorderWidth="1px" 
+                    onclick="BtnSave_Click" /></td>
+	        <td style="vertical-align:middle;" align="center">
+                <asp:Button ID="BtnReset" runat="server" ToolTip="Clear Form" TabIndex="904"   
+                    Text="Clear" Width="110px" Height="30px" BorderStyle="Outset" 
+                    BorderWidth="1px" onclick="BtnReset_Click"  />
+            </td>      
+	        </tr>		
+	  </table>
+    <table style="width: 100%">
+        <tr>
+            <td style="width:15%">
+                &nbsp;</td>
+            <td style="width:70%">
+                &nbsp;</td>
+            <td style="width:15%">
+                &nbsp;</td>
+        </tr>
+        <tr>
+            <td style="width:15%">
+                &nbsp;</td>
+            <td style="width:70%">
+                <fieldset>
+                    <legend><b>Sundous Limited Branch Setup Form</b></legend>
+                
+                <table style="width: 100%">
+                    <tr>
+                        <td style="width: 15%" align="right" >
+                            <asp:Label ID="Label1" runat="server" Text="Branch Name"></asp:Label>
+                        </td>
+                        <td style="width: 33%">
+                            <asp:TextBox ID="txtBranchName" runat="server" Width="90%"></asp:TextBox>
+                        </td>
+                        <td style="width: 4%">
+                            <asp:TextBox ID="txtBranchId" runat="server" Width="25px" Visible="False"></asp:TextBox>
+                        </td>
+                        <td style="width: 15%" align="right">
+                            <asp:Label ID="Label2" runat="server" Text="Address"></asp:Label>
+                        </td>
+                        <td style="width: 33%">
+                            <asp:TextBox ID="txtAddress" runat="server" Width="90%" TextMode="MultiLine"></asp:TextBox>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="width: 15%" align="right">
+                            <asp:Label ID="Label3" runat="server" Text="Mobile Number"></asp:Label>
+                        </td>
+                        <td style="width: 33%">
+                            <asp:TextBox ID="txtMobileNo" runat="server" Width="90%"></asp:TextBox>
+                        </td>
+                        <td style="width: 4%">
+                            &nbsp;</td>
+                        <td style="width: 15%" align="right">
+                            <asp:Label ID="Label4" runat="server" Text="Email"></asp:Label>
+                        </td>
+                        <td style="width: 33%">
+                            <asp:TextBox ID="txtEmail" runat="server" Width="90%"></asp:TextBox>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="width: 15%" align="right">
+                            &nbsp;</td>
+                        <td style="width: 33%">
+                            &nbsp;</td>
+                        <td style="width: 4%">
+                            &nbsp;</td>
+                        <td style="width: 15%" align="right">
+                            &nbsp;</td>
+                        <td style="width: 33%">
+                            &nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td align="right" colspan="5">
+                            <asp:GridView ID="dgSundousBranch" runat="server" AutoGenerateColumns="False" 
+                                CssClass="mGrid" onrowdatabound="dgSundousBranch_RowDataBound" 
+                                PageSize="15" 
+                                onselectedindexchanged="dgSundousBranch_SelectedIndexChanged">
+                                <Columns>
+                                    <asp:CommandField ShowSelectButton="True" />
+                                    <asp:BoundField DataField="ID" HeaderText="Branch Id" />
+                                    <asp:BoundField DataField="BranchName" HeaderText="Branch Name" />
+                                    <asp:BoundField DataField="Address" HeaderText="Address" />
+                                    <asp:BoundField DataField="MobileNumber" HeaderText="Mobile No" />
+                                    <asp:BoundField DataField="Email" HeaderText="Email" />
+                                </Columns>
+                            </asp:GridView>
+                        </td>
+                    </tr>
+                </table>
+                </fieldset>
+            </td>
+            <td style="width:15%">
+                &nbsp;</td>
+        </tr>
+        <tr>
+            <td style="width:15%">
+                &nbsp;</td>
+            <td style="width:70%">
+                &nbsp;</td>
+            <td style="width:15%">
+                &nbsp;</td>
+        </tr>
+    </table>
+</div>
+<div></div>
+</asp:Content>
+

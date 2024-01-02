@@ -1,0 +1,48 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<template>
+  <zoompanel>
+    <table cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td>
+          <div class="oizTopLeft"> </div>
+        </td>
+        <td>
+          <div class="oizTopCenter"> </div>
+        </td>
+        <td>
+          <div class="oizTopRight"> </div>
+        </td>
+      </tr>
+      <tr>
+        <td class="oizMiddleLeft"></td>
+        <td style="background:black;" align="left">
+          <div>
+            {BigImage}
+          </div>
+          <div class="oizDescriptionCover">
+            <span class="oizOpacityRender">{Description} </span>
+          </div>
+        </td>
+        <td class="oizMiddleRight"></td>
+      </tr>
+      <tr>
+        <td>
+          <div class="oizBottomLeft"> </div>
+        </td>
+        <td>
+          <div class="oizBottomCenter"> </div>
+        </td>
+        <td>
+          <div class="oizBottomRight"> </div>
+        </td>
+      </tr>
+    </table>
+  </zoompanel>
+  <loading>
+    Loading...
+  </loading>
+  <effectpanel>
+    <div class="oizEffectPanelTop"></div>
+  </effectpanel>
+  <background></background>
+</template>

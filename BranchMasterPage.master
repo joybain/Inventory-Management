@@ -1,0 +1,240 @@
+﻿<%@ Master Language="C#" AutoEventWireup="true" CodeFile="BranchMasterPage.master.cs" Inherits="BranchMasterPage" %>
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" >
+<head id="Head1" runat="server">
+    <title>NSSL-SHOP</title>
+    <link href="~/css/black/screen.css" rel="stylesheet" type="text/css"/>
+    <link href="~/css/black/datepicker.css" rel="stylesheet" type="text/css"/>
+    <link href="~/js/visualize/visualize.css" rel="stylesheet" type="text/css"/>
+    <link href="~/js/jwysiwyg/jquery.wysiwyg.css" rel="stylesheet" type="text/css"/>
+    <link href="~/js/fancybox/jquery.fancybox-1.3.0.css" rel="stylesheet" type="text/css"/>
+    <link href="~/css/ie.css" rel="stylesheet" type="text/css"/>
+    <link href="~/css/tipsy.css" rel="stylesheet" type="text/css"/> 
+    <link href="jsAlert/jsAlert.css" rel="stylesheet" />
+  
+    <meta http-equiv="X-UA-Compatible" content="IE=7" />
+    <script type="text/javascript" src='<%# ResolveUrl("~/Scripts/jquery-1.4.2.js") %>'></script>
+    <script type="text/javascript" src='<%# ResolveUrl("~/Scripts/iefix.js") %>'></script>    
+    <script type="text/javascript" src='<%# ResolveUrl("~/Scripts/valideDate.js") %>'></script>
+    <script type="text/javascript" src='<%# ResolveUrl("~/Scripts/validate12.js") %>'></script>
+    <script type="text/javascript" src='<%# ResolveUrl("~/Scripts/ieupdate.js") %>'></script>
+    <script type="text/javascript" src='<%# ResolveUrl("~/Scripts/nifty.js") %>'></script>     
+    <script type="text/javascript" src='<%# ResolveUrl("~/js/jquery.js") %>'></script>
+    <script type="text/javascript" src='<%# ResolveUrl("~/js/jquery-ui.js") %>'></script>
+    <script type="text/javascript" src='<%# ResolveUrl("~/js/jquery.img.preload.js") %>'></script>
+    <script type="text/javascript" src='<%# ResolveUrl("~/js/hint.js") %>'></script>
+    <script type="text/javascript" src='<%# ResolveUrl("~/js/visualize/jquery.visualize.js") %>'></script>
+    <script type="text/javascript" src='<%# ResolveUrl("~/js/jwysiwyg/jquery.wysiwyg.js") %>'></script>
+    <script type="text/javascript" src='<%# ResolveUrl("~/js/fancybox/jquery.fancybox-1.3.0.js") %>'></script>
+    <script type="text/javascript" src='<%# ResolveUrl("~/js/jquery.tipsy.js") %>'></script>
+    <script type="text/javascript" src='<%# ResolveUrl("~/js/excanvas.js") %>'></script>
+    <script type="text/javascript" src='<%# ResolveUrl("~/js/custom_black.js") %>'></script>
+    <script type="text/javascript" src='<%# ResolveUrl("~/js/jquery.autotab-1.1b.js") %>'></script>    
+    <script src="jsAlert/jsAlert.js"></script>   
+  <script type="text/javascript">
+      $(document).ready(function () {
+
+
+          //          textboxes = $("input:text, select");
+          //          if ($.browser.mozilla) {
+          //              $(textboxes).keypress(checkForEnter);
+          //          } else {
+          //              $(textboxes).keydown(checkForEnter);
+          //          }
+          //          function checkForEnter(event) {
+          //              if (event.keyCode == 13) {
+          //                  var inputs = $(this).parents("form").eq(0).find("input:text, select");
+          //                  if (inputs[inputs.index(this) + 1] != null) {
+          //                      inputs[inputs.index(this) + 1].focus();
+          //                  }
+          //                  event.preventDefault();
+          //              }
+          //          }
+          $("input:text, select").focus(
+        function () {
+            $(this).css({ 'background-color': '#F0E190' });
+        });
+          $("input:text, select").blur(
+        function () {
+            $(this).css({ 'background-color': '#FAFAF5' });
+        });
+      });
+</script>
+<%--<script type="text/javascript">
+    var time = new Date().getTime();
+    $(document.body).bind("mousemove keypress", function (e) {
+        time = new Date().getTime();
+    });
+
+    function refresh() {
+        if (new Date().getTime() - time >= 2400000)
+            window.location.reload(true);
+        else
+            setTimeout(refresh, 1000000);
+    }
+    setTimeout(refresh, 1000000);
+</script>--%>
+
+
+</head>
+
+<body>
+
+<div id="content_wrapper">
+<form id="Form" runat="server">
+<asp:ScriptManager ID="ScriptManager1" runat="server" AsyncPostBackTimeout="1000">
+        </asp:ScriptManager>
+<table style="width:100%;">
+<tr>
+<td colspan="2" style="vertical-align:top;">
+<div id="header">
+		<div id="logo" style="margin-top:0; text-align: left; font-size:9pt; ">
+			<img src="Logo/NetsoftLogo.jpg" alt="logo" height="50px" width="50%"/>    
+                 
+		</div>		
+		<div id="account_info">
+			<img src="images/icon_online.png" alt="Online" class="mid_align"/>
+			<asp:Label ID="lblLogin" runat="server" style="font-weight: 700" 
+                Font-Size="10pt" ForeColor="Yellow"></asp:Label>
+            <strong>&nbsp;, Welcome to nss Grocery Shop </strong>
+            <asp:Label ID="lblCountryName" runat="server" Font-Bold="True" 
+                ForeColor="Yellow" Font-Size="10pt" Visible="False"></asp:Label>
+&nbsp;| <asp:LinkButton ID="lbLogout" Text="(Logout)" runat="server" OnClick="lbLogout_Click"></asp:LinkButton>  
+          		
+        </div>
+       
+        
+</div>
+</td>
+</tr>
+<tr><td style="vertical-align:top; width:213px;" align="left">
+<!-- Begin left panel -->
+	<a href="javascript:;" id="show_menu">&raquo;</a>
+	<div id="left_menu">
+		<a href="javascript:;" id="hide_menu">&laquo;</a>
+		<ul id="main_menu">		
+            <li><a href="BranchHome.aspx" onclick="JavaScript:window.status=''; return true" onmouseover="JavaScript:window.status=''; return true" onmouseout="JavaScript:window.status=''; return true"><img src="images/icon_home.png" alt="Home"/>Home</a></li>	
+			<%--<li>
+				<a id="menu_pages" href="" onclick="JavaScript:window.status=''; return true" onmouseover="JavaScript:window.status=''; return true" onmouseout="JavaScript:window.status=''; return true"><img src="images/icon_due_payment.png" alt="Pages"/>General Accounts</a>
+				<ul>                    
+			        <li><a href="DebitVoucherUI.aspx?mno=0.0" onclick="JavaScript:window.status=''; return true" onmouseover="JavaScript:window.status=''; return true" onmouseout="JavaScript:window.status=''; return true">Debit Voucher</a></li>
+                    <li><a href="CreditVoucherUI.aspx?mno=0.1" onclick="JavaScript:window.status=''; return true" onmouseover="JavaScript:window.status=''; return true" onmouseout="JavaScript:window.status=''; return true">Credit Voucher</a></li>
+                    <li><a href="JournalVoucherUI.aspx?mno=0.2" onclick="JavaScript:window.status=''; return true" onmouseover="JavaScript:window.status=''; return true" onmouseout="JavaScript:window.status=''; return true">Journal Voucher</a></li>
+                    <li><a href="ContraVoucherUI.aspx?mno=0.3" onclick="JavaScript:window.status=''; return true" onmouseover="JavaScript:window.status=''; return true" onmouseout="JavaScript:window.status=''; return true">Contra Voucher</a></li>
+                    <li><a href="ReportMap.aspx?mno=0.4" onclick="JavaScript:window.status=''; return true" onmouseover="JavaScript:window.status=''; return true" onmouseout="JavaScript:window.status=''; return true">Report Settings</a></li>
+				    <li><a href="frmAccBulkAuth.aspx?mno=0.5" onclick="JavaScript:window.status=''; return true" onmouseover="JavaScript:window.status=''; return true" onmouseout="JavaScript:window.status=''; return true">Bulk Authorization</a></li>
+                    <li><a href="AccReports.aspx?mno=0.6" onclick="JavaScript:window.status=''; return true" onmouseover="JavaScript:window.status=''; return true" onmouseout="JavaScript:window.status=''; return true">Reports</a></li>
+				</ul>
+			</li>--%>
+            <li>
+                <a id="A1" href="" onclick="JavaScript:window.status=''; return true" onmouseover="JavaScript:window.status=''; return true" onmouseout="JavaScript:window.status=''; return true"><img src="images/icon_inventory_report.png" alt="Pages"/>Item Stock</a>
+                <ul>                    
+                    <li><a href="BranchItemReceivedStock.aspx?mno=0.0" onclick="JavaScript:window.status=''; return true" onmouseover="JavaScript:window.status=''; return true" onmouseout="JavaScript:window.status=''; return true">Stock Recevied</a></li>
+                    <li><a href="BranchStockItemsDetails.aspx?mno=0.1" onclick="JavaScript:window.status=''; return true" onmouseover="JavaScript:window.status=''; return true" onmouseout="JavaScript:window.status=''; return true">Branch Stock </a></li>
+                   
+                   
+                   
+                   <li><a href="frmDailyStockPriceChange.aspx?mno=0.1" onclick="JavaScript:window.status=''; return true" onmouseover="JavaScript:window.status=''; return true" onmouseout="JavaScript:window.status=''; return true">Branch Stock </a></li>
+
+                              <li><a href="frmRejectItem.aspx?mno=0.2" onclick="JavaScript:window.status=''; return true" onmouseover="JavaScript:window.status=''; return true" onmouseout="JavaScript:window.status=''; return true">Reject Item  </a></li>  
+                                <li><a href="frmRejectItemStock.aspx?mno=0.3" onclick="JavaScript:window.status=''; return true" onmouseover="JavaScript:window.status=''; return true" onmouseout="JavaScript:window.status=''; return true">Reject Stock  </a></li>  
+                </ul>
+            </li>
+            
+            <li>
+                <a id="A4" href="" onclick="JavaScript:window.status=''; return true" onmouseover="JavaScript:window.status=''; return true" onmouseout="JavaScript:window.status=''; return true"><img src="images/icon_inventory_report.png" alt="Pages"/>Sales</a>
+                <ul>                    
+                    <li><a href="BranchSalesVoucher.aspx?mno=1.2" onclick="JavaScript:window.status=''; return true" onmouseover="JavaScript:window.status=''; return true" onmouseout="JavaScript:window.status=''; return true">Branch Sales </a></li>
+                    <li><a href="frmBranchSalesExchange.aspx?mno=1.3" onclick="JavaScript:window.status=''; return true" onmouseover="JavaScript:window.status=''; return true" onmouseout="JavaScript:window.status=''; return true">Branch Sales Exchange </a></li>
+                    <li><a href="BranchSalesReturn.aspx?mno=1.4" onclick="JavaScript:window.status=''; return true" onmouseover="JavaScript:window.status=''; return true" onmouseout="JavaScript:window.status=''; return true">Branch Sales Return </a></li>
+                    <li><a href="frmBranchCustomerPayment.aspx?mno=1.5" onclick="JavaScript:window.status=''; return true" onmouseover="JavaScript:window.status=''; return true" onmouseout="JavaScript:window.status=''; return true">Coustomer Payment</a></li>
+                 </ul>
+            </li>
+            
+            
+
+            
+            
+            <li>
+                <a id="A3" href="" onclick="JavaScript:window.status=''; return true" onmouseover="JavaScript:window.status=''; return true" onmouseout="JavaScript:window.status=''; return true"><img src="images/icon_inventory_report.png" alt="Pages"/>Report</a>
+                <ul>                    
+                   
+                    <li><a href="frmBranchInvReport.aspx?mno=2.6" onclick="JavaScript:window.status=''; return true" onmouseover="JavaScript:window.status=''; return true" onmouseout="JavaScript:window.status=''; return true">Branch Sales report </a></li>
+                  
+                </ul>
+            </li>
+
+            <li>
+                <a id="A2" href="" onclick="JavaScript:window.status=''; return true" onmouseover="JavaScript:window.status=''; return true" onmouseout="JavaScript:window.status=''; return true"><img src="images/icon_inventory_report.png" alt="Pages"/>Setting</a>
+                <ul>  
+                   
+                    <li><a href="frmBranchClient.aspx?mno=3.5" onclick="JavaScript:window.status=''; return true" onmouseover="JavaScript:window.status=''; return true" onmouseout="JavaScript:window.status=''; return true">Coustomer Setup </a></li>
+                   
+                 </ul>
+            </li>
+            
+            <li>
+                <a id="A10" href="" onclick="JavaScript:window.status=''; return true" onmouseover="JavaScript:window.status=''; return true" onmouseout="JavaScript:window.status=''; return true"><img src="img/analysis.png" alt="Pages" height="25px" width="25px" />Daily Expenses</a>
+                <ul>
+                   
+                    <li><a href="BranchDownlodeInfoHeadOffice.aspx?mno=4.6" onclick="JavaScript:window.status=''; return true" onmouseover="JavaScript:window.status=''; return true" onmouseout="JavaScript:window.status=''; return true">Download Head Office Data</a></li> 
+                    <li><a href="frmBranchDailyExpenses.aspx?mno=4.7" onclick="JavaScript:window.status=''; return true" onmouseover="JavaScript:window.status=''; return true" onmouseout="JavaScript:window.status=''; return true">Daily Expenses</a></li> 
+
+                </ul>
+            </li>
+            
+		</ul>	
+       	
+
+	</div>
+	<!-- End left panel -->
+</td>
+<td align="left" style=" vertical-align:top; width:100%;">
+<div id="content" style="background-color:transparent; vertical-align:top; font-family:Verdana; font-size:8pt; margin-top:0;">	
+        <script type="text/javascript" language="javascript">
+            window.onload = function () {
+                if (document.getElementById("frmMainDiv")) {
+                    document.getElementById("frmMainDiv").style.minHeight = (window.screen.height - 120) + 'px';
+                    window.status = '';
+                }
+            };
+</script>
+        <asp:contentplaceholder id="MainContent" runat="server">
+        </asp:contentplaceholder>
+               
+</div>
+</td>
+</tr>
+<tr><td colspan="2" align="center">
+    <%--<tsc:Timeout 
+    ID="Timeout1" 
+    runat="server"
+    Enabled="true"
+    AboutToTimeoutMinutes="50" 
+    TimeoutMinutes="60" 
+    TimeoutURL="~/Default.aspx?timeout=true&sid=sam"
+    CssClass="Timeout"
+    DisplayButton="false" 
+    ButtonCssClass="btn" 
+    ButtonText="Continue My Session!">
+    <Template>
+        For your safety and protection, your session is about to expire.  If you wish to continue your session, please click here.
+    </Template>
+</tsc:Timeout>--%>
+<br class="clear"/><br class="clear"/>		
+		
+		<!-- Begin footer -->
+		<div id="footer" style="background-color:White;">
+			<asp:Label ID="Label1" runat="server" Font-Bold="True" ForeColor="#CC3300" 
+                Text="© Copyright 2020 Shop. Powered by : Netsoft Solution Ltd."></asp:Label>
+		</div>
+    <!-- End footer -->
+</td></tr>
+</table>
+</form>
+</div>
+
+</body>
+</html>

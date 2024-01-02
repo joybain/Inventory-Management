@@ -1,0 +1,654 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using System.Data;
+//using autouniv;
+using System.Data.SqlClient;
+using Delve;
+using iTextSharp.text;
+using iTextSharp.text.pdf;
+//using OldColor;
+using iTextSharp.text.pdf.draw;
+
+public partial class frmDayClosingSaleSummary : System.Web.UI.Page
+{
+    
+    private static Permis per;
+    private readonly DayClosingSaleSummaryManager _aDayClosingSaleSummaryManager=new DayClosingSaleSummaryManager();
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        if (Session["user"] == null)
+        {
+            if (Session.SessionID != "" | Session.SessionID != null)
+            {
+                clsSession ses = clsSessionManager.getSession(Session.SessionID);
+                if (ses != null)
+                {
+                    Session["user"] = ses.UserId;
+                    Session["book"] = "AMB";
+                    string connectionString = DataManager.OraConnString();
+                    SqlDataReader dReader;
+                    SqlConnection conn = new SqlConnection();
+                    conn.ConnectionString = connectionString;
+                    SqlCommand cmd = new SqlCommand();
+                    cmd.Connection = conn;
+                    cmd.CommandType = CommandType.Text;
+                    cmd.CommandText =
+                        "Select user_grp,[description],UserType,case when UserType=1 then 'Bangladesh' else 'Philippine' end AS[LoginCountry] from utl_userinfo where upper(user_name)=upper('" +
+                        Session["user"].ToString().ToUpper() + "') and status='A'";
+                    conn.Open();
+                    dReader = cmd.ExecuteReader();
+                    string wnot = "", userType = "";
+                    if (dReader.HasRows == true)
+                    {
+                        while (dReader.Read())
+                        {
+                            Session["userlevel"] = int.Parse(dReader["user_grp"].ToString());
+                            //Session["dept"] = dReader["dept"].ToString();
+                            wnot = "Welcome " + dReader["description"].ToString();
+                            Session["LoginCountry"] = dReader["LoginCountry"].ToString();
+                            userType = dReader["UserType"].ToString();
+                        }
+                        Session["wnote"] = wnot;
+                        cmd = new SqlCommand();
+                        cmd.Connection = conn;
+                        cmd.CommandType = CommandType.Text;
+                        //cmd.CommandText = "Select book_desc,company_address1,company_address2,separator_type from gl_set_of_books where book_name='" + Session["book"].ToString() + "' ";
+                        if (Convert.ToInt32(userType) == 2)
+                        {
+
+                            Session["bookMAN"] = "MAN";
+                        }
+                        else
+                        {
+                            Session["bookMAN"] = Session["book"].ToString();
+                        }
+                        cmd.CommandText = "Select book_desc,company_address1,company_address2,separator_type,ShotName from gl_set_of_books where book_name='" + Session["bookMAN"] + "' ";
+
+                        if (dReader.IsClosed == false)
+                        {
+                            dReader.Close();
+                        }
+                        dReader = cmd.ExecuteReader();
+                        if (dReader.HasRows == true)
+                        {
+                            while (dReader.Read())
+                            {
+                                Session["septype"] = dReader["separator_type"].ToString();
+                                Session["org"] = dReader["book_desc"].ToString();
+                                Session["add1"] = dReader["company_address1"].ToString();
+                                Session["add2"] = dReader["company_address2"].ToString();
+                            }
+                        }
+                    }
+                    dReader.Close();
+                    conn.Close();
+                }
+            }
+        }
+        ((Label)Page.Master.FindControl("lblLogin")).Text = Session["wnote"].ToString();
+        ((Label)Page.Master.FindControl("lblCountryName")).Text = Session["LoginCountry"].ToString();
+        ((LinkButton)Page.Master.FindControl("lbLogout")).Visible = true;
+        //try
+        //{
+        //    string pageName = DataManager.GetCurrentPageName();
+        //    string modid = PermisManager.getModuleId(pageName);
+        //    per = PermisManager.getUsrPermis(Session["user"].ToString().Trim().ToUpper(), modid);
+        //    if (per != null && per.AllowView == "Y")
+        //    {
+        //        ((Label)Page.Master.FindControl("lblLogin")).Text = Session["wnote"].ToString();
+        //        ((LinkButton)Page.Master.FindControl("lbLogout")).Visible = true;
+        //    }
+        //    else
+        //    {
+        //        Response.Redirect("Default.aspx?sid=sam");
+        //    }
+        //}
+        //catch
+        //{
+        //    Response.Redirect("Default.aspx?sid=sam");
+        //}
+        if (!IsPostBack)
+        {
+            RefreshAll();
+        }
+    }
+    private void RefreshAll()
+    {
+
+        txtDate.Attributes.Add("onBlur", "formatdate('" + txtDate.ClientID + "')");
+        txtReceiveDate.Attributes.Add("onBlur", "formatdate('" + txtReceiveDate.ClientID + "')");
+        txtDate.Text = txtBranchName.Text = txtRemarks.Text =txtUploadStatus.Text= string.Empty;
+        Updtl.Update();
+        txtDate.Text = DateTime.Now.ToString("dd/MM/yyyy");
+        double CurrencyRate = BankAndCashBlanceCheck.GetCurrency(BtnSave, txtDate, 0);
+        ViewState["CurrencyRate"] = CurrencyRate;
+        Session["UserType"] = IdManager.GetShowSingleValueString(" t.UserType", "t.USER_NAME", "UTL_USERINFO t",
+            Session["user"].ToString());
+        //txtReceiveDate.Text = "";
+        PnlDtl.Visible = false;
+        dgReceiveDtl.DataSource = null;
+        dgReceiveDtl.DataBind();
+        ViewState["StockDtl"] = null;
+        lblMstID.Text = "";
+        dgHistory.DataSource = null ;
+        dgHistory.DataBind();
+        PnlMst.Visible = false;
+        DataTable dtItemsSummery = _aDayClosingSaleSummaryManager.GetDayClosingItemsSummery("");
+        dgHistory.DataSource = dtItemsSummery;
+        dgHistory.DataBind();
+        PnlMst.Visible = BtnSave.Enabled = true;
+        
+    }
+    protected void dgHistory_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        PnlMst.Visible = false;
+        PnlDtl.Visible = true;
+        lblMstID.Text = dgHistory.SelectedRow.Cells[1].Text;
+        txtBranchName.Text = dgHistory.SelectedRow.Cells[3].Text;
+        txtDate.Text = dgHistory.SelectedRow.Cells[4].Text;
+        hfBranchID.Value = dgHistory.SelectedRow.Cells[5].Text;
+        hfCostingPrice.Value = dgHistory.SelectedRow.Cells[7].Text;
+        txtUploadStatus.Text = dgHistory.SelectedRow.Cells[6].Text;
+        hfSalesAmount.Value = dgHistory.SelectedRow.Cells[8].Text;
+        if (!dgHistory.SelectedRow.Cells[9].Text.Equals("&nbsp;"))
+        {
+            txtRemarks.Text = dgHistory.SelectedRow.Cells[9].Text;
+        }
+        else
+        {
+            txtRemarks.Text = string.Empty;
+        }
+
+        DataTable dtDayClosingDtl = _aDayClosingSaleSummaryManager.GetItemDayClosingDtl(lblMstID.Text);
+        if (dtDayClosingDtl.Rows.Count > 0)
+        {
+            ViewState["StockDtl"] = dtDayClosingDtl;
+            dgReceiveDtl.DataSource = dtDayClosingDtl;
+            dgReceiveDtl.DataBind();
+        }
+    }
+    protected void BtnReset_Click(object sender, EventArgs e)
+    {
+        var pageName = System.IO.Path.GetFileName(Request.Url.ToString());
+        Response.Redirect(pageName);
+    }
+
+    protected void BtnSave_Click(object sender, EventArgs e)
+    {
+        if (txtUploadStatus.Text.Trim().Equals("Received"))
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "Warning",
+                "alert('You Already Recorded.\\ you can not Record again.\\n if you want to record again please contract your software provider.!!');",
+                true);
+            return;
+        }
+        var dtStockRecived = (DataTable)ViewState["StockDtl"];
+
+        if (string.IsNullOrEmpty(hfSalesAmount.Value.ToString()))
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "Warning",
+                "alert('No day closing sales in this date..!!');", true);
+            return;
+        }
+        if (string.IsNullOrEmpty(txtRemarks.Text))
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "Warning",
+                "alert('Please input your Remarks/Particulars..!!');", true);
+            return;
+        }
+        VouchMst vmst;
+        if (!string.IsNullOrEmpty(lblMstID.Text))
+        {
+            //if (dtStockRecived.Rows.Count > 0)
+            //{
+                string LogineBy = Session["user"].ToString();
+                //string LogineBy = "";
+                string VCH_SYS_NO = IdManager.GetShowSingleValueString("VCH_SYS_NO",
+                    "t1.PAYEE='ITBS' and SUBSTRING(t1.VCH_REF_NO,1,2)='CV' and t1.SERIAL_NO", "GL_TRANS_MST t1",
+                    lblMstID.Text.Trim());
+                vmst = VouchManager.GetVouchMst(VCH_SYS_NO.Trim());
+                if (vmst != null)
+                {
+                    vmst.Particulars = txtRemarks.Text.Replace("'", "");
+                }
+                else
+                {
+                    //*************************** Account Entry ******************//
+                    vmst = new VouchMst();
+                    vmst.FinMon = FinYearManager.getFinMonthByDate(txtDate.Text);
+                    vmst.ValueDate = txtDate.Text;
+                    vmst.VchCode = "02";
+                    vmst.RefFileNo = "";
+                    vmst.VolumeNo = "";
+                    vmst.SerialNo = lblMstID.Text;
+                    vmst.Particulars = txtRemarks.Text.Replace("'", "");
+                    vmst.ControlAmt = Convert.ToDouble(hfSalesAmount.Value)
+                        .ToString()
+                        .Replace(",", "")
+                        .Replace("'", "");
+                    vmst.Payee = "ITBS";
+                    vmst.CheckNo = "";
+                    vmst.CheqDate = "";
+                    vmst.CheqAmnt = "0";
+                    vmst.MoneyRptNo = "";
+                    vmst.MoneyRptDate = "";
+                    vmst.TransType = "R";
+                    vmst.BookName = "AMB";
+                    vmst.EntryUser = Session["user"].ToString();
+                    vmst.EntryDate = DateTime.Parse(DateTime.Now.ToString()).ToString("dd/MM/yyyy");
+                    vmst.VchSysNo = IdManager.GetNextID("gl_trans_mst", "vch_sys_no").ToString();
+                    vmst.VchRefNo = "CV-" + vmst.VchSysNo.ToString().PadLeft(10, '0');
+                    vmst.Status = "U";
+                    vmst.AuthoUserType = Session["userlevel"].ToString();
+                }
+                _aDayClosingSaleSummaryManager.SaveDayClosingItemsSummery(dtStockRecived, LogineBy, lblMstID.Text,
+                    ViewState["CurrencyRate"].ToString(), Session["UserType"].ToString(), vmst, txtDate.Text,
+                    hfBranchID.Value, hfCostingPrice.Value, txtUploadStatus.Text);
+                ScriptManager.RegisterClientScriptBlock((sender as Control), this.GetType(), "alert",
+                    "alert('Sales Record are saved sucessfully.!!!');", true);
+                BtnSave.Enabled = false;
+            //}
+            //else
+            //{
+            //    ScriptManager.RegisterClientScriptBlock((sender as Control), this.GetType(), "alert",
+            //        "alert('Input received items then saved.!!!');", true);
+            //}
+        }
+        else
+        {
+            ScriptManager.RegisterClientScriptBlock((sender as Control), this.GetType(), "alert",
+                "alert('Please Select Item..!!!');", true);
+        }
+    }
+
+    protected void btnPrint_Click(object sender, EventArgs e)
+    {
+        int sl=1;
+        string filename = "TR_" + "StockReceived-" + DateTime.Now.ToString("dd-MMM-yyyy");
+        Response.Clear();
+        Response.ContentType = "application/pdf";
+        Response.AddHeader("content-disposition", "attachment; filename=" + filename + ".pdf");
+        Document document = new Document(PageSize.A4.Rotate(), 20f, 20f, 30f, 30f);
+        PdfWriter writer = PdfWriter.GetInstance(document, Response.OutputStream);
+        document.Open();
+        Rectangle page = document.PageSize;
+        PdfPTable head = new PdfPTable(1);
+        head.TotalWidth = page.Width - 50;
+        Phrase phrase = new Phrase(Convert.ToDateTime(Session["date"]).ToString("dd/MM/yyyy"), new Font(Font.FontFamily.TIMES_ROMAN, 8));
+        PdfPCell c = new PdfPCell(phrase);
+
+        c.Border = Rectangle.NO_BORDER;
+        c.VerticalAlignment = Element.ALIGN_BOTTOM;
+        c.HorizontalAlignment = Element.ALIGN_RIGHT;
+        head.AddCell(c);
+        head.WriteSelectedRows(0, -1, 0, page.Height - document.TopMargin + head.TotalHeight + 20, writer.DirectContent);
+
+        PdfPCell cell;
+        byte[] logo = GlBookManager.GetGlLogo(Session["book"].ToString());
+        iTextSharp.text.Image gif = iTextSharp.text.Image.GetInstance(logo);
+        gif.Alignment = iTextSharp.text.Image.MIDDLE_ALIGN;
+        gif.ScalePercent(8f);
+
+        float[] titwidth = new float[2] { 10, 200 };
+        PdfPTable dth = new PdfPTable(titwidth);
+        dth.WidthPercentage = 100;
+
+        cell = new PdfPCell(gif);
+        cell.HorizontalAlignment = 1;
+        cell.VerticalAlignment = 1;
+        cell.Rowspan = 4;
+        cell.BorderWidth = 0f;
+        dth.AddCell(cell);
+        cell = new PdfPCell(new Phrase(Session["org"].ToString(), FontFactory.GetFont(FontFactory.TIMES_ROMAN, 12, iTextSharp.text.Font.BOLD)));
+        cell.HorizontalAlignment = 1;
+        cell.VerticalAlignment = 1;
+        //cell.Colspan = 7;
+        cell.BorderWidth = 0f;
+        dth.AddCell(cell);
+
+        cell = new PdfPCell(new Phrase(Session["add1"].ToString(), FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD)));
+        cell.HorizontalAlignment = 1;
+        cell.VerticalAlignment = 1;
+        //cell.Colspan = 7;
+        cell.BorderWidth = 0f;
+        //cell.FixedHeight = 20f;
+        dth.AddCell(cell);
+        cell = new PdfPCell(new Phrase(Session["add2"].ToString(), FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD)));
+        cell.HorizontalAlignment = 1;
+        cell.VerticalAlignment = 1;
+        //cell.Colspan = 7;
+        cell.BorderWidth = 0f;
+        //cell.FixedHeight = 20f;
+        dth.AddCell(cell);
+        cell = new PdfPCell(new Phrase("Stock Return For Branch : "+txtBranchName.Text, FontFactory.GetFont(FontFactory.TIMES_ROMAN, 14, iTextSharp.text.Font.BOLD)));
+        cell.HorizontalAlignment = 1;
+        cell.VerticalAlignment = 1;
+        //cell.Colspan = 7;
+        cell.BorderWidth = 0f;
+        //cell.FixedHeight = 30f;
+        dth.AddCell(cell);
+        document.Add(dth);
+
+        LineSeparator line = new LineSeparator(1, 100, null, Element.ALIGN_CENTER, -2);
+        document.Add(line);
+        PdfPTable dtempty = new PdfPTable(1);
+        cell = new PdfPCell(FormatHeaderPhrase(""));
+        cell.BorderWidth = 0f;
+        cell.FixedHeight = 20f;
+        dtempty.AddCell(cell);
+        document.Add(dtempty);
+
+          float[] item = new float[6] { 5, 20,25,17,18,15 };
+          PdfPTable itemTable = new PdfPTable(item);
+        dth.WidthPercentage = 100; 
+             
+        cell = new PdfPCell(FormatHeaderPhrase("SL."));
+        cell.HorizontalAlignment = 1;
+        cell.VerticalAlignment = 1;
+        itemTable.AddCell(cell);
+       
+
+        cell = new PdfPCell(FormatHeaderPhrase("Item Name"));
+        cell.HorizontalAlignment = 1;
+        cell.VerticalAlignment = 1;
+        itemTable.AddCell(cell);
+      
+
+          cell = new PdfPCell(FormatHeaderPhrase("Code"));
+          cell.HorizontalAlignment = 1;
+          cell.VerticalAlignment = 1;
+        itemTable.AddCell(cell);
+
+         cell = new PdfPCell(FormatHeaderPhrase("Transfer Quantity"));
+         cell.HorizontalAlignment = 1;
+         cell.VerticalAlignment = 1;
+        itemTable.AddCell(cell);
+
+         cell = new PdfPCell(FormatHeaderPhrase("Transfer Price"));
+         cell.HorizontalAlignment = 1;
+         cell.VerticalAlignment = 1;
+        itemTable.AddCell(cell);
+
+         cell = new PdfPCell(FormatHeaderPhrase("Received Quantity"));
+         cell.HorizontalAlignment = 1;
+         cell.VerticalAlignment = 1;
+        itemTable.AddCell(cell);
+
+        DataTable dt = ItemStockReceiveManager.GetItemStockDtl(lblMstID.Text);
+        
+       
+        foreach (DataRow dr in dt.Rows)
+        {
+            if (dr["DtlID"].ToString() != "")
+            {
+                
+                cell = new PdfPCell(FormatPhrase(sl.ToString()));
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                cell.BorderColor = BaseColor.LIGHT_GRAY;
+                itemTable.AddCell(cell);
+                //string GRN = "";
+                //if (Serial == 1)
+                //{ GRN = txtGRNODate.Text; }
+                cell = new PdfPCell(FormatPhrase(dr["ItemName"].ToString()));
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                cell.BorderColor = BaseColor.LIGHT_GRAY;
+                itemTable.AddCell(cell);
+
+
+                cell = new PdfPCell(FormatPhrase(dr["Code"].ToString()));
+                cell.HorizontalAlignment = 0;
+                cell.VerticalAlignment = 1;
+                cell.BorderColor = BaseColor.LIGHT_GRAY;
+                itemTable.AddCell(cell);
+
+                cell = new PdfPCell(FormatPhrase(dr["TransferQnty"].ToString()));
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                cell.BorderColor = BaseColor.LIGHT_GRAY;
+                itemTable.AddCell(cell);
+
+                cell = new PdfPCell(FormatPhrase(dr["TransferPrice"].ToString()));
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                cell.BorderColor = BaseColor.LIGHT_GRAY;
+                itemTable.AddCell(cell);
+
+               
+                if(string.IsNullOrEmpty(dr["ReceivedQuantity"].ToString()))
+                {
+                    dr["ReceivedQuantity"]="0";
+                    cell = new PdfPCell(FormatPhrase(Convert.ToDecimal(dr["ReceivedQuantity"]).ToString("N2")));
+                cell.HorizontalAlignment = 2;
+                cell.VerticalAlignment = 1;
+                cell.BorderColor = BaseColor.LIGHT_GRAY;
+                itemTable.AddCell(cell);
+                }
+                else
+                {
+                    cell = new PdfPCell(FormatPhrase(Convert.ToDecimal(dr["ReceivedQuantity"]).ToString("N2")));
+                cell.HorizontalAlignment = 2;
+                cell.VerticalAlignment = 1;
+                cell.BorderColor = BaseColor.LIGHT_GRAY;
+                itemTable.AddCell(cell);
+                }
+                
+
+                
+                sl++;
+            }
+        }
+
+        document.Add(itemTable);        
+        document.Close();
+        Response.Flush();
+        Response.End();
+    }
+
+    private static PdfPCell SignatureFormat(Document document, PdfPCell cell)
+    {
+        float[] widtl = new float[5] { 20, 20, 20, 20, 20 };
+        PdfPTable pdtsig = new PdfPTable(widtl);
+        pdtsig.WidthPercentage = 100;
+        cell = new PdfPCell(FormatPhrase(""));
+        cell.HorizontalAlignment = 1;
+        cell.VerticalAlignment = 1;
+        cell.Border = 0;
+        cell.Colspan = 5;
+        cell.FixedHeight = 40f;
+        cell.BorderColor = BaseColor.LIGHT_GRAY;
+        pdtsig.AddCell(cell);
+
+
+        cell = new PdfPCell(FormatPhrase("Prepared by"));
+        cell.HorizontalAlignment = 1;
+        cell.VerticalAlignment = 1;
+        cell.Border = 1;
+        cell.FixedHeight = 20f;
+        cell.BorderColor = BaseColor.LIGHT_GRAY;
+        pdtsig.AddCell(cell);
+
+        cell = new PdfPCell(FormatPhrase(""));
+        cell.HorizontalAlignment = 1;
+        cell.VerticalAlignment = 1;
+        cell.Border = 0;
+        cell.FixedHeight = 20f;
+        cell.BorderColor = BaseColor.LIGHT_GRAY;
+        pdtsig.AddCell(cell);
+        cell = new PdfPCell(FormatPhrase("Checked by"));
+        cell.HorizontalAlignment = 1;
+        cell.VerticalAlignment = 1;
+        cell.Border = 1;
+        cell.FixedHeight = 20f;
+        cell.BorderColor = BaseColor.LIGHT_GRAY;
+        pdtsig.AddCell(cell);
+
+        cell = new PdfPCell(FormatPhrase(""));
+        cell.HorizontalAlignment = 1;
+        cell.VerticalAlignment = 1;
+        cell.Border = 0;
+        cell.FixedHeight = 20f;
+        cell.BorderColor = BaseColor.LIGHT_GRAY;
+        pdtsig.AddCell(cell);
+        cell = new PdfPCell(FormatPhrase("Authorised by"));
+        cell.HorizontalAlignment = 1;
+        cell.VerticalAlignment = 1;
+        cell.Border = 1;
+        cell.FixedHeight = 20f;
+        cell.BorderColor = BaseColor.LIGHT_GRAY;
+        pdtsig.AddCell(cell);
+        document.Add(pdtsig);
+        return cell;
+    }
+    private static Phrase FormatPhrase(string value)
+    {
+        return new Phrase(value, FontFactory.GetFont(FontFactory.TIMES_ROMAN, 9));
+    }
+
+    private static Phrase FormatHeaderPhrase(string value)
+    {
+        return new Phrase(value, FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD));
+    }
+    protected void dgHistory_RowDataBound(object sender, GridViewRowEventArgs e)
+    {
+        try
+        {
+            if (e.Row.RowType == DataControlRowType.Header | e.Row.RowType == DataControlRowType.Footer)
+            {
+                e.Row.Cells[1].Attributes.Add("style", "display:none");
+                e.Row.Cells[2].Attributes.Add("style", "display:none");
+                e.Row.Cells[5].Attributes.Add("style", "display:none");
+                e.Row.Cells[7].Attributes.Add("style", "display:none");
+                //e.Row.Cells[9].Attributes.Add("style", "display:none");
+
+            }
+            else if (e.Row.RowType == DataControlRowType.DataRow)
+            {
+                e.Row.Cells[1].Attributes.Add("style", "display:none");
+                e.Row.Cells[2].Attributes.Add("style", "display:none");
+                e.Row.Cells[5].Attributes.Add("style", "display:none");
+                e.Row.Cells[7].Attributes.Add("style", "display:none");
+                //e.Row.Cells[9].Attributes.Add("style", "display:none");
+                if (e.Row.Cells[6].Text.Equals("Received"))
+                {
+                    e.Row.Cells[6].ForeColor = System.Drawing.Color.Green;
+                }
+                else
+                {
+                    e.Row.Cells[6].ForeColor = System.Drawing.Color.OrangeRed;
+                }
+            }
+        }
+        catch (FormatException fex)
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('" + fex.Message + "');", true);
+        }
+        catch (Exception ex)
+        {
+            if (ex.Message.Contains("Database"))
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Database Maintain Error. Contact to the Software Provider..!!');", true);
+            else
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('There is some problem to do the task. Try again properly.!!');", true);
+        }
+    }
+    protected void ibSearch_Click(object sender, EventArgs e)
+    {
+        RefreshAll();
+        if (!string.IsNullOrEmpty(txtReceiveDate.Text))
+        {
+            //DataTable dt = ItemStockReceiveManager.GetItemStockMst(txtReceiveDate.Text);
+            DataTable dtItemsSummery = _aDayClosingSaleSummaryManager.GetDayClosingItemsSummery(txtReceiveDate.Text);
+            dgHistory.DataSource = dtItemsSummery;
+            dgHistory.DataBind();
+            if (dtItemsSummery.Rows.Count > 0)
+            {
+                PnlDtl.Visible = false;
+                dgReceiveDtl.DataSource = null;
+                dgReceiveDtl.DataBind();
+                ViewState["StockDtl"] = null;
+                PnlMst.Visible = true;
+            }
+            else
+            {
+                ScriptManager.RegisterClientScriptBlock((sender as Control), this.GetType(), "alert", "alert('No Item Transfer This Date...!!!');", true);
+            }
+        }
+        else
+        {
+            ScriptManager.RegisterClientScriptBlock((sender as Control), this.GetType(), "alert", "alert('Input Received Date...!!!');", true);
+        }
+    }
+    protected void btnDelete_Click(object sender, EventArgs e)
+    {
+        VouchMst vmst;
+        var dtStockRecived = (DataTable)ViewState["StockDtl"];
+        if (!string.IsNullOrEmpty(lblMstID.Text))
+        {
+            //if (dtStockRecived.Rows.Count > 0)
+            //{
+            string LogineBy = Session["user"].ToString();
+            //string LogineBy = "";
+            string VCH_SYS_NO = IdManager.GetShowSingleValueString("VCH_SYS_NO",
+                "t1.PAYEE='ITBS' and SUBSTRING(t1.VCH_REF_NO,1,2)='CV' and t1.SERIAL_NO", "GL_TRANS_MST t1",
+                lblMstID.Text.Trim());
+            vmst = VouchManager.GetVouchMst(VCH_SYS_NO.Trim());
+            //if (vmst != null)
+            //{
+            //    vmst.Particulars = txtRemarks.Text.Replace("'", "");
+            //}
+            //else
+            //{
+            //    //*************************** Account Entry ******************//
+            //    vmst = new VouchMst();
+            //    vmst.FinMon = FinYearManager.getFinMonthByDate(txtDate.Text);
+            //    vmst.ValueDate = txtDate.Text;
+            //    vmst.VchCode = "02";
+            //    vmst.RefFileNo = "";
+            //    vmst.VolumeNo = "";
+            //    vmst.SerialNo = lblMstID.Text;
+            //    vmst.Particulars = txtRemarks.Text.Replace("'", "");
+            //    vmst.ControlAmt = Convert.ToDouble(hfSalesAmount.Value)
+            //        .ToString()
+            //        .Replace(",", "")
+            //        .Replace("'", "");
+            //    vmst.Payee = "ITBS";
+            //    vmst.CheckNo = "";
+            //    vmst.CheqDate = "";
+            //    vmst.CheqAmnt = "0";
+            //    vmst.MoneyRptNo = "";
+            //    vmst.MoneyRptDate = "";
+            //    vmst.TransType = "R";
+            //    vmst.BookName = "AMB";
+            //    vmst.EntryUser = Session["user"].ToString();
+            //    vmst.EntryDate = DateTime.Parse(DateTime.Now.ToString()).ToString("dd/MM/yyyy");
+            //    vmst.VchSysNo = IdManager.GetNextID("gl_trans_mst", "vch_sys_no").ToString();
+            //    vmst.VchRefNo = "CV-" + vmst.VchSysNo.ToString().PadLeft(10, '0');
+            //    vmst.Status = "U";
+            //    vmst.AuthoUserType = Session["userlevel"].ToString();
+            //}
+            _aDayClosingSaleSummaryManager.DeleteDayClosingItemsSummery(dtStockRecived, LogineBy, lblMstID.Text,
+                ViewState["CurrencyRate"].ToString(), Session["UserType"].ToString(), vmst, txtDate.Text,
+                hfBranchID.Value, hfCostingPrice.Value, txtUploadStatus.Text);
+
+            ScriptManager.RegisterClientScriptBlock((sender as Control), this.GetType(), "alert",
+                "alert('Sales Record are delete sucessfully.!!!');", true);
+            btnDelete.Enabled = false;
+            //}
+            //else
+            //{
+            //    ScriptManager.RegisterClientScriptBlock((sender as Control), this.GetType(), "alert",
+            //        "alert('Input received items then saved.!!!');", true);
+            //}
+        }
+        else
+        {
+            ScriptManager.RegisterClientScriptBlock((sender as Control), this.GetType(), "alert",
+                "alert('Please Select Item..!!!');", true);
+        }
+    }
+}

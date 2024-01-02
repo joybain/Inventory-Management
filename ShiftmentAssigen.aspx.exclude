@@ -1,0 +1,588 @@
+﻿<%@ Page Title="Shipment Assign-.SDL" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true" CodeFile="ShiftmentAssigen.aspx.cs" Inherits="ShiftmentAssigen" %>
+
+<asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
+    <div id="frmMainDiv" style="background-color:White; width:100%;">
+        
+        <table style="width:100%;">
+            <tr>
+                <td align="right" class="style1" style="height:14px; ">
+                    <table style="width: 100%">
+                        <tr>
+                            <td style="width: 25%;">
+                                &nbsp;</td>
+                            <td style="width:50%;">
+                                &nbsp;</td>
+                            <td style=" width:25%;">
+                                &nbsp;</td>
+                        </tr>
+                        <tr>
+                            <td colspan="3">
+        <ajaxtoolkit:TabContainer ID="tabVch" runat="server" Width="99%" ActiveTabIndex="1" 
+                    Font-Size="8pt">
+            <ajaxtoolkit:TabPanel ID="tpVchDtl" runat="server" HeaderText="Shipment Receiver">
+                <ContentTemplate>
+
+                    <table style="width: 100%">
+                        <tr>
+                            <td style="width:20%">
+                                &nbsp;</td>
+                            <td style="width:60%">
+                                &nbsp;</td>
+                            <td style="width:20%">
+                                &nbsp;</td>
+                        </tr>
+                        <tr>
+                            <td style="width:20%">
+                                &nbsp;</td>
+                            <td style="width:60%">
+                                <fieldset style=" text-align:left; vertical-align: top; border: solid 1px #8BB381;">
+                                    <legend style="color: maroon;"><b>Shipment Receiver</b></legend>
+                                    <table style="width: 100%">
+                                        <tr>
+                                            <td style="width: 25%; height: 33px;">
+                                                Receiver Name<asp:HiddenField ID="hfID" runat="server" />
+                                            </td>
+                                            <td style="width: 2%; font-weight: 700; height: 33px;" align="center">
+                                                :</td>
+                                            <td style="width: 50%; height: 33px;" align="left">
+                                                <asp:TextBox ID="txtSebderName" runat="server" Width="95%"></asp:TextBox>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </fieldset>
+                            </td>
+                            <td style="width:20%">
+                                &nbsp;</td>
+                        </tr>
+                        <tr>
+                            <td style="width:20%">
+                                &nbsp;</td>
+                            <td style="width:60%" align="center">
+                                <table>
+                                    <tr>
+                                        <td align="center" style="vertical-align:middle; height:100%;">
+                                            <asp:Button ID="btnDeleteShipSender" runat="server" CssClass="buttonclass" 
+                                                Height="35px" onclick="btnDeleteShipSender_Click" Text="Delete" Width="100px" />
+                                        </td>
+                                        <td align="center" style="vertical-align:middle;">
+                                            &nbsp;</td>
+                                        <td align="center" style="vertical-align:middle; height:100%;">
+                                            <asp:Button ID="btnSaveShipSender" runat="server" CssClass="buttonclass" 
+                                                Height="35px" onclick="btnSaveShipSender_Click" Text="Save" Width="100px" />
+                                        </td>
+                                        <td align="center" style="vertical-align:middle;">
+                                            <asp:Button ID="btnClearShipSender" runat="server" CssClass="buttonclass" 
+                                                Height="35px" onclick="btnClearShipSender_Click" Text="Clear" Width="100px" />
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                            <td style="width:20%">
+                                &nbsp;</td>
+                        </tr>
+                        <tr>
+                            <td style="width:20%">
+                                &nbsp;</td>
+                            <td style="width:60%">
+                                <asp:GridView ID="dgSender" runat="server" AutoGenerateColumns="False" 
+                                    CssClass="mGrid" onrowdatabound="dgSender_RowDataBound" 
+                                    onselectedindexchanged="dgSender_SelectedIndexChanged">
+                                    <Columns>
+                                        <asp:CommandField ShowSelectButton="True">
+                                        <ItemStyle Font-Bold="True" Width="5%" />
+                                        </asp:CommandField>
+                                        <asp:BoundField DataField="ID" HeaderText="ID">
+                                        <ItemStyle Width="5%" />
+                                        </asp:BoundField>
+                                        <asp:BoundField DataField="Name" HeaderText="Name">
+                                        <ItemStyle Width="25%" />
+                                        </asp:BoundField>
+                                    </Columns>
+                                </asp:GridView>
+                            </td>
+                            <td style="width:20%">
+                                &nbsp;</td>
+                        </tr>
+                        <tr>
+                            <td style="width:20%">
+                                &nbsp;</td>
+                            <td style="width:60%">
+                                &nbsp;</td>
+                            <td style="width:20%">
+                                &nbsp;</td>
+                        </tr>
+                    </table>
+
+                </ContentTemplate>
+            </ajaxtoolkit:TabPanel>                                            
+<ajaxtoolkit:TabPanel ID="tpVchHist" runat="server" HeaderText="Shipment Assign">
+    <ContentTemplate>
+      
+        <table style="width: 100%">
+            <tr>
+                <td style="width: 10%">
+                    &nbsp;</td>
+                <td style="width: 80%">
+                    <table style="width: 100%">
+                        <tr>
+                            <td style="width: 48%">
+                                <asp:TextBox ID="txtID" runat="server" Visible="False"></asp:TextBox>
+                            </td>
+                            <td style="width: 2%">
+                                &nbsp;</td>
+                            <td style="width: 48%">
+                                &nbsp;</td>
+                        </tr>
+                        <tr>
+                            <td style="width: 48%">
+                                  <fieldset style=" text-align:left; vertical-align: top; border: solid 1px #8BB381;">
+                                    <legend style="color: maroon;"><b>Shipment Assign</b></legend>
+                                    <table style="width:100%; font-size:8pt;">
+                                        <tr>
+                                            <td align="right" style="width: 26%; height: 33px">
+                                                Shipment No</td>
+                                            <td style="width: 17px; height: 33px" align="center">
+                                                :</td>
+                                            <td align="left" style="height: 33px">
+                                                <asp:TextBox ID="txtShiftmentNo" runat="server" CssClass="TextBox" 
+                                                    Height="20px" SkinID="tbPlain" 
+                                                    style="text-align:center" Width="98%"></asp:TextBox>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td align="right" style="width:26%; height: 34px;">
+                                                Shipment Date</td>
+                                            <td style="width: 17px; height: 34px;" align="center">
+                                                :</td>
+                                            <td align="left" style="height: 34px">
+                                                <asp:TextBox ID="txtShiftmentDate" runat="server" CssClass="TextBox" 
+                                                    Height="20px" SkinID="tbPlain" Width="98%"></asp:TextBox>
+                                                      <ajaxToolkit:CalendarExtender ID="Calendarextender1" runat="server" 
+                                                Format="dd/MM/yyyy" TargetControlID="txtShiftmentDate" Enabled="True" />
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td align="right" style="width:26%; height: 34px;" valign="top">
+                                                Remark&#39;s</td>
+                                            <td style="width: 17px; height: 34px;" align="center" valign="top">
+                                                :</td>
+                                            <td align="left" style="height: 34px">
+                                                <asp:TextBox ID="txtRemark" runat="server" CssClass="TextBox" TextMode="MultiLine"
+                                                    Height="100px" SkinID="tbPlain" Width="98%"></asp:TextBox>
+                                            
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td align="right" style="width:26%; height: 34px;">
+                                                Status</td>
+                                            <td style="width: 17px; height: 34px;" align="center">
+                                                :</td>
+                                            <td align="left" style="height: 34px">
+                                                <asp:RadioButtonList ID="rbStatus" runat="server" BorderStyle="Solid" 
+                                                    RepeatDirection="Horizontal">
+                                                    <asp:ListItem Selected="True" Value="2">Processing</asp:ListItem>
+                                                    <asp:ListItem Value="1">Complete</asp:ListItem>
+                                                </asp:RadioButtonList>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td align="right" style="width:26%; height: 34px; font-weight: 700;">
+                                                Duration(Days) </td>
+                                            <td style="width: 17px; height: 34px;" align="center">
+                                                :</td>
+                                            <td align="left" style="height: 34px">
+                                                <asp:TextBox ID="txtDuration" style="text-align: center;" placeholder="00" runat="server"></asp:TextBox>
+                                            </td>
+                                        </tr>
+                                        </table>
+                                </fieldset>
+                            </td>
+                            <td style="width: 2%">
+                                &nbsp;</td>
+                            <td style="width: 48%" valign="top" rowspan="2">
+                                <fieldset style=" text-align:left; vertical-align: top; border: solid 1px #8BB381;">
+                                <legend style="color: maroon;"><b>Add Shipment Receiver</b></legend>
+                                <table style="width: 100%">
+                                    <tr>
+                                        <td style="height: 22px; " colspan="2">
+                                            Search Shipment Receiver :<asp:HiddenField ID="hfSenderID" runat="server" />
+                                        </td>
+                                        <td style="width: 25%" align="center" rowspan="2">
+                                            <asp:ImageButton ID="ibAdd" runat="server" ImageUrl="~/img/add.jpg" 
+                                                Width="35px" onclick="ibAdd_Click" />
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="2">
+                                            <asp:TextBox ID="txtSearchSender" runat="server" CssClass="TextBox" placeHolder="Search Sender.."
+                                                Height="20px" SkinID="tbPlain" style="text-align:left" Width="100%" 
+                                                AutoPostBack="True" ontextchanged="txtSearchSender_TextChanged"></asp:TextBox>
+                                            <ajaxToolkit:AutoCompleteExtender ID="AutoCompleteExtender2" 
+                                                                              runat="server" CompletionInterval="20" 
+                                                                              CompletionSetCount="30" MinimumPrefixLength="2" ServiceMethod="GetSearchSenderDtl" 
+                                                                              ServicePath="~/AutoComplete.asmx" 
+                                                                              TargetControlID="txtSearchSender" DelimiterCharacters="" Enabled="True">
+                                            </ajaxToolkit:AutoCompleteExtender>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td align="center" colspan="3">
+                                            <asp:GridView ID="dgAddSender" runat="server" CssClass="mGrid" Width="100%" 
+                                                AutoGenerateColumns="False" onrowdatabound="dgAddSender_RowDataBound" 
+                                                onrowdeleting="dgAddSender_RowDeleting">
+                                                <Columns>
+                                                    <asp:TemplateField>
+                                                        <ItemTemplate>
+                                                        <asp:ImageButton ID="lbDelete" runat="server" CausesValidation="False" 
+                                                                             CommandName="Delete" ImageAlign="Middle" ImageUrl="~/img/delete11.png" 
+                                                                             OnClientClick="javascript:return window.confirm('are u really want to delete these data?')" 
+                                                                             Text="Delete" />
+                                                        </ItemTemplate>
+                                                         <ItemStyle Font-Size="8pt" HorizontalAlign="Center" Width="5%" />
+                                                    </asp:TemplateField>
+                                                    <asp:BoundField HeaderText="ID" DataField="ID">
+                                                        <ItemStyle Font-Size="8pt" HorizontalAlign="Left" Width="5%" />
+                                                    </asp:BoundField>
+                                                    <asp:BoundField HeaderText="Receiver Name" DataField="SenderName">
+                                                        <ItemStyle Font-Size="8pt" HorizontalAlign="Left" Width="50%" />
+                                                    </asp:BoundField>
+                                                </Columns>
+                                            </asp:GridView>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width: 35%">
+                                            &nbsp;</td>
+                                        <td style="width: 40%">
+                                            &nbsp;</td>
+                                        <td align="center" style="width: 25%">
+                                            &nbsp;</td>
+                                    </tr>
+                                </table>
+                                </fieldset>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="width: 48%" align="center">
+                                <table>
+                                    <tr>
+                                        <td align="center" style="vertical-align:middle; height:100%;">
+                                            <asp:Button ID="DeleteButton" runat="server" CssClass="buttonclass" 
+                                                        onclick="DeleteButton_Click" Text="Delete" Width="100px" Height="35px" />
+                                        </td>
+                                        <td align="center" style="vertical-align:middle;">
+                                            &nbsp;</td>
+                                        <td align="center" style="vertical-align:middle; height:100%;">
+                                            <asp:Button ID="btnSave" runat="server" CssClass="buttonclass" 
+                                                        onclick="btnSave_Click" Text="Save" Width="100px" Height="35px" />
+                                        </td>
+                                        <td align="center" style="vertical-align:middle;">
+                                            <asp:Button ID="CloseButton" runat="server" CssClass="buttonclass" 
+                                                        onclick="CloseButton_Click" Text="Clear" Width="100px" Height="35px" />
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                            <td style="width: 2%">
+                                &nbsp;</td>
+                        </tr>
+                        <tr>
+                            <td colspan="3">
+                                <asp:GridView ID="dgShiftment" runat="server" AllowPaging="True" 
+                                    AutoGenerateColumns="False" Caption="Shipment History" CssClass="mGrid" 
+                                    onpageindexchanging="dgShiftment_PageIndexChanging" 
+                                    onrowdatabound="dgShiftment_RowDataBound" 
+                                    onselectedindexchanged="dgShiftment_SelectedIndexChanged" PageSize="30" 
+                                    Width="100%">
+                                    <Columns>
+                                        <asp:CommandField ShowSelectButton="True">
+                                        <ItemStyle HorizontalAlign="Center" Width="5%" Font-Bold="True" />
+                                        </asp:CommandField>
+                                        <asp:BoundField DataField="ID" HeaderText="ID">
+                                            <ItemStyle Font-Bold="True" HorizontalAlign="Left" Width="5%" />
+                                        </asp:BoundField>
+                                        <asp:BoundField DataField="ShiftmentNO" HeaderText="Shipment No.">
+                                            <ItemStyle Font-Bold="True" HorizontalAlign="Left"  Width="25%" />
+                                        </asp:BoundField>
+                                        <asp:BoundField DataField="ShiftmentDate" HeaderText="Shipment Date">
+                                            <ItemStyle Font-Bold="True" HorizontalAlign="Center"  Width="25%" />
+                                        </asp:BoundField>
+                                        <asp:BoundField DataField="Status" HeaderText="Status">
+                                            <ItemStyle Font-Bold="True" HorizontalAlign="Center" Width="15%" />
+                                        </asp:BoundField>
+                                    </Columns>
+                                </asp:GridView>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td align="center" style="width: 48%">
+                                &nbsp;</td>
+                            <td style="width: 2%">
+                                &nbsp;</td>
+                            <td style="width: 48%">
+                                &nbsp;</td>
+                        </tr>
+                    </table>
+                </td>
+                <td style="width: 10%">
+                    &nbsp;</td>
+            </tr>
+        </table>
+      
+    </ContentTemplate>
+</ajaxtoolkit:TabPanel>
+            <ajaxToolkit:TabPanel ID="TabPanel1" runat="server" HeaderText="Shipment define to customer">
+            
+                <ContentTemplate>
+
+                    <table style="width: 100%">
+                        <tr>
+                            <td style="width: 20%">
+                                &nbsp;</td>
+                            <td style="width: 60%">
+                                &nbsp;</td>
+                            <td style="width: 20%">
+                                &nbsp;</td>
+                        </tr>
+                        <tr>
+                            <td style="width: 20%">
+                                &nbsp;</td>
+                            <td style="width: 60%">
+                                <fieldset style=" text-align:left; vertical-align: top; border: solid 1px #8BB381;">
+                                <legend style="color: maroon;"><b>Shipment Info</b></legend>
+                                <table style="width: 100%">
+                                    <tr>
+                                        <td style="width: 25%; height: 35px;">
+                                            Search Shipment No.<asp:HiddenField ID="hfShipmentID" runat="server" />
+                                        </td>
+                                        <td style="width: 4%; font-weight: 700; height: 35px;" align="center">
+                                            :</td>
+                                        <td style="width: 55%; height: 35px;">
+                                            <asp:TextBox ID="txtSearchShipment" runat="server" CssClass="TextBox" PlaceHolder="Search Shipment.."
+                                                Height="20px" SkinID="tbPlain" style="text-align:left" Width="98%" 
+                                                AutoPostBack="True" ontextchanged="txtSearchShipment_TextChanged"></asp:TextBox>
+                                            <ajaxToolkit:AutoCompleteExtender ID="txtShiftmentNo_AutoCompleteExtender" 
+                                                                              runat="server" CompletionInterval="20" 
+                                                CompletionSetCount="30" MinimumPrefixLength="2" ServiceMethod="GetShiftmentInfo" 
+                                                                              ServicePath="~/AutoComplete.asmx" 
+                                                TargetControlID="txtSearchShipment" DelimiterCharacters="" Enabled="True">
+                                            </ajaxToolkit:AutoCompleteExtender>
+                                        </td>
+                                        <td style="width: 4%; height: 35px;">
+                                            </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width: 25%; height: 28px;">
+                                            Search Receiver Name<asp:HiddenField ID="hfSenderIDWithShip" runat="server" />
+                                        </td>
+                                        <td align="center" style="width: 4%; font-weight: 700; height: 28px;">
+                                            :</td>
+                                        <td style="width: 55%; height: 28px;">
+                                            <asp:DropDownList ID="ddlSenderName" runat="server" AutoPostBack="True" 
+                                                Height="26px" onselectedindexchanged="ddlSenderName_SelectedIndexChanged" 
+                                                Width="100%">
+                                            </asp:DropDownList>
+                                        </td>
+                                        <td style="width: 4%; height: 28px;">
+                                        </td>
+                                    </tr>
+                                </table>
+                                </fieldset>
+                                <fieldset style=" text-align:left; vertical-align: top; border: solid 1px #8BB381;">
+                                    <legend style="color: maroon;"><b>Add Customer</b></legend>
+                                    <table style="width: 100%">
+                                        <tr>
+                                            <td style="width: 26%; height: 28px;">
+                                                Receiver Sub Name</td>
+                                            <td style="width: 4%; font-weight: 700; height: 28px;" align="center">
+                                                :</td>
+                                            <td style="width: 40%; height: 28px;">
+                                                <asp:TextBox ID="txtShipSubName" runat="server" Width="100%"></asp:TextBox>
+                                            </td>
+                                            <td style="width: 10%; height: 28px;" align="center">
+                                                &nbsp;</td>
+                                        </tr>
+                                        <tr>
+                                            <td style="width: 26%; height: 28px;">
+                                                Search Customer/Buyer<asp:HiddenField ID="hfCustomerID" runat="server" />
+                                            </td>
+                                            <td align="center" style="width: 4%; font-weight: 700; height: 28px;">
+                                                :</td>
+                                            <td style="width: 40%; height: 28px;">
+                                                <asp:TextBox ID="txtSearchCustomer" runat="server" AutoPostBack="True" 
+                                                    CssClass="TextBox" Height="20px" OnTextChanged="txtSearchCustomer_TextChanged" 
+                                                    PlaceHolder="Search Customer.." SkinID="tbPlain" style="text-align:left" 
+                                                    Width="100%"></asp:TextBox>
+                                                <ajaxToolkit:AutoCompleteExtender ID="txtCustomer_AutoCompleteExtender" 
+                                                    runat="server" CompletionInterval="20" CompletionSetCount="12" 
+                                                    DelimiterCharacters="" Enabled="True" MinimumPrefixLength="1" 
+                                                    ServiceMethod="GetCustomername_BD_PH" ServicePath="AutoComplete.asmx" 
+                                                    TargetControlID="txtSearchCustomer">
+                                                </ajaxToolkit:AutoCompleteExtender>
+                                            </td>
+                                            <td align="center" style="width: 10%; height: 28px;">
+                                                <asp:ImageButton ID="ibAddCustomer" runat="server" ImageUrl="~/img/add.jpg" 
+                                                    OnClick="ibAddCustomer_Click" Width="35px" />
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="4" style="height: 28px;">
+                                                <asp:GridView ID="dgDefineCustomer" runat="server" AutoGenerateColumns="False" 
+                                                    CssClass="mGrid" Width="100%" 
+                                                    onrowdatabound="dgDefineCustomer_RowDataBound" 
+                                                    onrowdeleting="dgDefineCustomer_RowDeleting">
+                                                    <Columns>
+                                                        <asp:TemplateField>
+                                                            <ItemTemplate>
+                                                                <asp:ImageButton ID="lbDelete0" runat="server" CausesValidation="False" 
+                                                                    CommandName="Delete" ImageAlign="Middle" ImageUrl="~/img/delete11.png" 
+                                                                    OnClientClick="javascript:return window.confirm('are u really want to delete these data?')" 
+                                                                    Text="Delete" />
+                                                            </ItemTemplate>
+                                                            <ItemStyle Font-Size="8pt" HorizontalAlign="Center" Width="5%" />
+                                                        </asp:TemplateField>
+                                                        <asp:BoundField HeaderText="ID" DataField="ID">
+                                                            <ItemStyle Font-Size="8pt" HorizontalAlign="Left" Width="5%" />
+                                                        </asp:BoundField>
+                                                        <asp:BoundField DataField="SubShiperName" HeaderText="Sender Sub Name">
+                                                            <ItemStyle Font-Size="8pt" HorizontalAlign="Left" Width="30%" />
+                                                        </asp:BoundField>
+                                                        <asp:BoundField DataField="CustomerName" HeaderText="Customer Name">
+                                                            <ItemStyle Font-Size="8pt" HorizontalAlign="Left" Width="40%" />
+                                                        </asp:BoundField>
+                                                    </Columns>
+                                                </asp:GridView>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </fieldset>
+                            </td>
+                            <td style="width: 20%">
+                                &nbsp;</td>
+                        </tr>
+                        <tr>
+                            <td style="width: 20%">
+                                &nbsp;</td>
+                            <td style="width: 60%" align="center">
+                                <table>
+                                    <tr>
+                                        <td align="center" style="vertical-align:middle; height:100%;">
+                                            <asp:Button ID="btnDeleteCustomer" runat="server" CssClass="buttonclass" 
+                                                Height="35px" OnClick="btnDeleteCustomer_Click" Text="Delete" 
+                                                Width="100px" />
+                                        </td>
+                                        <td align="center" style="vertical-align:middle;">
+                                            &nbsp;</td>
+                                        <td align="center" style="vertical-align:middle; height:100%;">
+                                            <asp:Button ID="btnSaveCustomer" runat="server" CssClass="buttonclass" 
+                                                Height="35px" OnClick="btnSaveCustomer_Click" Text="Save" Width="100px" />
+                                        </td>
+                                        <td align="center" style="vertical-align:middle;">
+                                            <asp:Button ID="btnClearCustomer" runat="server" CssClass="buttonclass" 
+                                                Height="35px" OnClick="btnClearCustomer_Click" Text="Clear" 
+                                                Width="100px" />
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                            <td style="width: 20%">
+                                &nbsp;</td>
+                        </tr>
+                        <tr>
+                            <td style="width: 20%">
+                                &nbsp;</td>
+                            <td style="width: 60%">
+                                <asp:GridView ID="dgHistorydgDefineCustomer" runat="server" AllowPaging="True" 
+                                    AutoGenerateColumns="False" CssClass="mGrid" 
+                                    OnPageIndexChanging="dgShiftment_PageIndexChanging" 
+                                    OnRowDataBound="dgShiftment_RowDataBound" 
+                                    OnSelectedIndexChanged="dgShiftment_SelectedIndexChanged" PageSize="30" 
+                                    Width="100%">
+                                    <Columns>
+                                        <asp:CommandField ShowSelectButton="True">
+                                        <ItemStyle Font-Bold="True" HorizontalAlign="Center" Width="5%" />
+                                        </asp:CommandField>
+                                        <asp:BoundField DataField="ID" HeaderText="ID">
+                                        <ItemStyle Font-Bold="True" HorizontalAlign="Left" Width="5%" />
+                                        </asp:BoundField>
+                                        <asp:BoundField DataField="ShiftmentNO" HeaderText="Shipment No.">
+                                        <ItemStyle Font-Bold="True" HorizontalAlign="Left" Width="25%" />
+                                        </asp:BoundField>
+                                        <asp:BoundField DataField="ShiftmentDate" HeaderText="Sender Name">
+                                        <ItemStyle Font-Bold="True" HorizontalAlign="Left" Width="25%" />
+                                        </asp:BoundField>
+                                    </Columns>
+                                </asp:GridView>
+                            </td>
+                            <td style="width: 20%">
+                                &nbsp;</td>
+                        </tr>
+                        <tr>
+                            <td style="width: 20%">
+                                &nbsp;</td>
+                            <td style="width: 60%">
+                                &nbsp;</td>
+                            <td style="width: 20%">
+                                &nbsp;</td>
+                        </tr>
+                    </table>
+
+                </ContentTemplate>
+            </ajaxToolkit:TabPanel>
+</ajaxtoolkit:TabContainer>
+
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="width: 25%;">
+                                &nbsp;</td>
+                            <td style="width:50%;">
+                                &nbsp;</td>
+                            <td style=" width:25%;">
+                                &nbsp;</td>
+                        </tr>
+                        <tr>
+                            <td style="width: 25%; height: 51px;">
+                                </td>
+                            <td style="width:50%; height: 51px;">
+                               
+                            </td>
+                            <td style=" width:25%; height: 51px;">
+                                </td>
+                        </tr>
+                        <tr>
+                            <td style="width: 25%;text-align: center">
+                                &nbsp;</td>
+                            <td style="width:50%;" align="center">
+                               
+                            </td>
+                            <td style=" width:25%;">
+                                &nbsp;</td>
+                        </tr>
+                        <tr>
+                            <td style="width: 25%;">
+                                &nbsp;</td>
+                            <td style="width:50%;" align="center">
+                                &nbsp;</td>
+                            <td style=" width:25%;">
+                                &nbsp;</td>
+                        </tr>
+                        <tr>
+                            <td style="width: 25%;">
+                                &nbsp;</td>
+                            <td style="width:50%;">
+                                &nbsp;</td>
+                            <td style=" width:25%;">
+                                &nbsp;</td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            <tr>
+                <td align="center" style="height:400px;" valign="top">
+                    &nbsp;</td>
+            </tr>
+        </table>
+    </div>
+</asp:Content>
+

@@ -1,0 +1,229 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using System.Data.OleDb;
+using System.Data;
+using Delve;
+using System.Data.SqlClient;
+
+public partial class frmExcelUploadSalesSummery : System.Web.UI.Page
+{
+   clsItemTransferStockManager aclsItemTransferStockManager = new clsItemTransferStockManager();
+    private static Permis per;
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        if (Session["user"] == null)
+        {
+            if (Session.SessionID != "" | Session.SessionID != null)
+            {
+                clsSession ses = clsSessionManager.getSession(Session.SessionID);
+                if (ses != null)
+                {
+                    Session["user"] = ses.UserId;
+                    Session["book"] = "AMB";
+                    string connectionString = DataManager.OraConnString();
+                    SqlDataReader dReader;
+                    SqlConnection conn = new SqlConnection();
+                    conn.ConnectionString = connectionString;
+                    SqlCommand cmd = new SqlCommand();
+                    cmd.Connection = conn;
+                    cmd.CommandType = CommandType.Text;
+                    cmd.CommandText =
+                        "Select user_grp,[description],UserType,case when UserType=1 then 'Bangladesh' else 'Philippine' end AS[LoginCountry] from utl_userinfo where upper(user_name)=upper('" +
+                        Session["user"].ToString().ToUpper() + "') and status='A'";
+                    conn.Open();
+                    dReader = cmd.ExecuteReader();
+                    string wnot = "", userType = "";
+                    if (dReader.HasRows == true)
+                    {
+                        while (dReader.Read())
+                        {
+                            Session["userlevel"] = int.Parse(dReader["user_grp"].ToString());
+                            //Session["dept"] = dReader["dept"].ToString();
+                            wnot = "Welcome " + dReader["description"].ToString();
+                            Session["LoginCountry"] = dReader["LoginCountry"].ToString();
+                            userType = dReader["UserType"].ToString();
+                        }
+                        Session["wnote"] = wnot;
+                        cmd = new SqlCommand();
+                        cmd.Connection = conn;
+                        cmd.CommandType = CommandType.Text;
+                        //cmd.CommandText = "Select book_desc,company_address1,company_address2,separator_type from gl_set_of_books where book_name='" + Session["book"].ToString() + "' ";
+                        if (Convert.ToInt32(userType) == 2)
+                        {
+
+                            Session["bookMAN"] = "MAN";
+                        }
+                        else
+                        {
+                            Session["bookMAN"] = Session["book"].ToString();
+                        }
+                        cmd.CommandText = "Select book_desc,company_address1,company_address2,separator_type,ShotName from gl_set_of_books where book_name='" + Session["bookMAN"] + "' ";
+
+                        if (dReader.IsClosed == false)
+                        {
+                            dReader.Close();
+                        }
+                        dReader = cmd.ExecuteReader();
+                        if (dReader.HasRows == true)
+                        {
+                            while (dReader.Read())
+                            {
+                                Session["septype"] = dReader["separator_type"].ToString();
+                                Session["org"] = dReader["book_desc"].ToString();
+                                Session["add1"] = dReader["company_address1"].ToString();
+                                Session["add2"] = dReader["company_address2"].ToString();
+                            }
+                        }
+                    }
+                    dReader.Close();
+                    conn.Close();
+                }
+            }
+        }
+        try
+        {
+            string pageName = DataManager.GetCurrentPageName();
+            string modid = PermisManager.getModuleId(pageName);
+            per = PermisManager.getUsrPermis(Session["user"].ToString().Trim().ToUpper(), modid);
+            if (per != null && per.AllowView == "Y")
+            {
+                ((Label)Page.Master.FindControl("lblLogin")).Text = Session["wnote"].ToString();
+                ((Label)Page.Master.FindControl("lblCountryName")).Text = Session["LoginCountry"].ToString();
+                ((LinkButton)Page.Master.FindControl("lbLogout")).Visible = true;
+            }
+            else
+            {
+                Response.Redirect("Home.aspx?sid=sam");
+            }
+        }
+        catch
+        {
+            Response.Redirect("Default.aspx?sid=sam");
+        }
+        if (!IsPostBack)
+        {
+            DropDownListValue();
+            txtTfDate.Text = DateTime.Now.ToString("dd/MM/yyyy");
+        }
+    }
+    private void DropDownListValue()
+    {
+        DataTable dt = IdManager.GetShowDataTable("select ID,BranchName from BranchInfo where Flag IS NULL");
+        ddlBranch.DataSource = dt;
+        ddlBranch.DataTextField = "BranchName";
+        ddlBranch.DataValueField = "ID";
+        ddlBranch.DataBind();
+        ddlBranch.Items.Insert(0, "");
+    }
+    protected void btnUpload_Click(object sender, EventArgs e)
+    {
+        if (ulBenExcel.HasFile)
+        {
+            System.IO.FileInfo files = new System.IO.FileInfo(MapPath(ulBenExcel.FileName));
+            if (files.Exists)
+            {
+                files.Delete();
+            }
+            ulBenExcel.SaveAs(Server.MapPath("~/Excel/" + ulBenExcel.FileName));
+            string connstr = "";
+            if (System.IO.Path.GetExtension(ulBenExcel.FileName) == ".xls")
+            {
+
+                connstr = "Provider=Microsoft.Jet.Oledb.4.0;Data Source=" + Server.MapPath("~/Excel/" + ulBenExcel.FileName) + @";Extended Properties=""Excel 8.0;  IMEX=1; HDR=NO;TypeGuessRows=1;ImportMixedTypes=Text""";
+            }
+            else if (System.IO.Path.GetExtension(ulBenExcel.FileName) == ".xlsx")
+            {
+
+                connstr = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" + Server.MapPath("~/Excel/" + ulBenExcel.FileName) + @";Extended Properties=""Excel 12.0;  IMEX=1; HDR=NO;TypeGuessRows=1;ImportMixedTypes=Text""";
+
+            }
+            OleDbConnection conn = new OleDbConnection(connstr);
+            conn.Open();
+            var sheetNames = conn.GetSchema("Tables");
+            var name = "";
+            foreach (DataRow row in sheetNames.Rows)
+            {
+                name = row["TABLE_NAME"].ToString();
+                break;
+            }
+            string strSQL = "SELECT * FROM [" + name + "]";
+            OleDbCommand cmd = new OleDbCommand(strSQL, conn);
+            DataSet ds = new DataSet();
+            OleDbDataAdapter da = new OleDbDataAdapter(cmd);
+            da.Fill(ds);
+            if (ds.Tables[0].Rows.Count > 0)
+            {
+                dgHistory.DataSource = ds.Tables[0];
+                ViewState["Result"] = ds.Tables[0];
+                dgHistory.DataBind();
+               // dgHistory.Columns[0].ItemStyle.HorizontalAlign = HorizontalAlign.Center;
+                //dgHistory.Rows[0].Visible = false;                
+            }           
+        }
+    }
+    protected void btnSaveData_Click(object sender, EventArgs e)
+    {
+        if (string.IsNullOrEmpty(ddlBranch.SelectedItem.Text))
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Select Branch.!!');", true);
+            txtTfDate.Focus();
+            return;
+        }
+        if (string.IsNullOrEmpty(txtTfDate.Text))
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Input Date.!!');", true);
+            txtTfDate.Focus();
+            return;
+        }
+        int Count = IdManager.GetShowSingleValueInt("COUNT(*)", "convert(date,[Date],103)=convert(date,'" + txtTfDate.Text + "',103) AND BranchID", "ItemsBranchWiseSalesSummery", ddlBranch.SelectedValue);
+        if (Count > 0)
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('alrady upload this branch sales stock on Current date.');", true);
+            return;
+        }
+        if (ViewState["Result"] != null)
+        {
+            DataTable dt = (DataTable)ViewState["Result"];
+            if (dt.Rows.Count > 0)
+            {
+                if (ddlBranch.SelectedValue.Equals(dt.Rows[1]["F10"].ToString()))
+                {
+                    clsItemTransferStockManager.GetUpdateStock(dt, "", ddlBranch.SelectedValue, txtTfDate.Text, txtRemark.Text);
+                    ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Record is/are Saved Sucessfully..!!');", true);
+                    ddlBranch.SelectedIndex = -1;
+                    txtTfDate.Text = DateTime.Now.ToString("dd/MM/yyyy");
+                    txtRemark.Text = "";
+                }
+                else
+                {
+                    ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('This Excel file not excess this branch.\\n Please select correct branch and save .!!');", true);
+                    return;  
+                }
+            }
+            else
+            {
+                ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Please upload File then save.!!');", true);
+                return;               
+            }
+        }
+    }
+    protected void dgHistory_RowDataBound(object sender, GridViewRowEventArgs e)
+    {
+        if (e.Row.RowType == DataControlRowType.DataRow)
+        { 
+            if (e.Row.Cells[0].Text.Equals("Code"))
+            {
+                e.Row.Visible = false;
+            }
+        }
+    }
+    protected void btnClear_Click(object sender, EventArgs e)
+    {
+        var pageName = System.IO.Path.GetFileName(Request.Url.ToString());
+        Response.Redirect(pageName);
+    }
+}

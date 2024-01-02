@@ -1,0 +1,97 @@
+﻿<%@ Page Title="Set Authorization Level" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true" CodeFile="frmSetAuthLevel.aspx.cs" Inherits="frmSetAuthLevel" Theme="Themes" %>
+
+<asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
+<div id="frmMainDiv" style="background-color:White; width:100%;">   
+
+<table style="width:100%;">
+<tr>
+<td style="width:1%;"></td>
+<td style="width:98%; margin-top:1em;" align="center"> 
+<table style="width:100%;">
+<tr>
+<td style="width:15%;">
+<asp:Label ID="lblDept" runat="server" Font-Size="9pt" Width="100%">Office ID & Name</asp:Label>  
+</td>
+<td style="width:20%;">
+<asp:TextBox SkinId="tbPlain" ID="txtDept" runat="server" Width="95%" 
+        CssClass="tbc" Font-Size="8pt" MaxLength="9" AutoPostBack="True" 
+        ontextchanged="txtDept_TextChanged" ></asp:TextBox>   
+</td>
+<td style="width:65%;">
+<asp:TextBox SkinId="tbPlain" ID="txtDeptName" runat="server" Width="99%" CssClass="tbl" Font-Size="8pt" MaxLength="150" Enabled="false" ></asp:TextBox>   
+</td>
+</tr>
+</table>
+<asp:GridView CssClass="mGrid" PagerStyle-CssClass="pgr"  AlternatingRowStyle-CssClass="alt" ID="dgMsr" runat="server" AutoGenerateColumns="false" Font-Size="9pt" ShowFooter="false"
+        onrowcancelingedit="dgMsr_RowCancelingEdit" BorderColor="LightGray" onrowediting="dgMsr_RowEditing" 
+        onrowupdating="dgMsr_RowUpdating" OnRowCommand = "dgMsr_RowCommand">
+<Columns>
+<asp:TemplateField  ItemStyle-Width="120px" ItemStyle-HorizontalAlign="Center" ItemStyle-Height="20px">
+<ItemTemplate>
+<asp:LinkButton ID="lbBrkEdit" runat="server" CausesValidation="False" CommandName="Edit" Text="Edit" ></asp:LinkButton>
+<asp:LinkButton ID="lbAddNew" runat="server" CausesValidation="False" CommandName="Add" Text="New"></asp:LinkButton>  
+</ItemTemplate>
+<EditItemTemplate>
+<asp:LinkButton ID="lbBrkUpdate" runat="server" CausesValidation="False" CommandName="Update" Text="Update"></asp:LinkButton> 
+<asp:LinkButton ID="lbBrkCancel" runat="server" CausesValidation="False" CommandName="Cancel" Text="Cancel"></asp:LinkButton>
+</EditItemTemplate>
+<FooterTemplate>
+  <asp:LinkButton ID="lbBrkInsert" runat="server" CausesValidation="True" CommandName="Insert" Text="Insert" ></asp:LinkButton> 
+  <asp:LinkButton ID="lbBrkCancel1" runat="server" CausesValidation="False" CommandName="Cancel" Text="Cancel"></asp:LinkButton>
+</FooterTemplate>
+</asp:TemplateField>
+
+ <asp:TemplateField  HeaderText="Module ID" ItemStyle-Width="200px" ItemStyle-HorizontalAlign="Left"
+  FooterStyle-HorizontalAlign="Center">
+ <ItemTemplate>
+ <asp:Label ID="lblModId" runat="server" Text='<% # Eval("mod_desc") %>' Width="200px" Font-Size="8pt"></asp:Label>
+ </ItemTemplate>
+ <EditItemTemplate>
+ <asp:DropDownList SkinId="ddlPlain"  ID="ddlModId" runat="server" Width="200px" Font-Size="8pt" 
+  DataSource='<%#PopulateModules()%>' DataTextField="mod_desc" DataValueField="mod_id" >
+ </asp:DropDownList>
+ </EditItemTemplate>
+ <FooterTemplate>
+ <asp:DropDownList SkinId="ddlPlain"  ID="ddlModId" runat="server" Width="200px" Font-Size="8pt" 
+  DataSource='<%#PopulateModules()%>' DataTextField="mod_desc" DataValueField="mod_id" >
+ </asp:DropDownList>
+ </FooterTemplate>
+ </asp:TemplateField>
+  
+ <asp:TemplateField  HeaderText="Max Authorization Level" ItemStyle-Width="200px" ItemStyle-HorizontalAlign="Left"
+  FooterStyle-HorizontalAlign="Center">
+ <ItemTemplate>
+ <asp:Label ID="lblAuthLevel" runat="server" Text='<% # Eval("auth_level_desc") %>' Width="200px" Font-Size="8pt"></asp:Label>
+ </ItemTemplate>
+ <EditItemTemplate>
+ <asp:DropDownList SkinId="ddlPlain"  ID="ddlAuthLevel" runat="server" Width="200px" Font-Size="8pt" >
+ <asp:ListItem></asp:ListItem>
+  <asp:ListItem Text="Operator" Value="1"></asp:ListItem> 
+  <asp:ListItem Text="Supervisor" Value="2"></asp:ListItem>
+  <asp:ListItem Text="Evaluator" Value="3"></asp:ListItem>
+  <asp:ListItem Text="Administrator" Value="4"></asp:ListItem>
+ </asp:DropDownList>
+ </EditItemTemplate>
+ <FooterTemplate>
+ <asp:DropDownList SkinId="ddlPlain"  ID="ddlAuthLevel" runat="server" Width="200px" Font-Size="8pt">
+ <asp:ListItem></asp:ListItem>
+  <asp:ListItem Text="Operator" Value="1"></asp:ListItem> 
+  <asp:ListItem Text="Supervisor" Value="2"></asp:ListItem>
+  <asp:ListItem Text="Evaluator" Value="3"></asp:ListItem>
+  <asp:ListItem Text="Administrator" Value="4"></asp:ListItem>
+ </asp:DropDownList>
+ </FooterTemplate>
+ </asp:TemplateField>
+ </Columns>
+                        <RowStyle BackColor="White" />                      
+                        <PagerStyle BackColor="LightGray" ForeColor="Black" HorizontalAlign="Center" />
+                        <HeaderStyle BackColor="LightGray" Font-Bold="True" ForeColor="Black" />
+                        <AlternatingRowStyle BackColor="" />
+ </asp:GridView>
+ </td>
+ <td style="width:1%;"></td>
+</tr>
+</table>
+</div>  
+</asp:Content>
+

@@ -1,0 +1,215 @@
+﻿using System;
+using System.Collections;
+using System.Configuration;
+using System.Data;
+using System.Data.SqlClient;
+using System.Linq;
+using System.Web;
+using System.Web.Security;
+using System.Web.UI;
+using System.Web.UI.HtmlControls;
+using System.Web.UI.WebControls;
+using System.Web.UI.WebControls.WebParts;
+using System.Xml.Linq;
+using Delve;
+
+
+public partial class ItemInfo : System.Web.UI.Page
+{
+    private static DataTable dtmsr = new DataTable();
+    private static Permis per;
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        if (Session["user"] == null)
+        {
+            if (Session.SessionID != "" | Session.SessionID != null)
+            {
+                clsSession ses = clsSessionManager.getSession(Session.SessionID);
+                if (ses != null)
+                {
+                    Session["user"] = ses.UserId;
+                    Session["book"] = "AMB";
+                    string connectionString = DataManager.OraConnString();
+                    SqlDataReader dReader;
+                    SqlConnection conn = new SqlConnection();
+                    conn.ConnectionString = connectionString;
+                    SqlCommand cmd = new SqlCommand();
+                    cmd.Connection = conn;
+                    cmd.CommandType = CommandType.Text;
+                    cmd.CommandText =
+                        "Select user_grp,[description],UserType,case when UserType=1 then 'Bangladesh' else 'Philippine' end AS[LoginCountry] from utl_userinfo where upper(user_name)=upper('" +
+                        Session["user"].ToString().ToUpper() + "') and status='A'";
+                    conn.Open();
+                    dReader = cmd.ExecuteReader();
+                    string wnot = "", userType = "";
+                    if (dReader.HasRows == true)
+                    {
+                        while (dReader.Read())
+                        {
+                            Session["userlevel"] = int.Parse(dReader["user_grp"].ToString());
+                            //Session["dept"] = dReader["dept"].ToString();
+                            wnot = "Welcome " + dReader["description"].ToString();
+                            Session["LoginCountry"] = dReader["LoginCountry"].ToString();
+                            userType = dReader["UserType"].ToString();
+                        }
+                        Session["wnote"] = wnot;
+                        cmd = new SqlCommand();
+                        cmd.Connection = conn;
+                        cmd.CommandType = CommandType.Text;
+                        //cmd.CommandText = "Select book_desc,company_address1,company_address2,separator_type from gl_set_of_books where book_name='" + Session["book"].ToString() + "' ";
+                        if (Convert.ToInt32(userType) == 2)
+                        {
+
+                            Session["bookMAN"] = "MAN";
+                        }
+                        else
+                        {
+                            Session["bookMAN"] = Session["book"].ToString();
+                        }
+                        cmd.CommandText = "Select book_desc,company_address1,company_address2,separator_type,ShotName from gl_set_of_books where book_name='" + Session["bookMAN"] + "' ";
+
+                        if (dReader.IsClosed == false)
+                        {
+                            dReader.Close();
+                        }
+                        dReader = cmd.ExecuteReader();
+                        if (dReader.HasRows == true)
+                        {
+                            while (dReader.Read())
+                            {
+                                Session["septype"] = dReader["separator_type"].ToString();
+                                Session["org"] = dReader["book_desc"].ToString();
+                                Session["add1"] = dReader["company_address1"].ToString();
+                                Session["add2"] = dReader["company_address2"].ToString();
+                            }
+                        }
+                    }
+                    dReader.Close();
+                    conn.Close();
+                }
+            }
+        }
+        try
+        {
+            string pageName = DataManager.GetCurrentPageName();
+            string modid = PermisManager.getModuleId(pageName);
+            per = PermisManager.getUsrPermis(Session["user"].ToString().Trim().ToUpper(), modid);
+            if (per != null && per.AllowView == "Y")
+            {
+                ((Label)Page.Master.FindControl("lblLogin")).Text = Session["wnote"].ToString();
+                ((Label)Page.Master.FindControl("lblCountryName")).Text = Session["LoginCountry"].ToString();
+                ((LinkButton)Page.Master.FindControl("lbLogout")).Visible = true;
+            }
+            else
+            {
+                Response.Redirect("Home.aspx?sid=sam");
+            }
+        }
+        catch
+        {
+            Response.Redirect("Default.aspx?sid=sam");
+        } 
+        if (!IsPostBack)
+        {
+            ddlMeasure.DataSource = PopulateMeasure();
+            ddlMeasure.DataBind();
+            dgItemMst.DataSource = ItemManager.GetItemGrid();
+            dgItemMst.DataBind();
+        }
+    }
+    
+    public DataTable PopulateMeasure()
+    {
+        dtmsr = ItemManager.GetMeasure();
+        DataRow dr = dtmsr.NewRow();
+        dtmsr.Rows.InsertAt(dr, 0);
+        return dtmsr;
+    }
+
+    protected void btnClear_Click(object sender, EventArgs e)
+    {
+        Response.Redirect("~/ItemInfo.aspx");
+    }
+    protected void btnDelete_Click(object sender, EventArgs e)
+    {
+        if (txtItemCode.Text != "")
+        {
+            ItemManager.DeleteItems(txtItemCode.Text);
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Records are deleted successfully!!');", true);
+            dgItemMst.DataSource = ItemManager.GetItemGrid();
+            dgItemMst.DataBind();
+            clearFields();
+        }
+        else
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Please select item first!!');", true);
+        }
+    }
+    protected void btnSave_Click(object sender, EventArgs e)
+    {
+        if (txtItemCode.Text == "")
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Item Code cannot be null!!');", true);
+            return;
+        }
+        Items itm = ItemManager.GetItem(txtItemCode.Text);
+        if (itm == null)
+        {
+            itm = new Items();
+            itm.ItemCode = txtItemCode.Text;
+            itm.ItemDescbang = txtItemDescbang.Text;
+            itm.ItemDesc = txtItemDesc.Text;
+            itm.MsrCode = ddlMeasure.SelectedValue;
+            itm.ItemRate = txtItemRate.Text;
+            ItemManager.CreateItems(itm);
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Records are created successfully!!');", true);
+        }
+        else
+        {
+            if (itm.ItemDesc != txtItemDesc.Text | itm.MsrCode != ddlMeasure.SelectedValue | 
+                itm.ItemRate != txtItemRate.Text )
+            {
+                itm.ItemDesc = txtItemDesc.Text;
+                itm.ItemDescbang = txtItemDescbang.Text;
+                itm.MsrCode = ddlMeasure.SelectedValue;
+                itm.ItemRate = txtItemRate.Text;
+                ItemManager.UpdateItems(itm);
+                ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Records are updated successfully!!');", true);
+            }
+            else
+            {
+                ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('No changes to save!!');", true);
+            }
+        }
+        clearFields();        
+        dgItemMst.DataSource = ItemManager.GetItemGrid();
+        dgItemMst.PageIndex = dgItemMst.PageIndex;
+        dgItemMst.DataBind();
+    }
+    protected void dgItemMst_PageIndexChanging(object sender, GridViewPageEventArgs e)
+    {
+        dgItemMst.DataSource = ItemManager.GetItemGrid();
+        dgItemMst.PageIndex = e.NewPageIndex;
+        dgItemMst.DataBind();
+    }
+    protected void dgItemMst_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        Items itm = ItemManager.GetItem(dgItemMst.SelectedRow.Cells[1].Text.Trim());
+        if (itm != null)
+        {
+            txtItemCode.Text = itm.ItemCode;
+            txtItemDesc.Text = itm.ItemDesc;
+            txtItemDescbang.Text = itm.ItemDescbang;
+            ddlMeasure.SelectedValue = itm.MsrCode;
+            txtItemRate.Text = itm.ItemRate;
+        }
+    }
+    private void clearFields()
+    {
+        txtItemCode.Text = "";
+        txtItemDescbang.Text = "";
+        txtItemDesc.Text = "";
+        ddlMeasure.SelectedIndex = -1;
+        txtItemRate.Text = "";
+    }
+}

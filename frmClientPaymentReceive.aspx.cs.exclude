@@ -1,0 +1,1172 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using Delve;
+using System.Data;
+using sales;
+using System.Data.SqlClient;
+using iTextSharp.text;
+using iTextSharp.text.pdf;
+using iTextSharp.text.pdf.draw;
+
+public partial class frmClientPaymentReceive : System.Web.UI.Page
+{
+    private static Permis per;
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        if (Session["user"] == null)
+        {
+            if (Session.SessionID != "" | Session.SessionID != null)
+            {
+                clsSession ses = clsSessionManager.getSession(Session.SessionID);
+                if (ses != null)
+                {
+                    Session["user"] = ses.UserId;
+                    Session["book"] = "AMB";
+                    string connectionString = DataManager.OraConnString();
+                    SqlDataReader dReader;
+                    SqlConnection conn = new SqlConnection();
+                    conn.ConnectionString = connectionString;
+                    SqlCommand cmd = new SqlCommand();
+                    cmd.Connection = conn;
+                    cmd.CommandType = CommandType.Text;
+                    cmd.CommandText =
+                        "Select user_grp,[description],UserType,case when UserType=1 then 'Bangladesh' else 'Philippine' end AS[LoginCountry] from utl_userinfo where upper(user_name)=upper('" +
+                        Session["user"].ToString().ToUpper() + "') and status='A'";
+                    conn.Open();
+                    dReader = cmd.ExecuteReader();
+                    string wnot = "";
+                    if (dReader.HasRows == true)
+                    {
+                        while (dReader.Read())
+                        {
+                            Session["userlevel"] = int.Parse(dReader["user_grp"].ToString());
+                            //Session["dept"] = dReader["dept"].ToString();
+                            wnot = "Welcome " + dReader["description"].ToString();
+                        }
+                        Session["wnote"] = wnot;
+                        Session["LoginCountry"] = dReader["LoginCountry"].ToString();
+                        cmd = new SqlCommand();
+                        cmd.Connection = conn;
+                        cmd.CommandType = CommandType.Text;
+                        //cmd.CommandText = "Select book_desc,company_address1,company_address2,separator_type from gl_set_of_books where book_name='" + Session["book"].ToString() + "' ";
+                        if (Convert.ToInt32(dReader["UserType"].ToString()) == 2)
+                        {
+
+                            Session["bookMAN"] = "MAN";
+                        }
+                        else
+                        {
+                            Session["bookMAN"] = Session["book"].ToString();
+                        }
+                        cmd.CommandText = "Select book_desc,company_address1,company_address2,separator_type,ShotName from gl_set_of_books where book_name='" + Session["bookMAN"] + "' ";
+
+                        if (dReader.IsClosed == false)
+                        {
+                            dReader.Close();
+                        }
+                        dReader = cmd.ExecuteReader();
+                        if (dReader.HasRows == true)
+                        {
+                            while (dReader.Read())
+                            {
+                                Session["septype"] = dReader["separator_type"].ToString();
+                                Session["org"] = dReader["book_desc"].ToString();
+                                Session["add1"] = dReader["company_address1"].ToString();
+                                Session["add2"] = dReader["company_address2"].ToString();
+                            }
+                        }
+                    }
+                    dReader.Close();
+                    conn.Close();
+                }
+            }
+        }
+        try
+        {
+            string pageName = DataManager.GetCurrentPageName();
+            string modid = PermisManager.getModuleId(pageName);
+            per = PermisManager.getUsrPermis(Session["user"].ToString().Trim().ToUpper(), modid);
+            if (per != null && per.AllowView == "Y")
+            {
+                ((Label)Page.Master.FindControl("lblLogin")).Text = Session["wnote"].ToString();
+                ((Label)Page.Master.FindControl("lblCountryName")).Text = Session["LoginCountry"].ToString();
+                ((LinkButton)Page.Master.FindControl("lbLogout")).Visible = true;
+            }
+            else
+            {
+                Response.Redirect("Home.aspx?sid=sam");
+            }
+        }
+        catch
+        {
+            Response.Redirect("Default.aspx?sid=sam");
+        }
+ 
+        if (!IsPostBack)
+        {
+            btnSave.Enabled = btnDelete.Enabled = txtCustomerName.Enabled = dgPaymentHistory.Visible = true;
+            PaymentMethordVisible(false, false, false, false, false, false, false, false, false, false);
+            txtCustomerName.Visible = true; txtSearchCheque.Visible = lblCashDues.Visible =dgPaymentHistory.Visible= false;       
+            txtDate.Text = DateTime.Now.ToString("dd/MM/yyyy");
+            //DataTable dt = clsClientInfoManager.GetShowCustomerHistory("",rbReportType.SelectedValue);
+            //dgPaymentHistory.DataSource = dt;
+            //Session["CP"] = dt;
+            //dgPaymentHistory.DataBind();
+            string query2 = "select '' [bank_id],'' [bank_name]  union select [bank_id] ,[bank_name] from [bank_info] order by 1";
+            util.PopulationDropDownList(ddlBankName, "bank_info", query2, "bank_name", "bank_id");
+            DataTable dt1 = IdManager.GetShowDataTable("SELECT * FROM [FixGlCoaCode]");
+            Session["Cash_Code"] = dt1.Rows[0]["CashInHand_BD"].ToString();
+            Session["Cash_Name"] = dt1.Rows[0]["CashName_BD"].ToString();
+            txtPayment.Text = "0";
+            txtCustomerName.Focus();
+        }
+    }
+    protected void ddlPaymentMethord_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        if (ddlPaymentMethord.SelectedValue != "C")
+        {
+            PaymentMethordVisible(true, true, true, true, true, true, true, true, true, true);
+            ddlChequeStatus.SelectedIndex = 1;
+            UpdatePanel1.Update();
+        }
+        else
+        {
+            PaymentMethordVisible(false, false, false, false, false, false, false, false, false, false);
+            ddlChequeStatus.SelectedIndex = -1;
+            UpdatePanel1.Update();
+        }
+    }
+    protected void txtCustomerName_TextChanged(object sender, EventArgs e)
+    {
+        DataTable dt = clsClientInfoManager.GetShowSupplierOnPayment(txtCustomerName.Text);
+        if (dt.Rows.Count > 0)
+        {
+            lblCashDues.Text = "";
+            lblCode.Text = dt.Rows[0]["Code"].ToString();
+            lblGlCoa.Text = dt.Rows[0]["Gl_CoaCode"].ToString();
+            txtName.Text = dt.Rows[0]["ContactName"].ToString();
+            lblCusId.Text = dt.Rows[0]["ID"].ToString();           
+            lblCashDues.Visible = true;                      
+            txtCustomerName.Text = "";            
+            DataTable dt1 = clsClientInfoManager.GetShowCustomerHistory(dt.Rows[0]["ID"].ToString(),rbReportType.SelectedValue);
+            dgPaymentHistory.DataSource = dt1;
+            Session["CP"] = dt1;
+            dgPaymentHistory.DataBind();
+            txtPayment.Text = "0";            
+            txtPayment.Focus();
+            DataTable ddt = BankAndCashBlanceCheck.GetCheckBlanceInAcc("1-" + lblGlCoa.Text.Trim(), "AMB", DateTime.Now.ToString("dd/MM/yyyy"), DateTime.Now.ToString("dd/MM/yyyy"));
+            if (ddt.Rows.Count > 1)
+            {
+                DataRow lastRow = ddt.Rows[ddt.Rows.Count - 1];
+                lblBlance.Text ="Blance : "+ lastRow["bal"].ToString();
+            }
+            else
+            {
+                lblBlance.Text = "Blance : " + ddt.Rows[0]["bal"].ToString();
+            }
+            lblBlance.Visible =dgPaymentHistory.Visible= true;
+            UpdatePanel1.Update();
+            //UPSearch.Update();
+        }
+    }
+    protected void rbReportType_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        Clear("");
+        dgPaymentHistory.Visible = false;
+        //DataTable dt1 = clsClientInfoManager.GetShowCustomerHistory("", rbReportType.SelectedValue);
+        //dgPaymentHistory.DataSource = dt1;
+        //Session["CP"] = dt1;
+        //dgPaymentHistory.DataBind();
+        
+
+    }
+    protected void btnSave_Click(object sender, EventArgs e)
+    {
+        clsClientPaymentRec CP = clsClientInfoManager.GetShowSupplierPaymentInfo(txtId.Text);
+        if (CP != null)
+        {
+            if (txtName.Text == "")
+            {
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Enter Customer Name...!!');", true);
+            }
+            else if (Convert.ToDouble(txtPayment.Text) <= 0)
+            {
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Payment Amount (0)...!!');", true);
+            }
+            else if (ddlPaymentMethord.SelectedItem.Text == "")
+            {
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Select Payment Methord...!!');", true);
+            }
+            else if (ddlPaymentMethord.SelectedValue == "Q" && txtChqueNo.Text == "")
+            {
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Enter Cheque NO. .!!');", true);
+            }
+            else if (ddlPaymentMethord.SelectedValue == "Q" && ddlChequeStatus.SelectedItem.Text == "")
+            {
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Select Cheque Status..!!');", true);
+            }
+            else
+            {
+                if (per.AllowEdit == "Y")
+                {
+                    CP.ID = txtId.Text;
+                    CP.Customer_id = lblCusId.Text;
+                    CP.Date = txtDate.Text;
+                    CP.PayAmt = txtPayment.Text.Replace(",", "");
+                    CP.PaymentMethord = ddlPaymentMethord.SelectedValue;
+                    CP.BankId = ddlBankName.SelectedValue;
+                    CP.ChequeNo = txtChqueNo.Text;
+                    CP.ChequeDate = txtChqDate.Text;
+                    CP.Chk_Status = ddlChequeStatus.SelectedValue;
+                    CP.P_Type = rbReportType.SelectedValue;
+                    CP.INV_ID = lblInvoiceNo.Text;
+                    if (rbReportType.SelectedValue == "IP")
+                    {
+                        if (ddlPaymentMethord.SelectedValue.Trim() == "Q")
+                        {
+                            string st = IdManager.GetShowSingleValueString("Chk_Status", "ID", "CustomerPaymentReceive", txtId.Text);
+                            if (st.Trim() == "P" && ddlChequeStatus.SelectedValue.Trim() == "A")
+                            { CustomerAccCreditVoucherSave(); }
+                            else
+                            { CustomerAccCreditVoucherUpdate(); }
+                        }
+                        else
+                        { CustomerAccCreditVoucherUpdate(); }
+                    }
+                    else
+                    {
+                        SupplierAccDebitVoucherUpdate();
+                    }
+
+                    clsClientInfoManager.UpdateCustomerPaymentRecevie(CP);
+                    ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Record has been update successfully...!!');", true);
+                    btnSave.Enabled = false;
+                }
+                else
+                {
+                    ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('You are not Permitted this Step...!!');", true);
+                }
+            }
+        }
+        else
+        {
+            if (txtName.Text == "")
+            {
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Enter Customer Name...!!');", true);
+            }
+            else if (Convert.ToDouble(txtPayment.Text) <= 0)
+            {
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Payment Amount (0)...!!');", true);
+            }
+            else if (ddlPaymentMethord.SelectedItem.Text == "")
+            {
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Select Payment Methord...!!');", true);
+            }
+            else if (ddlPaymentMethord.SelectedValue == "Q" && txtChqueNo.Text == "")
+            {
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Enter Cheque NO. .!!');", true);
+            }
+            else if (ddlPaymentMethord.SelectedValue == "Q" && ddlChequeStatus.SelectedItem.Text == "")
+            {
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Select Cheque Status..!!');", true);
+            }
+            else
+            {
+                if (per.AllowAdd == "Y")
+                {
+                    CP = new clsClientPaymentRec();
+                    CP.Customer_id = lblCusId.Text;
+                    CP.Date = txtDate.Text;
+                    CP.PayAmt = txtPayment.Text.Replace(",", "");
+                    CP.PaymentMethord = ddlPaymentMethord.SelectedValue;
+                    CP.BankId = ddlBankName.SelectedValue;
+                    CP.ChequeNo = txtChqueNo.Text;
+                    CP.ChequeDate = txtChqDate.Text;
+                    CP.Chk_Status = ddlChequeStatus.SelectedValue;
+                    CP.P_Type = rbReportType.SelectedValue;
+                    CP.INV_ID = lblInvoiceNo.Text;
+                    clsClientInfoManager.SaveCustomerPaymentRecevie(CP);
+                    txtId.Text = IdManager.GetShowSingleValueIntNotParameter("TOP(1)[ID]", "[CustomerPaymentReceive] order by ID DESC").ToString();
+                    if (rbReportType.SelectedValue == "IP")
+                    {
+                        if (ddlPaymentMethord.SelectedValue == "Q")
+                        {
+                            if (ddlChequeStatus.SelectedValue == "A")
+                            {
+                                CustomerAccCreditVoucherSave();
+                            }
+                        }
+                        else
+                        {
+                            CustomerAccCreditVoucherSave();
+                        }
+                    }
+                    else
+                    {
+                        SupplierAccDebitVoucherSave();
+                    }
+                    ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Record has been saved successfully...!!');", true);
+                    btnSave.Enabled = false;
+                }
+                else
+                {
+                    ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('You are not Permitted this Step...!!');", true);
+                }
+            }
+        }
+    }
+    public void PaymentMethordVisible(bool LchequeNo, bool TchequeNo, bool LchequeDate, bool TchequeDate, bool Lbank, bool Tbank, bool LchkStatus, bool TchkStatus, bool CH1, bool CH2)
+    {
+        lblChequeNo.Visible = LchequeNo;
+        txtChqueNo.Visible = TchequeNo;
+        lblChequeDate.Visible = LchequeDate;
+        txtChqDate.Visible = TchequeDate;
+        ddlBankName.Visible = Tbank;
+        lblBank.Visible = Lbank;
+        lblChkStatus.Visible = LchkStatus;
+        ddlChequeStatus.Visible = TchkStatus;
+        CHK1.Visible = CH1;
+        CHK2.Visible = CH2;
+        txtChqueNo.Text = txtChqDate.Text = "";
+    }
+    private void CustomerAccCreditVoucherSave()
+    {
+        if (Convert.ToDouble(txtPayment.Text) > 0)
+        {           
+            VouchMst vmst = new VouchMst();
+            vmst.FinMon = FinYearManager.getFinMonthByDate(txtDate.Text);
+            vmst.ValueDate = txtDate.Text;
+            vmst.VchCode = "02";
+            vmst.RefFileNo = "";
+            vmst.VolumeNo = "";
+            vmst.SerialNo = txtId.Text;
+            vmst.Particulars = "Due Amount receive for Customer - ( " + txtId.Text + "-" + txtName.Text + " )";
+            vmst.ControlAmt = txtPayment.Text.Replace(",","");
+            vmst.Payee = "CP";
+            vmst.CheckNo = txtChqueNo.Text;
+            vmst.CheqDate = txtChqDate.Text;
+            if (ddlPaymentMethord.SelectedValue == "C") { vmst.CheqAmnt = txtPayment.Text.Replace(",",""); }
+            else { vmst.CheqAmnt = "0"; }
+            vmst.MoneyRptNo = "";
+            vmst.MoneyRptDate = "";
+            vmst.TransType = "R";
+            vmst.BookName = Session["book"].ToString();
+            vmst.EntryUser = Session["user"].ToString();
+            vmst.EntryDate = DateTime.Parse(DateTime.Now.ToString()).ToString("dd/MM/yyyy");
+            vmst.VchSysNo = IdManager.GetNextID("gl_trans_mst", "vch_sys_no").ToString();
+            vmst.VchRefNo = "CV-" + vmst.VchSysNo.ToString().PadLeft(10, '0');
+            vmst.Status = "U";
+            vmst.AuthoUserType = Session["userlevel"].ToString();
+            VouchManager.CreateVouchMst(vmst);
+            VouchDtl vdtl;
+            for (int i = 0; i < 2; i++)
+            {
+                if (i == 0)
+                {
+                    vdtl = new VouchDtl();
+                    vdtl.VchSysNo = vmst.VchSysNo;
+                    vdtl.ValueDate = txtDate.Text;
+                    vdtl.LineNo = "1";
+                    if (ddlPaymentMethord.SelectedValue != "C")
+                    {
+                        string BankCOA = IdManager.GetShowSingleValueString("gl_coa_code", "bank_id", "bank_info", ddlBankName.SelectedValue);
+                        vdtl.GlCoaCode = "1-" + BankCOA;
+                        vdtl.Particulars = "Cash at Bank: Amount Receive ";
+                        vdtl.AccType = VouchManager.getAccType("1-" + BankCOA);
+                    }
+                    else
+                    {
+                        vdtl.GlCoaCode = "1-" + Session["Cash_Code"];
+                        vdtl.Particulars = Session["Cash_Name"].ToString() + " : Amount Receive ";
+                        vdtl.AccType = VouchManager.getAccType("1-" + Session["Cash_Code"]);
+                    }
+
+                    vdtl.AmountDr = txtPayment.Text.Replace(",","");
+                    vdtl.AmountCr = "0";
+                    vdtl.Status = "U";
+                    vdtl.BookName = Session["book"].ToString();
+                    VouchManager.CreateVouchDtl(vdtl);
+                }
+                else if (i == 1)
+                {
+                    vdtl = new VouchDtl();
+                    vdtl.VchSysNo = vmst.VchSysNo;
+                    vdtl.ValueDate = txtDate.Text;
+                    vdtl.LineNo = "2";
+                    vdtl.GlCoaCode = "1-" + lblGlCoa.Text;
+                    vdtl.Particulars = "Customer Bill Pay ";
+                    vdtl.AccType = VouchManager.getAccType("1-" + lblGlCoa.Text);
+                    vdtl.AmountDr = "0";
+                    vdtl.AmountCr = txtPayment.Text.Replace(",","");
+                    vdtl.Status = "U";
+                    vdtl.BookName = Session["book"].ToString();
+                    VouchManager.CreateVouchDtl(vdtl);
+                }
+            }
+        }
+    }
+    private void CustomerAccCreditVoucherUpdate()
+    {
+        if (Convert.ToDouble(txtPayment.Text) > 0)
+        {
+            string VoucherID = IdManager.GetShowSingleValueString("VCH_SYS_NO", "t1.PAYEE='CP' and SUBSTRING(t1.VCH_REF_NO,1,2)='CV' and t1.SERIAL_NO", "GL_TRANS_MST t1", txtId.Text);            
+            VouchMst vmst = VouchManager.GetVouchMst(VoucherID.Trim());
+            if (vmst != null)
+            {
+                vmst.FinMon = FinYearManager.getFinMonthByDate(txtDate.Text);
+                vmst.ValueDate = txtDate.Text;
+                vmst.VchCode = "02";
+                vmst.RefFileNo = "";
+                vmst.VolumeNo = "";
+               // vmst.SerialNo = lblCusId.Text;
+                //vmst.Particulars = "Due Amount receive for Customer -(" + ID.ToString() + "-" + txtName.Text + ")";
+                vmst.ControlAmt = txtPayment.Text.Replace(",","");
+                //vmst.Payee = "CP";
+                vmst.CheckNo = txtChqueNo.Text;
+                vmst.CheqDate = txtChqDate.Text;
+                if (ddlPaymentMethord.SelectedValue == "C") { vmst.CheqAmnt = txtPayment.Text.Replace(",",""); }
+                else { vmst.CheqAmnt = "0"; }                
+                vmst.BookName = Session["book"].ToString();
+                vmst.UpdateUser = Session["user"].ToString();
+                vmst.UpdateDate = DateTime.Parse(DateTime.Now.ToString()).ToString("dd/MM/yyyy");
+                vmst.AuthoUserType = Session["userlevel"].ToString();
+                VouchManager.UpdateVouchMst(vmst);
+                VouchManager.DeleteVouchDtl(vmst.VchSysNo);
+                VouchDtl vdtl;
+                for (int i = 0; i < 2; i++)
+                {
+                    if (i == 0)
+                    {
+                        vdtl = new VouchDtl();
+                        vdtl.VchSysNo = vmst.VchSysNo;
+                        vdtl.ValueDate = txtDate.Text;
+                        vdtl.LineNo = "1";
+                        if (ddlPaymentMethord.SelectedValue != "C")
+                        {
+                            string BankCOA = IdManager.GetShowSingleValueString("gl_coa_code", "bank_id", "bank_info", ddlBankName.SelectedValue);
+                            vdtl.GlCoaCode = "1-" + BankCOA;
+                            vdtl.Particulars = "Cash at Bank: Amount Receive ";
+                            vdtl.AccType = VouchManager.getAccType("1-" + BankCOA);
+                        }
+                        else
+                        {
+                            vdtl.GlCoaCode = "1-" + Session["Cash_Code"];
+                            vdtl.Particulars = Session["Cash_Name"].ToString() + " : Amount Receive ";
+                            vdtl.AccType = VouchManager.getAccType("1-" + Session["Cash_Code"]);
+                        }
+
+                        vdtl.AmountDr = txtPayment.Text.Replace(",","");
+                        vdtl.AmountCr = "0";
+                        vdtl.Status = vmst.Status;
+                        vdtl.BookName = Session["book"].ToString();
+                        VouchManager.CreateVouchDtl(vdtl);
+                    }
+                    else if (i == 1)
+                    {
+                        vdtl = new VouchDtl();
+                        vdtl.VchSysNo = vmst.VchSysNo;
+                        vdtl.ValueDate = txtDate.Text;
+                        vdtl.LineNo = "2";
+                        vdtl.GlCoaCode = "1-" + lblGlCoa.Text;
+                        vdtl.Particulars = "Customer Bill Pay ";
+                        vdtl.AccType = VouchManager.getAccType("1-" + lblGlCoa.Text);
+                        vdtl.AmountDr = "0";
+                        vdtl.AmountCr = txtPayment.Text.Replace(",","");
+                        vdtl.Status = vmst.Status;
+                        vdtl.BookName = Session["book"].ToString();
+                        VouchManager.CreateVouchDtl(vdtl);
+                    }
+                }
+            }
+        }
+    }
+
+    private void SupplierAccDebitVoucherSave()
+    {
+        if (Convert.ToDouble(txtPayment.Text) > 0)
+        {
+            int ID = SupplierManager.GetShowPaymentID();
+            VouchMst vmst = new VouchMst();
+            vmst.FinMon = FinYearManager.getFinMonthByDate(txtDate.Text);
+            vmst.ValueDate = txtDate.Text;
+            vmst.VchCode = "01";
+            vmst.RefFileNo = "";
+            vmst.VolumeNo = "";
+            vmst.SerialNo = txtId.Text;
+            vmst.Particulars = "Customer Items Return Payment for.- (" + ID.ToString() + "-" + txtName.Text + ")";
+            vmst.ControlAmt = txtPayment.Text.Replace(",", "");
+            vmst.Payee = "CP";
+            vmst.CheckNo = txtChqueNo.Text;
+            vmst.CheqDate = txtChqDate.Text;
+            if (ddlPaymentMethord.SelectedValue != "C") { vmst.CheqAmnt = txtPayment.Text.Replace(",", ""); }
+            else { vmst.CheqAmnt = "0"; }
+            vmst.MoneyRptNo = "";
+            vmst.MoneyRptDate = "";
+            vmst.TransType = "R";
+            vmst.BookName = Session["book"].ToString();
+            vmst.EntryUser = Session["user"].ToString();
+            vmst.EntryDate = DateTime.Parse(DateTime.Now.ToString()).ToString("dd/MM/yyyy");
+            vmst.VchSysNo = IdManager.GetNextID("gl_trans_mst", "vch_sys_no").ToString();
+            vmst.VchRefNo = "DV-" + vmst.VchSysNo.ToString().PadLeft(10, '0');
+            vmst.Status = "U";
+            vmst.AuthoUserType = Session["userlevel"].ToString();
+            VouchManager.CreateVouchMst(vmst);
+            VouchDtl vdtl;
+            for (int j = 0; j < 2; j++)
+            {
+                if (j == 0)
+                {
+                    vdtl = new VouchDtl();
+                    vdtl.VchSysNo = vmst.VchSysNo;
+                    vdtl.ValueDate = txtDate.Text;
+                    vdtl.LineNo = "1";
+                    vdtl.GlCoaCode = "1-" + lblGlCoa.Text;
+                    vdtl.Particulars = "Customer Payment ";
+                    vdtl.AccType = VouchManager.getAccType("1-" + lblGlCoa.Text);
+                    vdtl.AmountDr = txtPayment.Text.Replace(",", "");
+                    vdtl.AmountCr = "0";
+                    vdtl.Status = "U";
+                    vdtl.BookName = Session["book"].ToString();
+                    VouchManager.CreateVouchDtl(vdtl);
+                }
+                if (j == 1)
+                {
+                    vdtl = new VouchDtl();
+                    vdtl.VchSysNo = vmst.VchSysNo;
+                    vdtl.ValueDate = txtDate.Text;
+                    vdtl.LineNo = "2";
+                    if (ddlPaymentMethord.SelectedValue != "C")
+                    {
+                        string BankCOA = IdManager.GetShowSingleValueString("gl_coa_code", "bank_id", "bank_info", ddlBankName.SelectedValue);
+                        vdtl.GlCoaCode = "1-" + BankCOA;
+                        vdtl.Particulars = "Cash at Bank : Payment On Customer ";
+                        vdtl.AccType = VouchManager.getAccType("1-" + BankCOA);
+                    }
+                    else
+                    {
+
+                        vdtl.GlCoaCode = "1-" + Session["Cash_Code"].ToString();
+                        vdtl.Particulars = Session["Cash_Name"].ToString() + " : Payment On Customer ";
+                        vdtl.AccType = VouchManager.getAccType("1-" + Session["Cash_Code"].ToString());
+                    }
+
+                    vdtl.AmountDr = "0";
+                    vdtl.AmountCr = txtPayment.Text.Replace(",", "");
+                    vdtl.Status = "U";
+                    vdtl.BookName = Session["book"].ToString();
+                    VouchManager.CreateVouchDtl(vdtl);
+                }
+            }
+        }
+    }
+    private void SupplierAccDebitVoucherUpdate()
+    {
+        string VoucherID = IdManager.GetShowSingleValueString("VCH_SYS_NO", "t1.PAYEE='IR' and SUBSTRING(t1.VCH_REF_NO,1,2)='DV' and t1.SERIAL_NO", "GL_TRANS_MST t1", txtId.Text);
+        if (Convert.ToDouble(txtPayment.Text) > 0)
+        {
+            VouchMst vmst = VouchManager.GetVouchMst(VoucherID.Trim());
+            if (vmst != null)
+            {
+                vmst.FinMon = FinYearManager.getFinMonthByDate(txtDate.Text);
+                vmst.ValueDate = txtDate.Text;
+                vmst.VchCode = "01";
+                vmst.RefFileNo = "";
+                vmst.VolumeNo = "";                     
+                vmst.ControlAmt = txtPayment.Text.Replace(",", "");               
+                vmst.CheckNo = txtChqueNo.Text;
+                vmst.CheqDate = txtChqDate.Text;
+                if (ddlPaymentMethord.SelectedValue != "C") { vmst.CheqAmnt = txtPayment.Text.Replace(",", ""); }
+                else { vmst.CheqAmnt = "0"; }
+                vmst.BookName = Session["book"].ToString();
+                vmst.UpdateUser = Session["user"].ToString();
+                vmst.UpdateDate = DateTime.Parse(DateTime.Now.ToString()).ToString("dd/MM/yyyy");
+                vmst.AuthoUserType = Session["userlevel"].ToString();
+                VouchManager.UpdateVouchMst(vmst);
+                VouchManager.DeleteVouchDtl(vmst.VchSysNo);
+                VouchDtl vdtl;
+                for (int j = 0; j < 2; j++)
+                {
+                    if (j == 0)
+                    {
+                        vdtl = new VouchDtl();
+                        vdtl.VchSysNo = vmst.VchSysNo;
+                        vdtl.ValueDate = txtDate.Text;
+                        vdtl.LineNo = "1";
+                        vdtl.GlCoaCode = "1-" + lblGlCoa.Text;
+                        vdtl.Particulars = "Customer Payment ";
+                        vdtl.AccType = VouchManager.getAccType("1-" + lblGlCoa.Text);
+                        vdtl.AmountDr = txtPayment.Text.Replace(",", "");
+                        vdtl.AmountCr = "0";
+                        vdtl.Status = vmst.Status;
+                        vdtl.BookName = Session["book"].ToString();
+                        VouchManager.CreateVouchDtl(vdtl);
+                    }
+                    if (j == 1)
+                    {
+                        vdtl = new VouchDtl();
+                        vdtl.VchSysNo = vmst.VchSysNo;
+                        vdtl.ValueDate = txtDate.Text;
+                        vdtl.LineNo = "2";
+                        if (ddlPaymentMethord.SelectedValue != "C")
+                        {
+                            string BankCOA = IdManager.GetShowSingleValueString("gl_coa_code", "bank_id", "bank_info", ddlBankName.SelectedValue);
+                            vdtl.GlCoaCode = "1-" + BankCOA;
+                            vdtl.Particulars = "Cash at Bank : Payment On Customer ";
+                            vdtl.AccType = VouchManager.getAccType("1-" + BankCOA);
+                        }
+                        else
+                        {
+
+                            vdtl.GlCoaCode = "1-" + Session["Cash_Code"].ToString();
+                            vdtl.Particulars = Session["Cash_Name"].ToString() + " : Payment On Customer ";
+                            vdtl.AccType = VouchManager.getAccType("1-" + Session["Cash_Code"].ToString());
+                        }
+                        vdtl.AmountDr = "0";
+                        vdtl.AmountCr = txtPayment.Text.Replace(",", "");
+                        vdtl.Status =vmst.Status;
+                        vdtl.BookName = Session["book"].ToString();
+                        VouchManager.CreateVouchDtl(vdtl);
+                    }
+                }
+            }
+        }
+    }
+
+    protected void dgPaymentHistory_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        clsClientPaymentRec CP = clsClientInfoManager.GetShowSupplierPaymentInfo(dgPaymentHistory.SelectedRow.Cells[1].Text.Trim());
+        if (CP != null)
+        {
+            txtId.Text = dgPaymentHistory.SelectedRow.Cells[1].Text;
+            lblCusId.Text = CP.Customer_id;
+            lblGlCoa.Text = IdManager.GetShowSingleValueString("Gl_CoaCode", "ID", "Customer", lblCusId.Text); 
+            ddlPaymentMethord.SelectedValue = CP.PaymentMethord.Trim();
+            txtPayment.Text = CP.PayAmt;
+            lblInvoiceNo.Text = CP.INV_ID;
+            txtVoucher.Text = CP.InvoiceNo;
+            if (CP.PaymentMethord.Trim() == "Q")
+            {
+                PaymentMethordVisible(true, true, true, true, true, true, true, true, true, true);            
+                ddlBankName.SelectedValue = CP.BankId.Trim();
+                txtChqDate.Text = CP.ChequeDate;
+                txtChqueNo.Text = CP.ChequeNo;
+                ddlChequeStatus.SelectedValue = CP.Chk_Status.Trim();
+                   
+            }
+            else
+            { PaymentMethordVisible(false, false, false, false, false, false, false, false, false, false); }
+            txtDate.Text = CP.Date;                  
+            txtName.Text = dgPaymentHistory.SelectedRow.Cells[3].Text;
+            txtPayment.Focus();
+            txtCustomerName.Enabled = false;
+            lblCashDues.Visible = false;
+            UpdatePanel1.Update();
+           // UPSearch.Update();
+        }
+    }
+    protected void Clear_Click(object sender, EventArgs e)
+    {
+        Clear("");
+    }
+    protected void Delete_Click(object sender, EventArgs e)
+    {
+        if (per.AllowDelete == "Y")
+        {
+            clsClientPaymentRec CP = clsClientInfoManager.GetShowSupplierPaymentInfo(dgPaymentHistory.SelectedRow.Cells[1].Text);
+            if (CP != null)
+            {
+                CP.ID = txtId.Text;
+                clsClientInfoManager.DeteleCustomerPayment(CP);
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Record has been delete successfully...!!');", true);
+                btnSave.Enabled = btnDelete.Enabled = false;
+            }
+        }
+        else
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('You are not Permitted this Step...!!');", true);
+        }
+    }
+    protected void dgPaymentHistory_PageIndexChanging(object sender, GridViewPageEventArgs e)
+    {
+        dgPaymentHistory.DataSource = Session["CP"];
+        dgPaymentHistory.PageIndex = e.NewPageIndex;
+        dgPaymentHistory.DataBind();
+    }
+    protected void RadioButtonList1_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        if (RadioButtonList1.SelectedValue == "S") { txtCustomerName.Visible = true; txtSearchCheque.Visible = false; txtCustomerName.Focus(); Clear("P"); }
+        else
+        { txtCustomerName.Visible = false; txtSearchCheque.Visible = true; txtSearchCheque.Focus(); Clear("P"); }
+    }
+    private void Clear(string p)
+    {
+        PaymentMethordVisible(false, false, false, false, false, false, false, false, false, false);
+        btnSave.Enabled = btnDelete.Enabled = txtCustomerName.Enabled = dgPaymentHistory.Visible = true;             
+        ddlBankName.SelectedIndex = ddlPaymentMethord.SelectedIndex = ddlChequeStatus.SelectedIndex = -1;
+        txtCustomerName.Text = txtChqueNo.Text = txtChqDate.Text = txtId.Text = txtName.Text = "";
+        lblGlCoa.Text = txtId.Text = lblCode.Text = lblCusId.Text =txtVoucher.Text=lblInvoiceNo.Text= "";
+        txtDate.Text = DateTime.Now.ToString("dd/MM/yyyy");
+        if (p == "")
+        { RadioButtonList1.SelectedValue = "S"; txtCustomerName.Visible = true; txtSearchCheque.Visible = false; 
+            DataTable dt = clsClientInfoManager.GetShowCustomerHistory("",rbReportType.SelectedValue); 
+            dgPaymentHistory.DataSource = dt;
+            Session["SP"] = dt; 
+            dgPaymentHistory.DataBind(); 
+        }
+        txtPayment.Text = "0";
+        lblCashDues.Visible = lblBlance.Visible = dgPaymentHistory.Visible = false;
+        dgPaymentHistory.Focus();
+        UpdatePanel1.Update();
+    }
+    protected void txtSearchCheque_TextChanged(object sender, EventArgs e)
+    {
+        DataTable dt = clsClientInfoManager.GetShowCheckNubber(txtSearchCheque.Text);
+        if (dt.Rows.Count > 0)
+        {
+            txtId.Text = dt.Rows[0]["ID"].ToString();
+            lblGlCoa.Text = dt.Rows[0]["Gl_CoaCode"].ToString();
+            lblCusId.Text = dt.Rows[0]["Customer_id"].ToString();
+            txtName.Text = dt.Rows[0]["ContactName"].ToString();           
+            ddlPaymentMethord.SelectedValue = dt.Rows[0]["PayMethod"].ToString().Trim();
+            txtPayment.Text = dt.Rows[0]["PayAmt"].ToString();          
+            if (dt.Rows[0]["PayMethod"].ToString().Trim() != "C")
+            {
+                PaymentMethordVisible(true, true, true, true, true, true, true, true, true, true);
+                ddlBankName.SelectedValue = dt.Rows[0]["Bank_id"].ToString().Trim();
+                txtChqueNo.Text = dt.Rows[0]["ChequeNo"].ToString();
+                txtChqDate.Text = dt.Rows[0]["ChequeDate"].ToString();
+                ddlChequeStatus.SelectedValue = dt.Rows[0]["Chk_Status"].ToString();
+            }          
+            txtSearchCheque.Text = "";           
+            lblBank.Visible = ddlBankName.Visible = txtChqDate.Visible = txtChqueNo.Visible = lblChkStatus.Visible = ddlChequeStatus.Visible = true;
+            dgPaymentHistory.Visible = lblCashDues.Visible = false;
+            txtPayment.Focus();
+            UpdatePanel1.Update();
+        }
+    }
+    protected void dgPaymentHistory_RowDataBound(object sender, GridViewRowEventArgs e)
+    {
+        try
+        {
+            if (e.Row.RowType == DataControlRowType.DataRow | e.Row.RowType == DataControlRowType.Header | e.Row.RowType == DataControlRowType.Footer)
+            {
+                e.Row.Cells[1].Attributes.Add("style", "display:none");
+                e.Row.Cells[2].Attributes.Add("style", "display:none");
+            }
+        }
+        catch (FormatException fex)
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('" + fex.Message + "');", true);
+        }
+        catch (Exception ex)
+        {
+            if (ex.Message.Contains("Database"))
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Database Maintain Error. Contact to the Software Provider..!!');", true);
+            else
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('There is some problem to do the task. Try again properly.!!');", true);
+        }
+    }
+
+    protected void txtVoucher_TextChanged(object sender, EventArgs e)
+    {
+        DataTable dt = SaleReturnManager.GetShowSLMasterInfo(txtVoucher.Text);
+        if (dt.Rows.Count > 0)
+        {
+            lblInvoiceNo.Text = dt.Rows[0]["ID"].ToString();
+            UpdatePanel1.Update();
+        }
+    }
+    protected void btnPrint_Click(object sender, EventArgs e)
+    {
+        int VoucherID = IdManager.GetShowSingleValueInt("VCH_SYS_NO", "PAYEE='CP' and SERIAL_NO", "GL_TRANS_MST", txtId.Text);
+       // lblID.Text = VoucherID.ToString();
+        getVoucherPdf(VoucherID);
+    }
+    private void getVoucherPdf(int VoucherID)
+    {
+        VouchMst vmst = VouchManager.GetVouchMst(VoucherID.ToString());
+        if (vmst != null)
+        {
+            string filename = "CustomerPayment";
+            Response.Clear();
+            Response.ContentType = "application/pdf";
+            Response.AddHeader("content-disposition", "attachment; filename=" + filename + ".pdf");
+            Document document = new Document(PageSize.A4);
+            PdfWriter writer = PdfWriter.GetInstance(document, Response.OutputStream);
+            document.Open();
+            iTextSharp.text.Rectangle page = document.PageSize;
+            PdfPTable head = new PdfPTable(1);
+            head.TotalWidth = page.Width - 50;
+
+            PdfPCell cell;
+
+            byte[] logo = GlBookManager.GetGlLogo(Session["book"].ToString());
+            iTextSharp.text.Image gif = iTextSharp.text.Image.GetInstance(logo);
+            gif.Alignment = iTextSharp.text.Image.MIDDLE_ALIGN;
+            gif.ScalePercent(8f);
+
+            float[] titwidth = new float[2] { 10, 200 };
+            PdfPTable dth = new PdfPTable(titwidth);
+            dth.WidthPercentage = 100;
+
+            cell = new PdfPCell(gif);
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.Rowspan = 4;
+            cell.BorderWidth = 0f;
+            cell.FixedHeight = 80f;
+            dth.AddCell(cell);
+            cell = new PdfPCell(new Phrase(Session["org"].ToString(), FontFactory.GetFont(FontFactory.TIMES_ROMAN, 12, iTextSharp.text.Font.BOLD)));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.BorderWidth = 0f;
+            cell.FixedHeight = 20f;
+            dth.AddCell(cell);
+            cell = new PdfPCell(new Phrase(Session["add1"].ToString(), FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD)));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.BorderWidth = 0f;
+            cell.FixedHeight = 20f;
+            dth.AddCell(cell);
+            cell = new PdfPCell(new Phrase(Session["add2"].ToString(), FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD)));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.BorderWidth = 0f;
+            cell.FixedHeight = 20f;
+            dth.AddCell(cell);
+            string vchtype = "";
+            if (vmst.VchCode == "02") { vchtype = "Credit Voucher"; }
+            else if (vmst.VchCode == "01") { vchtype = "Debit Voucher"; }
+            else if (vmst.VchCode == "03") { vchtype = "Journal Voucher"; }
+
+            cell = new PdfPCell(new Phrase(vchtype, FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD)));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.BorderWidth = 0f;
+            cell.FixedHeight = 20f;
+            dth.AddCell(cell);
+            document.Add(dth);
+            LineSeparator line = new LineSeparator(1f, 100, null, Element.ALIGN_CENTER, -2);
+            document.Add(line);
+            PdfPTable dtempty = new PdfPTable(1);
+            cell = new PdfPCell(FormatHeaderPhrase(""));
+            cell.BorderWidth = 0f;
+            cell.FixedHeight = 10f;
+            dtempty.AddCell(cell);
+            document.Add(dtempty);
+            float[] widthmst = new float[5] { 20, 30, 20, 20, 20 };
+            PdfPTable pdtMst = new PdfPTable(widthmst);
+            pdtMst.WidthPercentage = 100;
+            cell = new PdfPCell(FormatPhrase("Voucher No"));
+            cell.HorizontalAlignment = 0;
+            cell.VerticalAlignment = 1;
+            //cell.BorderWidth = 0;
+            // cell.FixedHeight = 18f;
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtMst.AddCell(cell);
+            cell = new PdfPCell(FormatPhrase(vmst.VchSysNo));
+            cell.HorizontalAlignment = 0;
+            cell.VerticalAlignment = 1;
+            //cell.FixedHeight = 18f;
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtMst.AddCell(cell);
+            cell = new PdfPCell(FormatPhrase(""));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.BorderWidth = 0;
+            // cell.FixedHeight = 18f;
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtMst.AddCell(cell);
+            cell = new PdfPCell(FormatPhrase("Voucher Date"));
+            cell.HorizontalAlignment = 0;
+            cell.VerticalAlignment = 1;
+            //cell.BorderWidth = 0;
+            //cell.FixedHeight = 18f;
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtMst.AddCell(cell);
+            cell = new PdfPCell(FormatPhrase(DataManager.DateEncode(vmst.ValueDate).ToString(IdManager.DateFormat())));
+            cell.HorizontalAlignment = 0;
+            cell.VerticalAlignment = 1;
+            // cell.FixedHeight = 18f;
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtMst.AddCell(cell);
+            cell = new PdfPCell(FormatPhrase("Reference No"));
+            cell.HorizontalAlignment = 0;
+            cell.VerticalAlignment = 1;
+            //cell.BorderWidth = 0;
+            //cell.FixedHeight = 18f;
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtMst.AddCell(cell);
+            cell = new PdfPCell(FormatPhrase(vmst.VchRefNo));
+            cell.HorizontalAlignment = 0;
+            cell.VerticalAlignment = 1;
+            //cell.FixedHeight = 18f;
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtMst.AddCell(cell);
+            cell = new PdfPCell(FormatPhrase(""));
+            cell.HorizontalAlignment = 0;
+            cell.VerticalAlignment = 1;
+            cell.BorderWidth = 0;
+            // cell.FixedHeight = 18f;
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtMst.AddCell(cell);
+            cell = new PdfPCell(FormatPhrase("Serial No"));
+            cell.HorizontalAlignment = 0;
+            cell.VerticalAlignment = 1;
+            // cell.BorderWidth = 0;
+            // cell.FixedHeight = 18f;
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtMst.AddCell(cell);
+            cell = new PdfPCell(FormatPhrase(vmst.SerialNo));
+            cell.HorizontalAlignment = 0;
+            cell.VerticalAlignment = 1;
+            //cell.FixedHeight = 18f;
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtMst.AddCell(cell);
+
+            if (decimal.Parse(string.IsNullOrEmpty(vmst.CheckNo) ? "0" : vmst.CheckNo) > decimal.Zero)
+            {
+                cell = new PdfPCell(FormatPhrase("Cheque No"));
+                cell.HorizontalAlignment = 0;
+                cell.VerticalAlignment = 1;
+                //cell.BorderWidth = 0;
+                //  cell.FixedHeight = 18f;
+                cell.BorderColor = BaseColor.LIGHT_GRAY;
+                pdtMst.AddCell(cell);
+                cell = new PdfPCell(FormatPhrase(vmst.CheckNo));
+                cell.HorizontalAlignment = 0;
+                cell.VerticalAlignment = 1;
+                // cell.FixedHeight = 18f;
+                cell.BorderColor = BaseColor.LIGHT_GRAY;
+                pdtMst.AddCell(cell);
+                cell = new PdfPCell(FormatPhrase(""));
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                //  cell.BorderWidth = 0;
+                //  cell.FixedHeight = 18f;
+                cell.BorderColor = BaseColor.LIGHT_GRAY;
+                pdtMst.AddCell(cell);
+                cell = new PdfPCell(FormatPhrase("Cheque Date"));
+                cell.HorizontalAlignment = 0;
+                cell.VerticalAlignment = 1;
+                // cell.BorderWidth = 0;
+                // cell.FixedHeight = 18f;
+                cell.BorderColor = BaseColor.LIGHT_GRAY;
+                pdtMst.AddCell(cell);
+                cell = new PdfPCell(FormatPhrase(DataManager.DateEncode(vmst.CheqDate).ToString(IdManager.DateFormat())));
+                cell.HorizontalAlignment = 0;
+                cell.VerticalAlignment = 1;
+                // cell.FixedHeight = 18f;
+                cell.BorderColor = BaseColor.LIGHT_GRAY;
+                pdtMst.AddCell(cell);
+
+                cell = new PdfPCell(FormatPhrase("Cheque Amount"));
+                cell.HorizontalAlignment = 0;
+                cell.VerticalAlignment = 1;
+                //  cell.BorderWidth = 0;
+                // cell.FixedHeight = 18f;
+                cell.BorderColor = BaseColor.LIGHT_GRAY;
+                pdtMst.AddCell(cell);
+                cell = new PdfPCell(FormatPhrase(vmst.CheqAmnt));
+                cell.HorizontalAlignment = 0;
+                cell.VerticalAlignment = 1;
+                // cell.FixedHeight = 18f;
+                cell.BorderColor = BaseColor.LIGHT_GRAY;
+                pdtMst.AddCell(cell);
+                cell = new PdfPCell(FormatPhrase(""));
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                cell.BorderWidth = 0;
+                cell.FixedHeight = 18f;
+                cell.BorderColor = BaseColor.LIGHT_GRAY;
+                pdtMst.AddCell(cell);
+                cell = new PdfPCell(FormatPhrase(""));
+                cell.HorizontalAlignment = 0;
+                cell.VerticalAlignment = 1;
+                cell.BorderWidth = 0;
+                cell.FixedHeight = 18f;
+                cell.BorderColor = BaseColor.LIGHT_GRAY;
+                pdtMst.AddCell(cell);
+                cell = new PdfPCell(FormatPhrase(""));
+                cell.HorizontalAlignment = 0;
+                cell.VerticalAlignment = 1;
+                cell.FixedHeight = 18f;
+                cell.BorderWidth = 0;
+                cell.BorderColor = BaseColor.LIGHT_GRAY;
+                pdtMst.AddCell(cell);
+            }
+
+            cell = new PdfPCell(FormatPhrase("Particulars"));
+            cell.HorizontalAlignment = 0;
+            cell.VerticalAlignment = 1;
+            // cell.BorderWidth = 0;
+            // cell.FixedHeight = 18f;
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtMst.AddCell(cell);
+            cell = new PdfPCell(FormatPhraseOnSingleFont(vmst.Particulars));
+            cell.HorizontalAlignment = 0;
+            cell.VerticalAlignment = 1;
+            cell.Colspan = 4;
+            cell.FixedHeight = 35f;
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtMst.AddCell(cell);
+            document.Add(pdtMst);
+
+            DataTable dtdtl = VouchManager.GetVouchDtlRpt(vmst.VchSysNo);
+            float[] widthdtl = new float[3] { 50, 20, 20 };
+            PdfPTable pdtDtl = new PdfPTable(widthdtl);
+            pdtDtl.WidthPercentage = 100;
+            decimal ctot = decimal.Zero;
+            decimal dtot = decimal.Zero;
+
+            cell = new PdfPCell(FormatHeaderPhrase("Account Description"));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            //cell.FixedHeight = 18f;
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtDtl.AddCell(cell);
+            cell = new PdfPCell(FormatHeaderPhrase("Debit "));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            // cell.FixedHeight = 18f;
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtDtl.AddCell(cell);
+            cell = new PdfPCell(FormatHeaderPhrase("Credit "));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            // cell.FixedHeight = 18f;
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtDtl.AddCell(cell);
+
+            foreach (DataRow row in dtdtl.Rows)
+            {
+                if (row["particulars"].ToString() != "")
+                {
+                    cell = new PdfPCell(FormatPhrase(row["particulars"].ToString()));
+                    cell.HorizontalAlignment = 0;
+                    cell.VerticalAlignment = 1;
+                    // cell.FixedHeight = 20f;
+                    cell.BorderColor = BaseColor.LIGHT_GRAY;
+                    pdtDtl.AddCell(cell);
+                    cell = new PdfPCell(FormatPhrase(row["amount_dr"].ToString()));
+                    cell.HorizontalAlignment = 2;
+                    cell.VerticalAlignment = 1;
+                    //cell.FixedHeight = 20f;
+                    cell.BorderColor = BaseColor.LIGHT_GRAY;
+                    pdtDtl.AddCell(cell);
+                    cell = new PdfPCell(FormatPhrase(row["amount_cr"].ToString()));
+                    cell.HorizontalAlignment = 2;
+                    cell.VerticalAlignment = 1;
+                    // cell.FixedHeight = 20f;
+                    cell.BorderColor = BaseColor.LIGHT_GRAY;
+                    pdtDtl.AddCell(cell);
+
+                    if (row["amount_cr"].ToString() != "")
+                    {
+                        ctot += decimal.Parse(row["amount_cr"].ToString());
+                    }
+                    if (row["amount_dr"].ToString() != "")
+                    {
+                        dtot += decimal.Parse(row["amount_dr"].ToString());
+                    }
+                }
+            }
+            decimal Total = (ctot + dtot);
+            cell = new PdfPCell(FormatHeaderPhrase("Total"));
+            cell.HorizontalAlignment = 2;
+            cell.VerticalAlignment = 1;
+            //  cell.FixedHeight = 18f;
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtDtl.AddCell(cell);
+            cell = new PdfPCell(FormatPhrase(dtot.ToString("N3")));
+            cell.HorizontalAlignment = 2;
+            cell.VerticalAlignment = 1;
+            //cell.FixedHeight = 20f;
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtDtl.AddCell(cell);
+            cell = new PdfPCell(FormatPhrase(ctot.ToString("N3")));
+            cell.HorizontalAlignment = 2;
+            cell.VerticalAlignment = 1;
+            // cell.FixedHeight = 20f;
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtDtl.AddCell(cell);
+
+            document.Add(pdtDtl);
+
+            PdfPTable dtempty1 = new PdfPTable(1);
+            dtempty1.WidthPercentage = 100;
+            cell = new PdfPCell(FormatPhrase("In word: " + DataManager.GetLiteralAmt(dtot.ToString()).Replace("  ", " ").Replace("  ", " ")));
+            cell.VerticalAlignment = 0;
+            cell.HorizontalAlignment = 0;
+            cell.BorderWidth = 0f;
+            cell.FixedHeight = 60f;
+            dtempty1.AddCell(cell);
+            document.Add(dtempty1);
+
+            float[] widthsig = new float[] { 20, 5, 20, 5, 20 };
+            PdfPTable pdtsig = new PdfPTable(widthsig);
+            pdtsig.WidthPercentage = 100;
+            cell = new PdfPCell(FormatPhrase("Accountant"));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.Border = 1;
+            cell.FixedHeight = 18f;
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtsig.AddCell(cell);
+            cell = new PdfPCell(FormatPhrase(""));
+            cell.HorizontalAlignment = 0;
+            cell.VerticalAlignment = 1;
+            cell.Border = 0;
+            cell.FixedHeight = 18f;
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtsig.AddCell(cell);
+            cell = new PdfPCell(FormatPhrase(" "));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.Border = 0;
+            cell.FixedHeight = 18f;
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtsig.AddCell(cell);
+            cell = new PdfPCell(FormatPhrase(""));
+            cell.HorizontalAlignment = 0;
+            cell.VerticalAlignment = 1;
+            cell.Border = 0;
+            cell.FixedHeight = 18f;
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtsig.AddCell(cell);
+            cell = new PdfPCell(FormatPhrase("Manager/Director"));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.Border = 1;
+            cell.FixedHeight = 18f;
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtsig.AddCell(cell);
+            document.Add(pdtsig);
+
+            document.Close();
+            Response.Flush();
+            Response.End();
+        }
+
+
+        //byte[] byt = ms.GetBuffer();
+        //if (Session["rptbyte"] != null) { byte[] rptbyt = (byte[])Session["rptbyte"]; rptbyt = byt; } else { Session["rptbyte"] = byt; }
+    }
+    private static Phrase FormatPhraseOnSingleFont(string value)
+    {
+        return new Phrase(value, FontFactory.GetFont(FontFactory.TIMES_ROMAN, 7));
+    }
+    private static Phrase FormatPhrase(string value)
+    {
+        return new Phrase(value, FontFactory.GetFont(FontFactory.TIMES_ROMAN, 9));
+    }
+
+    private static Phrase FormatHeaderPhrase(string value)
+    {
+        return new Phrase(value, FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD));
+    }
+}

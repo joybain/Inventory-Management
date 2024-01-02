@@ -1,0 +1,357 @@
+﻿<%@ Page Title="" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true" CodeFile="frmSupplierPayment.aspx.cs" Inherits="frmSupplierPayment" %>
+<%@ Register Assembly="AjaxControlToolkit" Namespace="AjaxControlToolkit" TagPrefix="ajaxtoolkit" %>
+<asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
+<script language="javascript" type="text/javascript" >
+    function OpenWindow(Url) {
+        var testwindow = window.open(Url, '', 'width=600px,height=400px,top=100,left=300,scrollbars=1');
+    }
+    function onListPopulated() {
+        var completionList = $find("AutoCompleteEx").get_completionList();
+        completionList.style.width = 'auto';
+    }
+    function TotSumation() {
+
+      
+        var txtTotPayment = document.getElementById("<%=txtPayment.ClientID %>");
+       
+        if (parseFloat(txtPayableAmt.value) < parseFloat(txtTotPayment.value)) {
+            alert("Payment Amount Over This Total Charge.....!!!!!!");
+            txtTotPayment.value = "0";
+            txtTotPayment.focus();
+        }
+        else {
+            txtDue.value = (txtPayableAmt.value - txtTotPayment.value);
+        }
+    }
+</script>
+<div style="background-color:White; width:100%; min-height:700px; height:auto !important; height:700px; font-family:Tahoma;">
+<table  id="pageFooterWrapper">
+  <tr>  
+        <td align="center">
+        <asp:Button ID="btnDelete" runat="server" ToolTip="Delete" onclick="Delete_Click"
+            
+                onclientclick="javascript:return window.confirm('are u really want to delete these data')" Text="Delete" 
+        Height="30px" Width="110px" BorderStyle="Outset"  />
+        </td>       
+        <td >
+            &nbsp;</td>       
+        <td align="center" >
+        <asp:Button ID="btnSave" runat="server" ToolTip="Save Purchase Record" 
+                onclick="btnSave_Click" Text="Save" 
+        Height="30px" Width="110px" BorderStyle="Outset"  />
+        </td>
+        <td >
+            &nbsp;</td>
+        <td align="center" >
+        <asp:Button ID="btnClear" runat="server"  ToolTip="Clear" onclick="Clear_Click" Text="Clear" 
+        Height="30px" Width="110px" BorderStyle="Outset"  />
+        </td>
+        <td align="center" >
+        <asp:Button ID="btnPrint" runat="server" Text="Print" 
+        Height="30px" Width="110px" BorderStyle="Outset" onclick="btnPrint_Click"  />
+        </td>            
+        
+   </tr>
+   </table>
+   <br />
+
+<table style="width:100%;"><tr>
+<td style="width:1%;">&nbsp;</td>
+<td style="width:98%; font-family:Tahoma;" align="right">
+
+<asp:Label ID="lblPayTyp0" runat="server" Font-Size="8pt" Visible="False">Payment ID</asp:Label>
+                            <asp:Label ID="lblCashDues" runat="server" ForeColor="#CC3300" 
+                                Text="Due Cash in Hand:" Visible="False"></asp:Label>
+
+                            <asp:TextBox ID="txtSearchCheque" runat="server" AutoPostBack="True" 
+                                CssClass="tbc" Font-Size="8pt" Height="26px" MaxLength="11" 
+                                Placeholder="Search By Cheque No" SkinID="tbPlain" 
+                                
+                                style="width: 10%; text-indent: 15px; display: inline-block; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; background: transparent !important; text-align: left;" 
+                                ontextchanged="txtSearchCheque_TextChanged" Width="20px"></asp:TextBox>
+                        <ajaxToolkit:AutoCompleteExtender ID="txtSearchCheque_AutoCompleteExtender" 
+                                runat="server" CompletionInterval="20"
+                         CompletionSetCount="12" EnableCaching="true" MinimumPrefixLength="1" 
+                         ServiceMethod="GetChequeNumber" ServicePath="AutoComplete.asmx" 
+                                TargetControlID="txtSearchCheque" />                             
+                                    </td>
+<td style="width:1%;">&nbsp;</td>
+</tr><tr>
+<td style="width:1%;">&nbsp;</td>
+<td style="width:100%; font-family:Tahoma;" align="center">
+   
+    <table style="width: 100%">
+        <tr>
+            <td style="width:15%;"></td>
+            <td style="width: 886px;">   
+              
+               <%-- <asp:UpdatePanel ID="UPSearch" runat="server" UpdateMode="Conditional"><ContentTemplate>   --%>
+                <table style="width: 100%">
+                    <tr>
+                        <td align="left" style="width:30%;">
+                        <fieldset style="vertical-align: top; height: 63px;"><legend><b>Payment Type</b></legend>
+                            <asp:RadioButtonList ID="rbReportType" runat="server" 
+                                AutoPostBack="True" 
+                                onselectedindexchanged="rbReportType_SelectedIndexChanged" 
+                                style="margin-left: 0px" Width="219px">
+                                <asp:ListItem Value="PV" Selected="True">Due Payment</asp:ListItem>
+                                <asp:ListItem Value="PR">Collection Agt Prch Rtn</asp:ListItem>
+                            </asp:RadioButtonList>                            
+                            </fieldset>
+                        </td>
+                        <td align="right">
+                        <fieldset style="vertical-align: top; border:1px solid lightgray; text-align:left;"><legend><b>Search Option</b></legend>
+                             <table style="width: 100%">
+                                <tr>
+                                    <td style="width:16%; height: 39px;" align="left">
+                            <asp:RadioButtonList ID="rbSupOrParty" runat="server" 
+                                onselectedindexchanged="rbSupOrParty_SelectedIndexChanged" 
+                                AutoPostBack="True">
+                                <asp:ListItem Value="S" Selected="True">Supplier</asp:ListItem>
+                                <asp:ListItem Value="P">Party</asp:ListItem>
+                            </asp:RadioButtonList>
+                                    </td>
+                                    <td style="width:2%; height: 39px;" align="center"></td>
+                                    <td style="width:60%; height: 39px;" valign="middle">
+                        <asp:TextBox SkinID="tbPlain" ID="txtSearchSupplier" runat="server"  style="width: 98%; text-indent:15px;display: inline-block;border: 1px solid #ccc;
+                         border-radius: 4px;box-sizing: border-box;background:transparent !important; text-align:left;" 
+                        Font-Size="8pt" MaxLength="11" CssClass="tbc" Placeholder="Search By Supplier"   
+                                AutoPostBack="True" Height="26px" 
+                                ontextchanged="txtSearchSupplier_TextChanged" Width="98%" ></asp:TextBox>
+                                  <ajaxToolkit:AutoCompleteExtender ID="autoComplete" runat="server"
+                                CompletionInterval="20" CompletionSetCount="12" EnableCaching="true" 
+                                MinimumPrefixLength="1" ServiceMethod="GetShowSUPPLIER" 
+                                ServicePath="AutoComplete.asmx" TargetControlID="txtSearchSupplier" />
+                                <br />
+                        <asp:TextBox SkinID="tbPlain" ID="txtSearchParty" runat="server"  style="width: 98%; text-indent:15px;display: inline-block;border: 1px solid #ccc;
+                         border-radius: 4px;box-sizing: border-box;background:transparent !important; text-align:left;" 
+                        Font-Size="8pt" MaxLength="11" CssClass="tbc" Placeholder="Search By Party"   
+                                AutoPostBack="True" Height="26px" 
+                                ontextchanged="txtSearchParty_TextChanged" Width="98%" ></asp:TextBox>
+                               <ajaxtoolkit:AutoCompleteExtender ID="AutoCompleteExtender1"
+                                                        runat="server" CompletionInterval="20" CompletionSetCount="30"
+                                                        EnableCaching="true" MinimumPrefixLength="2"
+                                                        ServiceMethod="GetShowPartyName" ServicePath="~/AutoComplete.asmx"
+                                                        TargetControlID="txtSearchParty">
+                                                    </ajaxtoolkit:AutoCompleteExtender>                              
+
+                                    </td>
+                                </tr>
+                            </table></fieldset>
+                        </td>
+                    </tr>
+                    </table>
+                <%--</ContentTemplate></asp:UpdatePanel>  --%>
+               
+            </td>
+            <td style="width:15%;">&nbsp;</td>
+        </tr>
+        <tr>
+            <td style="width:15%;">
+                &nbsp;</td>
+            <td style="width: 886px;">
+            <fieldset style="vertical-align: top; border: solid 1px #8BB381;"><legend style="color: maroon;"><b>Supplier Payment</b></legend>
+                <asp:UpdatePanel ID="UpdatePanel1" runat="server" UpdateMode="Conditional"><ContentTemplate>
+                <table style="width: 100%">
+                    <tr>
+                        <td style="width:15%;" align="right">
+                          <asp:Label ID="lblPayDate" runat="server" Font-Size="8pt">Supplier / Party Name</asp:Label>
+                            <asp:Label ID="lblSupId" runat="server" Visible="False"></asp:Label>
+                            <asp:Label ID="lblGlCoa" runat="server" Visible="False"></asp:Label>
+                        </td>
+                        <td style="width:5%;"> </td>
+                        <td  align="left" colspan="2">
+                            <asp:TextBox ID="txtSupName" runat="server" CssClass="tbc" Font-Size="8pt" style="text-align:left;"
+                                MaxLength="40" SkinID="tbPlain" Width="95%" Enabled="False"></asp:TextBox>
+                        </td>
+                        
+                        <td align="center" colspan="2">
+                            <asp:Label ID="lblBlance" runat="server" Font-Bold="True" Font-Size="10pt" 
+                                ForeColor="#FF3300"></asp:Label>
+                        </td>
+                        
+                    </tr>
+                    <tr>
+                        <td style="width:15%;" align="right">
+                            <asp:Label ID="lblCode" runat="server" Visible="False"></asp:Label>
+<asp:Label ID="lblPayTyp" runat="server" Font-Size="8pt">Date</asp:Label>
+                            </td>
+                        <td style="width:2%;">&nbsp;</td>
+                        <td style="width:20%;">                          
+<asp:TextBox SkinID="tbPlain" ID="txtDate" runat="server" Width="100%" 
+        Font-Size="8pt" MaxLength="40" CssClass="tbc"></asp:TextBox>
+         <ajaxtoolkit:calendarextender runat="server" ID="Calendarextender1" 
+            TargetControlID="txtDate" Format="dd/MM/yyyy"/>
+                        </td>
+                        <td style="width:15%;" align="right"> 
+<asp:Label ID="lblPayTyp1" runat="server" Font-Size="8pt">Transaction Mode</asp:Label>
+                        </td>
+                        <td style="width:5%;"> 
+                            <asp:Label ID="lblID" runat="server"></asp:Label>
+                        </td>
+                        <td style="width:20%;">
+                               <asp:DropDownList ID="ddlPaymentMethord" runat="server" Height="26px" 
+                                   Width="104%" Font-Size="8pt" onselectedindexchanged="ddlPaymentMethord_SelectedIndexChanged" 
+                                   SkinID="ddlPlain" AutoPostBack="True">
+                                   <asp:ListItem Text="Cash" Value="C"></asp:ListItem>
+                                   <asp:ListItem Value="Q">Cheque</asp:ListItem>
+                               </asp:DropDownList>                                                 
+                        </td>
+                    </tr>
+                    <tr id="CHK1" runat="server">
+                        <td style="width:15%;" align="right">
+                            <asp:Label ID="lblChequeNo" runat="server" Font-Size="8pt">Cheque No</asp:Label>
+                        </td>
+                        <td style="width:2%;"> &nbsp;</td>
+                        <td style="width:20%;">
+                            <asp:TextBox ID="txtChqueNo" runat="server" CssClass="tbc" Font-Size="8pt" 
+                                MaxLength="11" SkinID="tbPlain" Width="100%"></asp:TextBox>
+                        </td>
+                        <td style="width:15%;" align="right"> 
+                            <asp:Label ID="lblChequeDate" runat="server" Font-Size="8pt">Cheque Date</asp:Label>
+                        </td>
+                        <td style="width:5%;">
+                            <asp:TextBox ID="txtId" runat="server" CssClass="tbc" Enabled="False" 
+                                Font-Size="8pt" MaxLength="40" SkinID="tbPlain" Visible="False" Width="20px"></asp:TextBox>
+                        </td>
+                        <td style="width:20%;" align="left">
+                            <asp:TextBox ID="txtChqDate" runat="server" CssClass="tbc" Font-Size="8pt" 
+                                MaxLength="11" SkinID="tbPlain" 
+                                Width="100%"></asp:TextBox>
+                            <ajaxToolkit:CalendarExtender ID="txtChqDate0_calendarextender" runat="server" 
+                                Format="dd/MM/yyyy" TargetControlID="txtChqDate" />
+                        </td>
+                    </tr>
+                    <tr id="CHK2" runat="server">
+                        <td style="width:15%;" align="right">
+                        <asp:Label ID="lblBank" runat="server" Font-Size="8pt">Bank Name</asp:Label>
+                        </td>
+                        <td style="width:5%;"> &nbsp;</td>
+                        <td style="width:20%;">                      
+                            <asp:DropDownList ID="ddlBankName" runat="server" Height="26px" Width="104%">
+                            </asp:DropDownList>                        
+                        </td>
+                        <td style="width:15%;" align="right"> 
+                            <asp:Label ID="lblChkStatus" runat="server" Font-Size="8pt">Cheque Status</asp:Label>
+                        </td>
+                        <td style="width:5%;">&nbsp;</td>
+                        <td style="width:20%;">
+                            <asp:DropDownList ID="ddlChequeStatus" runat="server" Font-Size="8pt" 
+                                Height="24px" onselectedindexchanged="ddlPaymentMethord_SelectedIndexChanged" 
+                                SkinID="ddlPlain" TabIndex="24" Width="104%">
+                                <asp:ListItem></asp:ListItem>
+                                <asp:ListItem Value="P">Pending</asp:ListItem>
+                                <asp:ListItem Value="A">Approved</asp:ListItem>
+                                <asp:ListItem Value="B">Bounce</asp:ListItem>
+                            </asp:DropDownList>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="width:15%;" align="right">
+<asp:Label ID="lblChequeNo2" runat="server" Font-Size="8pt">Amount</asp:Label>
+                        </td>
+                        <td style="width:5%;"> &nbsp;</td>
+                        <td style="width:20%;">
+<asp:TextBox SkinID="tbPlain" ID="txtPayment" runat="server" Width="100%" Font-Size="8pt" MaxLength="40" 
+                                style="text-align: right;" onChange="TotSumation();"
+                               onfocus="this.select();"  CssClass="tbc" AutoPostBack="True"></asp:TextBox>
+                        </td>
+                        <td style="width:15%;" align="right"> 
+                            <asp:Label ID="lblChkStatus0" runat="server" Font-Size="8pt">Goods Receive No</asp:Label>
+                        </td>
+                        <td style="width:5%;">
+                            <asp:Label ID="lblPvId" runat="server" Visible="False"></asp:Label>
+                        </td>
+                        <td style="width:20%;" align="left">
+                            <asp:TextBox ID="txtVoucher" runat="server" AutoPostBack="True" CssClass="tbc" 
+                                Font-Size="8pt" MaxLength="25" ontextchanged="txtVoucher_TextChanged" 
+                                placeholder="Search Goods Receive No" SkinID="tbPlain" Width="100%"></asp:TextBox>
+                            <ajaxToolkit:AutoCompleteExtender ID="autoComplete1" runat="server" 
+                                CompletionInterval="1000" CompletionSetCount="12" EnableCaching="true" 
+                                MinimumPrefixLength="1" ServiceMethod="GetGRN" 
+                                ServicePath="AutoComplete.asmx" TargetControlID="txtVoucher" />
+                        </td>
+                    </tr>
+                </table>
+                </ContentTemplate>
+                </asp:UpdatePanel>
+                </fieldset>
+            </td>
+            <td style="width:15%;">&nbsp;</td>
+        </tr>
+        <tr>
+            <td style="width:15%;">
+                &nbsp;</td>
+            <td style="width: 886px;">
+                &nbsp;</td>
+            <td style="width:15%;">&nbsp;</td>
+        </tr>
+        <tr>
+            <td colspan="3">
+                <asp:GridView ID="dgPaymentHistory" runat="server" 
+                    Caption="Supplier Payment History" CssClass="mGrid" Width="100%" 
+                    AutoGenerateColumns="False" AllowPaging="True" AllowSorting="True" 
+                    PageSize="30" 
+                    onselectedindexchanged="dgPaymentHistory_SelectedIndexChanged" 
+                    onpageindexchanging="dgPaymentHistory_PageIndexChanging" Font-Bold="False" 
+                    onrowdatabound="dgPaymentHistory_RowDataBound">
+                    <Columns>
+                        <asp:CommandField ShowSelectButton="True"  ItemStyle-Width="20px" ItemStyle-HorizontalAlign="Center">
+                        <ItemStyle HorizontalAlign="Center" Width="20px"></ItemStyle>
+                        </asp:CommandField>
+                        <asp:BoundField DataField="ID" HeaderText="ID" ItemStyle-Width="20px" ItemStyle-HorizontalAlign="Center">    
+                        <ItemStyle HorizontalAlign="Center" Width="20px"></ItemStyle>
+                        </asp:BoundField>
+                        <asp:BoundField DataField="Code" HeaderText="Supplier Code" ItemStyle-Width="40px" ItemStyle-HorizontalAlign="Center">    
+                        <ItemStyle HorizontalAlign="Center" Width="40px"></ItemStyle>
+                        </asp:BoundField>
+                        <asp:BoundField DataField="ContactName" HeaderText="Supplier Name" ItemStyle-Width="100px" ItemStyle-HorizontalAlign="Left">    
+                        <ItemStyle HorizontalAlign="Left" Width="100px"></ItemStyle>
+                        </asp:BoundField>
+                        <asp:BoundField DataField="PmDate" HeaderText="Date" ItemStyle-Width="40px" ItemStyle-HorizontalAlign="Center">    
+                        <ItemStyle HorizontalAlign="Center" Width="40px"></ItemStyle>
+                        </asp:BoundField>
+                        <asp:BoundField DataField="PayAmt" HeaderText="Amount" 
+                            ItemStyle-Width="40px" ItemStyle-HorizontalAlign="Right">    
+                        <ItemStyle HorizontalAlign="Right" Width="40px"></ItemStyle>
+                        </asp:BoundField>
+                        <asp:BoundField DataField="CHK_Status" HeaderText="Cheque Status" 
+                            ItemStyle-Width="40px" ItemStyle-HorizontalAlign="Center">    
+                        <ItemStyle HorizontalAlign="Center" Width="40px"></ItemStyle>
+                        </asp:BoundField>
+                        <asp:BoundField DataField="ChequeNo" HeaderText="Cheque No." ItemStyle-Width="40px" ItemStyle-HorizontalAlign="Center">
+                         <ItemStyle HorizontalAlign="Center" Width="40px"></ItemStyle>
+                        </asp:BoundField>
+                    </Columns>
+                      <RowStyle BackColor="White" />
+                        <SelectedRowStyle BackColor="" Font-Bold="True" />
+                        <PagerStyle BackColor="LightGray" ForeColor="Black" HorizontalAlign="Center" />
+                        <AlternatingRowStyle BackColor="" />
+                        <HeaderStyle Font-Size="10pt" />
+                </asp:GridView>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="2">
+                &nbsp;</td>
+        </tr>
+        <tr>
+            <td style="width: 193px">
+                &nbsp;</td>
+            <td style="width: 886px">                
+                &nbsp;</td>
+        </tr>
+    </table>
+</td>
+<td style="width:1%;">&nbsp;</td>
+</tr><tr>
+<td style="width:1%;">&nbsp;</td>
+<td style="width:98%; font-family:Tahoma;" align="center">
+
+    &nbsp;</td>
+<td style="width:1%;">&nbsp;</td>
+</tr></table>
+</div>
+
+</asp:Content>
+

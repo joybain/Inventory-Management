@@ -1,0 +1,399 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using iTextSharp.text;
+using iTextSharp.text.pdf;
+using System.Data;
+using iTextSharp.text.pdf.draw;
+using Delve;
+
+public partial class rptPartyPayment : System.Web.UI.Page
+{
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        if (!IsPostBack)
+        {
+            string query3 = "select '' ID,'' PartyName  union select  ID,PartyName from  PartyInfo order by 1";
+            util.PopulationDropDownList(ddlPartyName, "PartyInfo", query3, "PartyName", "ID");
+            ClearAll();
+        }
+    }
+    protected void btnShow_Click(object sender, EventArgs e)
+    {
+        if (ddlReportType.SelectedValue == "PPR")
+        {
+            Response.Clear();
+            Response.ContentType = "application/pdf";
+            Response.AddHeader("content-disposition", "attachment; filename='PartyPayment'.pdf");
+            Document document = new Document(PageSize.A4.Rotate());
+            PdfWriter writer = PdfWriter.GetInstance(document, Response.OutputStream);
+            document.Open();
+
+            PdfPCell cell;
+            byte[] logo = GlBookManager.GetGlLogo(Session["book"].ToString());
+            iTextSharp.text.Image gif = iTextSharp.text.Image.GetInstance(logo);
+            gif.Alignment = iTextSharp.text.Image.MIDDLE_ALIGN;
+            gif.ScalePercent(8f);
+
+            float[] titwidth = new float[2] { 10, 200 };
+            PdfPTable dth = new PdfPTable(titwidth);
+            dth.WidthPercentage = 100;
+
+            cell = new PdfPCell(gif);
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.Rowspan = 4;
+            cell.BorderWidth = 0f;
+            dth.AddCell(cell);
+            cell = new PdfPCell(new Phrase(Session["org"].ToString(), FontFactory.GetFont(FontFactory.TIMES_ROMAN, 12, iTextSharp.text.Font.BOLD)));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.Colspan = 7;
+            cell.BorderWidth = 0f;
+            cell.FixedHeight = 20f;
+            dth.AddCell(cell);
+            cell = new PdfPCell(new Phrase(Session["add1"].ToString(), FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD)));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.Colspan = 7;
+            cell.BorderWidth = 0f;
+            cell.FixedHeight = 20f;
+            dth.AddCell(cell);
+            cell = new PdfPCell(new Phrase(Session["add2"].ToString(), FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD)));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.Colspan = 7;
+            cell.BorderWidth = 0f;
+            cell.FixedHeight = 20f;
+            dth.AddCell(cell);
+            cell = new PdfPCell(new Phrase("Party Payment Summery", FontFactory.GetFont(FontFactory.TIMES_ROMAN, 14, iTextSharp.text.Font.BOLD)));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.Colspan = 7;
+            cell.BorderWidth = 0f;
+            cell.FixedHeight = 30f;
+            dth.AddCell(cell);
+            document.Add(dth);
+            LineSeparator line = new LineSeparator(1, 100, null, Element.ALIGN_CENTER, -2);
+            document.Add(line);
+
+            float[] widthdtl = new float[12] { 8,15, 10,20, 30, 15, 8,10, 15, 15, 16, 16 };
+            PdfPTable pdtdtl = new PdfPTable(widthdtl);
+            pdtdtl.WidthPercentage = 100;
+
+            cell = new PdfPCell(FormatHeaderPhrase(""));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.FixedHeight = 15f;
+            cell.Border = 0;
+            cell.Colspan = 12;
+            pdtdtl.AddCell(cell);
+
+            cell = new PdfPCell(FormatHeaderPhrase("Serial"));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;            
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtdtl.AddCell(cell);
+            cell = new PdfPCell(FormatHeaderPhrase("Shipment Date"));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;            
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtdtl.AddCell(cell);
+            cell = new PdfPCell(FormatHeaderPhrase("Ship No"));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;            
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtdtl.AddCell(cell);
+            cell = new PdfPCell(FormatHeaderPhrase("Party Name"));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;          
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtdtl.AddCell(cell);
+            cell = new PdfPCell(FormatHeaderPhrase("Items"));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;             
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtdtl.AddCell(cell);
+            cell = new PdfPCell(FormatHeaderPhrase("Party Rate"));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;           
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtdtl.AddCell(cell);
+            cell = new PdfPCell(FormatHeaderPhrase("Pics"));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtdtl.AddCell(cell);
+            cell = new PdfPCell(FormatHeaderPhrase("T.Mode"));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtdtl.AddCell(cell);
+            cell = new PdfPCell(FormatHeaderPhrase("Total Parses Amount"));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtdtl.AddCell(cell);
+            cell = new PdfPCell(FormatHeaderPhrase("Payment Type"));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtdtl.AddCell(cell);
+            cell = new PdfPCell(FormatHeaderPhrase("Payed "));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtdtl.AddCell(cell);
+            cell = new PdfPCell(FormatHeaderPhrase("Cheque time interval"));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtdtl.AddCell(cell);
+
+            int Serial = 1;
+            decimal totPvAmt = 0; decimal totPayAmt = 0; decimal PartyRate = 0; decimal PICS = 0;
+            DataTable dtdtl = PartyInfoManager.getShowPartyPaymentSupperyInReport(ddlPartyName.SelectedValue,txtFromdate.Text,txtToDate.Text);
+            foreach (DataRow dr in dtdtl.Rows)
+            {
+                cell = new PdfPCell(FormatPhrase(Serial.ToString()));
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                cell.FixedHeight = 20f;
+                cell.BorderColor = BaseColor.LIGHT_GRAY;
+                pdtdtl.AddCell(cell);
+                Serial++;
+
+
+                cell = new PdfPCell(FormatPhrase((DataManager.DateEncode(dr["TransDate"].ToString())).ToString(IdManager.DateFormat())));
+                cell.HorizontalAlignment = 0;
+                cell.VerticalAlignment = 1;
+                cell.BorderColor = BaseColor.LIGHT_GRAY;
+                pdtdtl.AddCell(cell);
+
+                if (dr["ShiftmentNO"].ToString() != "")
+                {
+                    cell = new PdfPCell(FormatPhrase(dr["ShiftmentNO"].ToString()));
+                }
+                else
+                {
+                    cell = new PdfPCell(FormatPhrase("-"));
+                }
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                cell.BorderColor = BaseColor.LIGHT_GRAY;
+                pdtdtl.AddCell(cell);
+
+                if (dr["PartyName"].ToString() != "")
+                {
+                    cell = new PdfPCell(FormatPhrase(dr["PartyName"].ToString()));
+                }
+                else
+                {
+                    cell = new PdfPCell(FormatPhrase("-"));
+                }               
+                cell.HorizontalAlignment = 0;
+                cell.VerticalAlignment = 1;
+                cell.BorderColor = BaseColor.LIGHT_GRAY;
+                pdtdtl.AddCell(cell);
+
+                if (dr["Items"].ToString() != "")
+                {
+                    cell = new PdfPCell(FormatPhrase(dr["Items"].ToString()));
+                    cell.HorizontalAlignment = 0;
+                    cell.VerticalAlignment = 1;
+                }
+                else
+                {
+                    cell = new PdfPCell(FormatPhrase("-"));
+                    cell.HorizontalAlignment = 1;
+                    cell.VerticalAlignment = 1;
+                }                    
+                cell.BorderColor = BaseColor.LIGHT_GRAY;
+                pdtdtl.AddCell(cell);
+
+                if (dr["PartyRate"].ToString() != "")
+                {
+                    cell = new PdfPCell(FormatPhrase(dr["PartyRate"].ToString()));
+                    cell.HorizontalAlignment = 2;
+                    cell.VerticalAlignment = 1;
+                }
+                else
+                {
+                    cell = new PdfPCell(FormatPhrase("-"));
+                    cell.HorizontalAlignment = 1;
+                    cell.VerticalAlignment = 1;
+                }                 
+               
+                cell.BorderColor = BaseColor.LIGHT_GRAY;
+                pdtdtl.AddCell(cell);
+
+                if (dr["PICS"].ToString() != "")
+                {
+                    cell = new PdfPCell(FormatPhrase(dr["PICS"].ToString()));
+                    cell.HorizontalAlignment = 2;
+                    cell.VerticalAlignment = 1;
+                }
+                else
+                {
+                    cell = new PdfPCell(FormatPhrase("-"));
+                    cell.HorizontalAlignment = 1;
+                    cell.VerticalAlignment = 1;
+                }             
+                cell.BorderColor = BaseColor.LIGHT_GRAY;
+                pdtdtl.AddCell(cell);
+
+
+                cell = new PdfPCell(FormatPhrase(dr["TMode"].ToString()));
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                cell.BorderColor = BaseColor.LIGHT_GRAY;
+                pdtdtl.AddCell(cell);
+
+                if (dr["Total"].ToString() != "")
+                {
+                    cell = new PdfPCell(FormatPhrase(dr["Total"].ToString()));
+                    cell.HorizontalAlignment = 2;
+                    cell.VerticalAlignment = 1;
+                }
+                else
+                {
+                    cell = new PdfPCell(FormatPhrase("-"));
+                    cell.HorizontalAlignment = 1;
+                    cell.VerticalAlignment = 1;
+                }              
+                cell.BorderColor = BaseColor.LIGHT_GRAY;
+                pdtdtl.AddCell(cell);
+
+                if (dr["PaymentMathord"].ToString() != "")
+                {
+                    cell = new PdfPCell(FormatPhrase(dr["PaymentMathord"].ToString()));
+                }
+                else
+                {
+                    cell = new PdfPCell(FormatPhrase("-"));
+                }                 
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                cell.BorderColor = BaseColor.LIGHT_GRAY;
+                pdtdtl.AddCell(cell);
+
+                if (dr["Payed"].ToString() != "")
+                {
+                    cell = new PdfPCell(FormatPhrase(dr["Payed"].ToString()));
+                    cell.HorizontalAlignment = 2;
+                    cell.VerticalAlignment = 1;
+                }
+                else
+                {
+                    cell = new PdfPCell(FormatPhrase("-"));
+                    cell.HorizontalAlignment = 1;
+                    cell.VerticalAlignment = 1;
+                }              
+                cell.BorderColor = BaseColor.LIGHT_GRAY;
+                pdtdtl.AddCell(cell);
+
+                if (dr["BDT"].ToString() != "")
+                {
+                    cell = new PdfPCell(FormatPhrase(dr["BDT"].ToString()));
+                }
+                else
+                {
+                    cell = new PdfPCell(FormatPhrase("-"));
+                }                 
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                cell.BorderColor = BaseColor.LIGHT_GRAY;
+                pdtdtl.AddCell(cell);
+
+                if (dr["PartyRate"].ToString() != "")
+                {
+                    PartyRate += Convert.ToDecimal(dr["PartyRate"].ToString());
+                }
+                if (dr["PICS"].ToString() != "")
+                {
+                    PICS += Convert.ToDecimal(dr["PICS"].ToString());
+                }
+                if (dr["Total"].ToString() != "")
+                {
+                    totPvAmt += Convert.ToDecimal(dr["Total"].ToString());
+                }
+                if (dr["Payed"].ToString() != "")
+                {
+                    totPayAmt += Convert.ToDecimal(dr["Payed"].ToString());
+                }
+               
+            }
+            cell = new PdfPCell(FormatHeaderPhrase("Total"));
+            cell.HorizontalAlignment = 2;
+            cell.VerticalAlignment = 1;
+            cell.FixedHeight = 20f;
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            cell.Colspan = 5;
+            pdtdtl.AddCell(cell);
+            cell = new PdfPCell(FormatHeaderPhrase(totPayAmt.ToString("N3")));
+            cell.HorizontalAlignment = 2;
+            cell.VerticalAlignment = 1;
+            cell.FixedHeight = 20f;
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtdtl.AddCell(cell);
+            cell = new PdfPCell(FormatHeaderPhrase(PICS.ToString("N3")));
+            cell.HorizontalAlignment = 2;
+            cell.VerticalAlignment = 1;
+            cell.FixedHeight = 20f;
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtdtl.AddCell(cell);
+            cell = new PdfPCell(FormatHeaderPhrase(totPvAmt.ToString("N3")));
+            cell.HorizontalAlignment = 2;
+            cell.VerticalAlignment = 1;
+            cell.FixedHeight = 20f;
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtdtl.AddCell(cell);
+            cell = new PdfPCell(FormatHeaderPhrase(""));
+            cell.HorizontalAlignment = 2;
+            cell.VerticalAlignment = 1;
+            cell.FixedHeight = 20f;
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtdtl.AddCell(cell);
+            cell = new PdfPCell(FormatHeaderPhrase(totPayAmt.ToString("N3")));
+            cell.HorizontalAlignment = 2;
+            cell.VerticalAlignment = 1;
+            cell.FixedHeight = 20f;
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtdtl.AddCell(cell);
+            cell = new PdfPCell(FormatHeaderPhrase(""));
+            cell.HorizontalAlignment = 2;
+            cell.VerticalAlignment = 1;
+            cell.FixedHeight = 20f;
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtdtl.AddCell(cell);
+
+            document.Add(pdtdtl);
+            document.Close();
+            Response.Flush();
+            Response.End();
+        }
+    }
+    private static Phrase FormatPhrase(string value)
+    {
+        return new Phrase(value, FontFactory.GetFont(FontFactory.TIMES_ROMAN, 9));
+    }
+    private static Phrase FormatHeaderPhrase(string value)
+    {
+        return new Phrase(value, FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD));
+    }
+    protected void btnClear_Click(object sender, EventArgs e)
+    {
+        ClearAll();
+
+    }
+    private void ClearAll()
+    {
+        ddlPartyName.SelectedIndex = -1;
+        ddlReportType.SelectedIndex = -1;
+        txtFromdate.Text = "";
+        txtToDate.Text = "";
+    }
+}

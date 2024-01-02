@@ -1,0 +1,234 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using System.Data;
+using System.Data.SqlClient;
+using Delve;
+
+public partial class frmSundousBranchSetup : System.Web.UI.Page
+{
+    clsSundousBranchManager aclsSundousBranchManager= new clsSundousBranchManager();
+    private static Permis per;
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        if (Session["user"] == null)
+        {
+            if (Session.SessionID != "" | Session.SessionID != null)
+            {
+                clsSession ses = clsSessionManager.getSession(Session.SessionID);
+                if (ses != null)
+                {
+                    Session["user"] = ses.UserId;
+                    Session["book"] = "AMB";
+                    string connectionString = DataManager.OraConnString();
+                    SqlDataReader dReader;
+                    SqlConnection conn = new SqlConnection();
+                    conn.ConnectionString = connectionString;
+                    SqlCommand cmd = new SqlCommand();
+                    cmd.Connection = conn;
+                    cmd.CommandType = CommandType.Text;
+                    cmd.CommandText = "Select user_grp,description from utl_userinfo where upper(user_name)=upper('" + Session["user"].ToString().ToUpper() + "') and status='A'";
+                    conn.Open();
+                    dReader = cmd.ExecuteReader();
+                    string wnot = "";
+                    if (dReader.HasRows == true)
+                    {
+                        while (dReader.Read())
+                        {
+                            Session["userlevel"] = int.Parse(dReader["user_grp"].ToString());
+                            //Session["dept"] = dReader["dept"].ToString();
+                            wnot = "Welcome Mr. " + dReader["description"].ToString();
+                        }
+                        Session["wnote"] = wnot;
+
+                        cmd = new SqlCommand();
+                        cmd.Connection = conn;
+                        cmd.CommandType = CommandType.Text;
+                        cmd.CommandText = "Select book_desc,company_address1,company_address2,separator_type,ShotName from gl_set_of_books where book_name='" + Session["book"].ToString() + "' ";
+                        if (dReader.IsClosed == false)
+                        {
+                            dReader.Close();
+                        }
+                        dReader = cmd.ExecuteReader();
+                        if (dReader.HasRows == true)
+                        {
+                            while (dReader.Read())
+                            {
+                                Session["septype"] = dReader["separator_type"].ToString();
+                                Session["org"] = dReader["book_desc"].ToString();
+                                Session["add1"] = dReader["company_address1"].ToString();
+                                Session["add2"] = dReader["company_address2"].ToString();
+                                Session["ShotName"] = dReader["ShotName"].ToString();
+                            }
+                        }
+                    }
+                    dReader.Close();
+                    conn.Close();
+                }
+            }
+        }
+        try
+        {
+            //ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('" + Session.SessionID + "');", true);
+            string pageName = DataManager.GetCurrentPageName();
+            string modid = PermisManager.getModuleId(pageName);
+            per = PermisManager.getUsrPermis(Session["user"].ToString().Trim().ToUpper(), modid);
+            if (per != null & per.AllowView == "Y")
+            {
+                ((Label)Page.Master.FindControl("lblLogin")).Text = Session["wnote"].ToString();
+                ((LinkButton)Page.Master.FindControl("lbLogout")).Visible = true;
+            }
+            else
+            {
+                Response.Redirect("Home.aspx?sid=sam");
+            }
+        }
+        catch
+        {
+            Response.Redirect("Default.aspx?sid=sam");
+        }
+
+        if (!IsPostBack)
+        {
+            Refresh();
+        }
+    }
+    private void Refresh()
+    {
+        txtBranchId.Text = txtBranchName.Text = txtAddress.Text = txtMobileNo.Text = txtEmail.Text = string.Empty;
+        DataTable dt = aclsSundousBranchManager.GetBranchInfo();
+        dgSundousBranch.DataSource = dt;
+        dgSundousBranch.DataBind();
+    }
+    protected void BtnSave_Click(object sender, EventArgs e)
+    {
+        try
+        {
+            clsSundousBranch aclsSundousBranch = aclsSundousBranchManager.GetBranchInfo(txtBranchId.Text);
+            if (aclsSundousBranch != null)
+            {
+                if (per.AllowEdit == "Y")
+                {
+                    aclsSundousBranch.BranchId = txtBranchId.Text.Trim();
+                    aclsSundousBranch.BranchName = txtBranchName.Text.Trim();
+                    aclsSundousBranch.Address = txtAddress.Text.Trim();
+                    aclsSundousBranch.Mobile = txtMobileNo.Text.Trim();
+                    aclsSundousBranch.Email = txtEmail.Text.Trim();
+                    aclsSundousBranch.LoginBy = Session["user"].ToString();
+
+                    aclsSundousBranchManager.UpdateBranchInfo(aclsSundousBranch);
+                    Refresh();
+                    ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Record(s) is/are updated suceessfullly!!');", true);
+                }
+                else
+                {
+                    ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('You have not enough permissoin to update this record!!');", true);
+                }
+            }
+            else
+            {
+                if (per.AllowAdd == "Y")
+                {
+                    aclsSundousBranch = new clsSundousBranch();
+                    //aUniversity.versityId = txtUniversityId.Text.Trim();
+                    aclsSundousBranch.BranchName = txtBranchName.Text.Trim();
+                    aclsSundousBranch.Address = txtAddress.Text.Trim();
+                    aclsSundousBranch.Mobile = txtMobileNo.Text.Trim();
+                    aclsSundousBranch.Email = txtEmail.Text.Trim();
+                    aclsSundousBranch.LoginBy = Session["user"].ToString();
+
+                    aclsSundousBranchManager.SaveInformation(aclsSundousBranch);
+                    Refresh();
+                    ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Record(s) is/are created suceessfullly!!');", true);
+                }
+                else
+                {
+                    ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('You have not enough permissoin to update this record!!');", true);
+                }
+            }
+        }
+        catch (FormatException fex)
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('" + fex.Message + "');", true);
+        }
+        catch (Exception ex)
+        {
+            if (ex.Message.Contains("Database"))
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Database Maintain Error. Contact to the Software Provider..!!');", true);
+            else
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('There is some problem to do the task. Try again properly.!!');", true);
+        }   
+    }
+    protected void BtnDelete_Click(object sender, EventArgs e)
+    {
+        try
+        {
+            clsSundousBranch aclsSundousBranch = aclsSundousBranchManager.GetBranchInfo(txtBranchId.Text);
+            if (aclsSundousBranch != null)
+            {
+                if (per.AllowDelete == "Y")
+                {
+                    aclsSundousBranchManager.DeleteInfo(aclsSundousBranch);
+                    Refresh();
+                    ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Record(s) is/are Deleted suceessfullly!!');", true);
+                }
+                else
+                {
+                    ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('You have not enough permissoin to delete this record!!');", true);
+                }
+            }
+        }
+        catch (FormatException fex)
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('" + fex.Message + "');", true);
+        }
+        catch (Exception ex)
+        {
+            if (ex.Message.Contains("Database"))
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Database Maintain Error. Contact to the Software Provider..!!');", true);
+            else
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('There is some problem to do the task. Try again properly.!!');", true);
+        }
+    }
+    protected void BtnReset_Click(object sender, EventArgs e)
+    {
+        var pageName = System.IO.Path.GetFileName(Request.Url.ToString());
+        Response.Redirect(pageName);
+    }
+    protected void dgSundousBranch_RowDataBound(object sender, GridViewRowEventArgs e)
+    {
+        if (e.Row.RowType == DataControlRowType.DataRow | e.Row.RowType == DataControlRowType.Header | e.Row.RowType == DataControlRowType.Footer)
+        {
+            e.Row.Cells[1].Attributes.Add("style", "display:none");
+        }
+    }
+    protected void dgSundousBranch_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        try
+        {
+            clsSundousBranch aclsSundousBranch = aclsSundousBranchManager.GetBranchInfo(dgSundousBranch.SelectedRow.Cells[1].Text.Trim());
+            if (aclsSundousBranch != null)
+            {
+                txtBranchId.Text = aclsSundousBranch.BranchId;
+                txtBranchName.Text = aclsSundousBranch.BranchName;
+                txtAddress.Text = aclsSundousBranch.Address;
+                txtMobileNo.Text = aclsSundousBranch.Mobile;
+                txtEmail.Text = aclsSundousBranch.Email;
+            }
+        }
+        catch (FormatException fex)
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('" + fex.Message + "');", true);
+        }
+        catch (Exception ex)
+        {
+            if (ex.Message.Contains("Database"))
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Database Maintain Error. Contact to the Software Provider..!!');", true);
+            else
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('There is some problem to do the task. Try again properly.!!');", true);
+        }
+    }
+}

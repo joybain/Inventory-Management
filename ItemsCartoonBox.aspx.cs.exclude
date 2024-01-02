@@ -1,0 +1,1459 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using System.Data;
+using Delve;
+using System.Drawing;
+using System.Data.SqlClient;
+using iTextSharp.text;
+using iTextSharp.text.pdf;
+
+public partial class ItemsCartoonBox : System.Web.UI.Page
+{
+    private static Permis per;
+    ShiftmentAssignManager _aShiftmentAssignManager=new ShiftmentAssignManager();
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        if (Session["user"] == null)
+        {
+            if (Session.SessionID != "" | Session.SessionID != null)
+            {
+                clsSession ses = clsSessionManager.getSession(Session.SessionID);
+                if (ses != null)
+                {
+                    Session["user"] = ses.UserId;
+                    Session["book"] = "AMB";
+                    string connectionString = DataManager.OraConnString();
+                    SqlDataReader dReader;
+                    SqlConnection conn = new SqlConnection();
+                    conn.ConnectionString = connectionString;
+                    SqlCommand cmd = new SqlCommand();
+                    cmd.Connection = conn;
+                    cmd.CommandType = CommandType.Text;
+                    cmd.CommandText =
+                        "Select user_grp,[description],UserType,case when UserType=1 then 'Bangladesh' else 'Philippine' end AS[LoginCountry] from utl_userinfo where upper(user_name)=upper('" +
+                        Session["user"].ToString().ToUpper() + "') and status='A'";
+                    conn.Open();
+                    dReader = cmd.ExecuteReader();
+                    string wnot = "", userType = "";
+                    if (dReader.HasRows == true)
+                    {
+                        while (dReader.Read())
+                        {
+                            Session["userlevel"] = int.Parse(dReader["user_grp"].ToString());
+                            //Session["dept"] = dReader["dept"].ToString();
+                            wnot = "Welcome " + dReader["description"].ToString();
+                            Session["LoginCountry"] = dReader["LoginCountry"].ToString();
+                            userType = dReader["UserType"].ToString();
+                        }
+                        Session["wnote"] = wnot;
+                        cmd = new SqlCommand();
+                        cmd.Connection = conn;
+                        cmd.CommandType = CommandType.Text;
+                        //cmd.CommandText = "Select book_desc,company_address1,company_address2,separator_type from gl_set_of_books where book_name='" + Session["book"].ToString() + "' ";
+                        if (Convert.ToInt32(userType) == 2)
+                        {
+
+                            Session["bookMAN"] = "MAN";
+                        }
+                        else
+                        {
+                            Session["bookMAN"] = Session["book"].ToString();
+                        }
+                        cmd.CommandText = "Select book_desc,company_address1,company_address2,separator_type,ShotName from gl_set_of_books where book_name='" + Session["bookMAN"] + "' ";
+
+                        if (dReader.IsClosed == false)
+                        {
+                            dReader.Close();
+                        }
+                        dReader = cmd.ExecuteReader();
+                        if (dReader.HasRows == true)
+                        {
+                            while (dReader.Read())
+                            {
+                                Session["septype"] = dReader["separator_type"].ToString();
+                                Session["org"] = dReader["book_desc"].ToString();
+                                Session["add1"] = dReader["company_address1"].ToString();
+                                Session["add2"] = dReader["company_address2"].ToString();
+                            }
+                        }
+                    }
+                    dReader.Close();
+                    conn.Close();
+                }
+            }
+        }
+        try
+        {
+            string pageName = DataManager.GetCurrentPageName();
+            string modid = PermisManager.getModuleId(pageName);
+            per = PermisManager.getUsrPermis(Session["user"].ToString().Trim().ToUpper(), modid);
+            if (per != null && per.AllowView == "Y")
+            {
+                ((Label)Page.Master.FindControl("lblLogin")).Text = Session["wnote"].ToString();
+                ((Label)Page.Master.FindControl("lblCountryName")).Text = Session["LoginCountry"].ToString();
+                ((LinkButton)Page.Master.FindControl("lbLogout")).Visible = true;
+            }
+            else
+            {
+                Response.Redirect("Home.aspx?sid=sam");
+            }
+        }
+        catch
+        {
+            Response.Redirect("Default.aspx?sid=sam");
+        }
+        if (!IsPostBack)
+        {
+            Session["ICList"] = null;
+            //if (ViewState["itemdtl"] != null)
+            //{
+            //    DataTable dtCheckTemp = (DataTable)ViewState["itemdtl"];
+            //    if (dtCheckTemp != null)
+            //    {
+            //        foreach (DataRow drCon in dtCheckTemp.Rows)
+            //        {
+            //            if (!string.IsNullOrEmpty(drCon["item_code"].ToString()))
+            //            {
+            //                ShiftmentItemsCartoonManager.DeleteTempTable(drCon["item_code"].ToString());
+            //            }
+            //        }
+            //    }
+            //    //ShiftmentItemsCartoonManager.DeleteTempTable();
+            //}
+            ShiftmentItemsCartoonManager.DeleteTempTable("");
+            txtCourtoon.Text = txtShiftmentNo.Text = txtRemarks.Text = "";
+            DataTable dtt = ShiftmentItemsCartoonManager.GetShowCartoonItemsDetails(txtID.Text);
+            dgHistory.DataSource = dtt;
+            ViewState["History"] = dtt;
+            if (dtt.Rows.Count == 0)
+            { tdHistory.Visible = false; }
+            else { tdHistory.Visible = true; }
+            dgHistory.DataBind();
+           // txtCourtoon.Enabled = txtShiftmentNo.Enabled = 
+                txtRemarks.Enabled =PnlQty.Visible= false;
+            lbSave.Enabled = lblNew.Visible = lbDelete.Visible = true;
+            //UP2.Visible =UP3.Visible=dgItem.Enabled=PnlQty.Visible= false;
+            ItemsDetails.Visible = false;
+            getEmptyDtl();
+            DataTable dt = IdManager.GetShowDataTable("SELECT '' CHK,[ID],[ColorName] FROM [ColorInfo]");
+            chkColor.DataSource = dt; chkColor.DataTextField = "ColorName"; chkColor.DataValueField = "ID";
+            chkColor.DataBind();
+            DataTable dt1 = IdManager.GetShowDataTable("SELECT '' CHK,[ID],[SizeName] FROM [SizeInfo]");
+            chkSize.DataSource = dt1; chkSize.DataTextField = "SizeName"; chkSize.DataValueField = "ID";
+            chkSize.DataBind();
+            getColor();
+            getSize();
+            IdManager.getInsertUpdateDelete("DELETE FROM [TemporaryImage]");
+            Session["ID"] = Session["Img"] = null;
+
+            // ************************ Gride Textbox Add ***************//
+            btnProductImage.OnClientClick = "javascript:OpenWindow('frmImage.aspx?ID=" + "" + "&RefNo=" + "00" + "');return false;";
+            GrideViewColumns();
+            ViewState["ColorInfo"] = null;
+            ViewState["SizeInfo"] = null;
+            btnOk.Visible = btnCle.Visible = false;
+        }
+    }
+    private void GrideViewColumns()
+    {
+        dgQty.Columns.Clear();
+        BoundField bfield = new BoundField();
+        bfield.HeaderText = "";
+        bfield.ItemStyle.Width = 1;
+        bfield.ItemStyle.ForeColor = Color.White;
+        bfield.DataField = "ColorID";
+        bfield.ItemStyle.Font.Bold = true;
+        dgQty.Columns.Add(bfield);
+
+        BoundField bfield1 = new BoundField();
+        bfield1.HeaderText = "Color Name";
+        bfield1.ItemStyle.Width = 150;
+        bfield1.ItemStyle.Font.Bold = true;
+        bfield1.DataField = "ColorName";
+        dgQty.Columns.Add(bfield1);
+    }
+    private void getColor()
+    {
+        DataTable dt = new DataTable();
+        dt.Columns.Add("ID", typeof(string));
+        dt.Columns.Add("ColorName", typeof(string));
+        //DataRow dr = dt.NewRow();
+        //dt.Rows.Add(dr);
+        ViewState["ColorInfo"] = dt;
+    }
+    private void getSize()
+    {
+        DataTable dt = new DataTable();
+        dt.Columns.Add("ID", typeof(string));
+        dt.Columns.Add("SizeName", typeof(string));
+        ViewState["SizeInfo"] = dt;
+    }
+    private void getQty()
+    {
+        GrideViewColumns();
+        DataTable dt = new DataTable();
+        DataTable dtSz = (DataTable)ViewState["SizeInfo"];
+        dt.Columns.Add("ColorID", typeof(string));
+        dt.Columns.Add("ColorName", typeof(string));
+        foreach (DataRow dr in dtSz.Rows)
+        {
+            dt.Columns.Add(dr["SizeName"].ToString(), typeof(string));
+        }
+        int countSZ = dtSz.Rows.Count;
+        DataTable dtCL = (DataTable)ViewState["ColorInfo"];
+        foreach (DataRow dr in dtCL.Rows)
+        {
+            DataRow dr1 = dt.NewRow();
+            dr1["ColorID"] = dr["ID"].ToString();
+            dr1["ColorName"] = dr["ColorName"].ToString();
+            dt.Rows.Add(dr1);
+        }
+        ViewState["Qty"] = dt;
+        foreach (DataRow dr in dtSz.Rows)
+        {
+            string coln = dr["SizeName"].ToString();
+            TemplateField tf3 = new TemplateField();
+            tf3.HeaderTemplate = new GridViewTemplate(DataControlRowType.Header, coln, new Label(), "");
+            tf3.HeaderStyle.HorizontalAlign = HorizontalAlign.Center;
+            tf3.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
+            tf3.ItemStyle.Width = 90;
+            dgQty.Columns.Add(tf3);
+        }
+        dgQty.DataSource = dt;
+        dgQty.DataBind();
+    }
+    protected void btnProductQuantity_Click(object sender, EventArgs e)
+    {
+
+        GrideViewColumns();
+        getColor();
+        getSize();
+        foreach (System.Web.UI.WebControls.ListItem item in chkColor.Items)
+        {
+            if (item.Selected)
+            {
+                string Name = "";
+                DataTable dt = (DataTable)ViewState["ColorInfo"];
+                Name = IdManager.GetShowSingleValueString("ColorName", "ID", "ColorInfo", item.Value);
+                dt.Rows.Add(item.Value, Name);
+                ViewState["ColorInfo"] = dt;
+            }
+        }
+        DataTable dtt = new DataTable();
+        foreach (System.Web.UI.WebControls.ListItem item in chkSize.Items)
+        {
+            if (item.Selected)
+            {
+                DataTable dt = (DataTable)ViewState["SizeInfo"];
+                string Name = IdManager.GetShowSingleValueString("SizeName", "ID", "SizeInfo", item.Value);
+                dt.Rows.Add(item.Value, Name);
+                ViewState["SizeInfo"] = dt;
+            }
+        }
+        DataTable ttb1 = (DataTable)ViewState["ColorInfo"];
+        DataTable ttb2 = (DataTable)ViewState["SizeInfo"];
+        if (ttb1.Rows.Count <= 0)
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Select color first  ...!!');", true);
+            return;
+        }
+        if (ttb2.Rows.Count <= 0)
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Select size first  ...!!');", true);
+            return;
+        }
+        ViewState["Qty"] = null;
+        getQty();
+        dgQty.Visible = btnOk.Visible = btnCle.Visible =  true;
+
+    }
+    private void BindGridData(int Value,string ItemsID)
+    {
+        SqlConnection connection = new SqlConnection(DataManager.OraConnString());
+        SqlCommand command=null;
+        if (Value == 0)
+        {
+            command = new SqlCommand("SELECT '' AS imagename,[ID] AS ImageID, [Image] AS Image from [Temp_ShiftmentItemsImage] where [MasterId] ='" + ItemsID + "'", connection);           
+
+        }
+        else
+        {
+            command = new SqlCommand("SELECT '' AS imagename,[ID] AS ImageID, [Image] AS Image from [ShiftmentBoxingItemsImage] where [BoxingItemsID] ='" + txtID.Text + "' AND ItemsID='" + ItemsID + "'", connection);
+        }
+        SqlDataAdapter daimages = new SqlDataAdapter(command);
+        DataTable dt = new DataTable();
+        daimages.Fill(dt);
+        Session["Img"] = dt;
+    }
+    protected void dgQty_RowUpdating(object sender, GridViewUpdateEventArgs e)
+    {
+
+    }
+    protected void dgQty_RowCreated(object sender, GridViewRowEventArgs e)
+    {
+        if (e.Row.RowType == DataControlRowType.DataRow)
+        {
+            DataTable dtSz = (DataTable)ViewState["SizeInfo"];
+            if (dtSz != null)
+            {
+                int a = 2;
+                foreach (DataRow dr in dtSz.Rows)
+                {
+                    TextBox txtBx = new TextBox();
+                    txtBx.ID = dr["SizeName"].ToString();
+                    txtBx.Visible = true;
+                    txtBx.EnableViewState = true;
+                    e.Row.Cells[a].Controls.Add(txtBx);
+                    a++;
+                }
+            }
+        }
+    }
+    protected void dgQty_RowDataBound(object sender, GridViewRowEventArgs e)
+    {        
+        if (e.Row.RowType == DataControlRowType.DataRow | e.Row.RowType == DataControlRowType.Header | e.Row.RowType == DataControlRowType.Footer)
+        {
+            e.Row.Cells[0].Attributes.Add("style", "display:none");            
+        }
+        if (e.Row.RowType == DataControlRowType.DataRow)
+        {
+
+            DataTable dtSz = (DataTable)ViewState["SizeInfo"];
+            int a = 2;
+            foreach (DataRow dr in dtSz.Rows)
+            {
+                string txtSize = dr["SizeName"].ToString();
+                TextBox tb = (TextBox)(e.Row.Cells[a].FindControl(txtSize));
+                tb.Attributes.Add("style", "text-align:right");
+                tb.Attributes.Add("onfocus", "this.select();");
+                tb.Attributes.Add("onkeypress", "return isNumber(event)");
+                tb.Text = (e.Row.DataItem as DataRowView).Row[txtSize].ToString();
+                a++;
+            }            
+        }      
+    }
+    protected void btnColorSize_Click1(object sender, EventArgs e)
+    {
+        tbColorSize.Visible = true;
+    }
+    protected void btnNew_Click(object sender, EventArgs e)
+    {
+        
+    }
+    private void getEmptyDtl()
+    {
+        DataTable dtDtlGrid = new DataTable();
+        dtDtlGrid.Columns.Add("item_code", typeof(string));
+        dtDtlGrid.Columns.Add("item_desc", typeof(string));
+        dtDtlGrid.Columns.Add("qty", typeof(string));
+        dtDtlGrid.Columns.Add("Color", typeof(string));
+        DataRow dr = dtDtlGrid.NewRow();
+        //dr["item_code"] = "0001";
+        //dr["msr_unit_code"] = "01";
+        dtDtlGrid.Rows.Add(dr);
+        dgItem.DataSource = dtDtlGrid;
+        ViewState["itemdtl"] = dtDtlGrid;
+        dgItem.DataBind();
+    }
+    public DataTable PopulateItem()
+    {
+        DataTable dtitm = ShiftmentItemsManager.GetShowShiftmentItemsOnShoftmentAssignID(lblShiftmentID.Text.Trim(),ddlSenderName.SelectedValue,ddlCustomer.SelectedValue);
+        DataRow dr = dtitm.NewRow();
+        dtitm.Rows.InsertAt(dr, 0);
+        return dtitm;
+    }
+    protected void ddlSenderName_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        DataTable dtShipSenderInfo = _aShiftmentAssignManager.GetShipmentSenderInfo(lblShiftmentID.Text, "", ddlSenderName.SelectedValue, "3");
+        if (dtShipSenderInfo != null)
+        {
+            if (dtShipSenderInfo.Rows.Count > 0)
+            {
+                ddlCustomer.DataSource = dtShipSenderInfo;
+                ddlCustomer.DataTextField = "Search";
+                ddlCustomer.DataValueField = "CustomerID";
+                ddlCustomer.DataBind();
+                ddlCustomer.Items.Insert(0, "");
+
+                dgItem.DataSource = ViewState["itemdtl"];
+                dgItem.DataBind();
+                getEmptyDtl();   
+            }
+        }
+    }
+    protected void txtShiftmentNo_TextChanged(object sender, EventArgs e)
+    {
+        DataTable dt = ShiftmentAssignManager.GetShowShiftmentAssignOnSearch(txtShiftmentNo.Text);
+        if (dt.Rows.Count > 0)
+        {
+            txtShiftmentNo.Text = dt.Rows[0]["ShiftmentNO"].ToString();          
+            lblShiftmentID.Text = dt.Rows[0]["ID"].ToString();
+            dgItem.DataSource = ViewState["itemdtl"];
+            dgItem.DataBind();                        
+            txtRemarks.Focus();
+            getEmptyDtl();           
+            dgItem.Enabled = true;
+
+            DataTable dtShipSenderInfo = _aShiftmentAssignManager.GetShipmentSenderInfo(lblShiftmentID.Text, "", "", "2");
+            if (dtShipSenderInfo.Rows.Count > 0)
+            {
+                ddlSenderName.DataSource = dtShipSenderInfo;
+                ddlSenderName.DataTextField = "Search";
+                ddlSenderName.DataValueField = "SenderID";
+                ddlSenderName.DataBind();
+                ddlSenderName.Items.Insert(0, "");
+            }
+
+            int totCor = IdManager.GetShowSingleValueInt("isnull(max([CartoonNo]),0)", "[ShiftmentBoxingMst] where [ShiftmentID]='" + dt.Rows[0]["ID"].ToString() + "' ");
+            txtCourtoon.Text = (totCor + 1).ToString();
+        }
+    }
+    protected void ddlItemCode_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        try
+        {
+            if (ViewState["itemdtl"] != null)
+            {
+                //GetClearColorAndSize();
+                GridViewRow gvr = (GridViewRow)((DropDownList)sender).NamingContainer;
+                DataTable dtdtl = (DataTable)ViewState["itemdtl"];
+                DataRow dr = dtdtl.Rows[gvr.DataItemIndex];                
+                DataRow dr13 = dtdtl.AsEnumerable().SingleOrDefault(r => r.Field<string>("item_code") == ((DropDownList)gvr.FindControl("ddlItemCode")).SelectedValue);
+                if (dr13 != null)
+                {
+                    ScriptManager.RegisterClientScriptBlock((sender as Control), this.GetType(), "alert", "alert('Alrady add this list ....!!!');", true);
+                    ((DropDownList)gvr.FindControl("ddlItemCode")).SelectedIndex = -1;
+                    return;
+                }
+                double Qty = IdManager.GetShowSingleValueCurrency("isnull(sum([Quantity]),0)-(select isnull(SUM(t1.Quantity),0)+(select ISNULL(sum(tt.Quantity),0) from Temp_ShiftmentItemsQuantity tt where tt.MasterId='" + ((DropDownList)gvr.FindControl("ddlItemCode")).SelectedValue + "') from ShiftmentBoxingItemsDtl t1  inner join [ShiftmentItems] t5 on t5.ID=t1.ItemsID inner join ShiftmentBoxingMst t2 on t2.ID=t1.MasterID and t2.ShiftmentID='" + lblShiftmentID.Text + "' and t1.ItemsID='" + ((DropDownList)gvr.FindControl("ddlItemCode")).SelectedValue + "')", " t1.ID='" + ((DropDownList)gvr.FindControl("ddlItemCode")).SelectedValue + "' and t1.[ShiftmentID]", "[ShiftmentItems] t1", lblShiftmentID.Text);
+                lblTotQty.Text = "Total Stock Quantity :  ( " + Qty.ToString("N0") + " )";
+                ViewState["Qty"] = Qty;
+                if (Qty == 0)
+                {                    
+                    ScriptManager.RegisterClientScriptBlock((sender as Control), this.GetType(), "alert", "alert('Shipment Quentity Is ( 0 ) .... !!!!');", true);
+                    ((DropDownList)gvr.FindControl("ddlItemCode")).SelectedIndex = -1;
+                }
+                dr["item_code"] = ((DropDownList)gvr.FindControl("ddlItemCode")).SelectedValue;
+                dr["item_desc"] = ((DropDownList)gvr.FindControl("ddlItemCode")).SelectedItem.Text;
+                dr["qty"] = ((TextBox)gvr.FindControl("txtQty")).Text;
+                dr["Color"] = ((TextBox)gvr.FindControl("txtColor")).Text;
+                string found = "";
+                foreach (DataRow drf in dtdtl.Rows)
+                {
+                    if (drf["qty"].ToString() == "")
+                    {
+                        found = "Y";
+                    }
+                }
+                if (found == "")
+                {
+                    DataRow dr1 = dtdtl.NewRow();
+                    dtdtl.Rows.Add(dr1);
+                }
+                dgItem.DataSource = dtdtl;
+                dgItem.DataBind();
+                ((TextBox)dgItem.Rows[dgItem.Rows.Count - 1].FindControl("txtQty")).Focus();
+            }
+        }
+        catch (FormatException fex)
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('" + fex.Message + "');", true);
+        }
+        catch (Exception ex)
+        {
+            if (ex.Message.Contains("Database"))
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Database Maintain Error. Contact to the Software Provider..!!');", true);
+            else
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('There is some problem to do the task. Try again properly.!!');", true);
+        }
+    }
+    protected void txtQty_TextChanged(object sender, EventArgs e)
+    {
+        if (ViewState["itemdtl"] != null)
+        {
+            GridViewRow gvr = (GridViewRow)((TextBox)sender).NamingContainer;
+            DataTable dt = (DataTable)ViewState["itemdtl"];
+            // DataTable dt = ItemManager.GetItems(((TextBox)gvr.FindControl("txtItemDesc")).Text);
+            if (dt.Rows.Count > 0)
+            {
+                DataRow dr = dt.Rows[gvr.DataItemIndex];
+                dr["item_code"] = ((DropDownList)gvr.FindControl("ddlItemCode")).SelectedValue;
+                dr["item_desc"] = ((DropDownList)gvr.FindControl("ddlItemCode")).SelectedItem.Text;
+                dr["qty"] = ((TextBox)gvr.FindControl("txtQty")).Text;
+                dr["Color"] = ((TextBox)gvr.FindControl("txtColor")).Text;
+            }
+            if (Convert.ToDouble(ViewState["Qty"]) < Convert.ToDouble(((TextBox)gvr.FindControl("txtQty")).Text))
+            {
+                ScriptManager.RegisterClientScriptBlock((sender as Control), this.GetType(), "alert", "alert(' Items Quantity Over this stock Quantity .... !!!!');", true);
+                ((TextBox)gvr.FindControl("txtQty")).Text = "0";
+                 ((TextBox)dgItem.Rows[dgItem.Rows.Count - 1].FindControl("txtQty")).Focus();
+                return;
+            }           
+            dgItem.DataSource = dt;
+            dgItem.DataBind();
+            // ((TextBox)gvr.FindControl("txtItemRate")).Focus();        
+            ((TextBox)dgItem.Rows[dgItem.Rows.Count - 1].FindControl("txtColor")).Focus();
+        }
+
+    }
+    protected void txtColor_TextChanged(object sender, EventArgs e)
+    {
+        if (ViewState["itemdtl"] != null)
+        {
+            GridViewRow gvr = (GridViewRow)((TextBox)sender).NamingContainer;
+            DataTable dt = (DataTable)ViewState["itemdtl"];
+            // DataTable dt = ItemManager.GetItems(((TextBox)gvr.FindControl("txtItemDesc")).Text);
+            if (dt.Rows.Count > 0)
+            {
+                DataRow dr = dt.Rows[gvr.DataItemIndex];
+                dr["item_code"] = ((DropDownList)gvr.FindControl("ddlItemCode")).SelectedValue;
+                dr["item_desc"] = ((DropDownList)gvr.FindControl("ddlItemCode")).SelectedItem.Text;
+                dr["qty"] = ((TextBox)gvr.FindControl("txtQty")).Text;
+                dr["Color"] = ((TextBox)gvr.FindControl("txtColor")).Text;
+            }
+            string found = "";
+            foreach (DataRow drd in dt.Rows)
+            {
+                if (drd["item_code"].ToString() == "" && drd["item_desc"].ToString() == "")
+                {
+                    found = "Y";
+                }
+            }
+            if (found == "")
+            {
+                DataRow drd = dt.NewRow();
+                dt.Rows.Add(drd);
+            }
+            dgItem.DataSource = dt;
+            dgItem.DataBind();                   
+            ((DropDownList)dgItem.Rows[dgItem.Rows.Count - 2].FindControl("ddlItemCode")).Focus();
+        }
+    }
+    protected void dgItem_RowDeleting(object sender, GridViewDeleteEventArgs e)
+    {
+        if (ViewState["itemdtl"] != null)
+        {
+            DataTable dtDtlGrid = (DataTable)ViewState["itemdtl"];
+            dtDtlGrid.Rows.RemoveAt(dgItem.Rows[e.RowIndex].DataItemIndex);
+            if (dtDtlGrid.Rows.Count > 0)
+            {
+                string found = "";
+                foreach (DataRow drf in dtDtlGrid.Rows)
+                {
+                    if (drf["item_code"].ToString() == "" && drf["item_desc"].ToString() == "")
+                    {
+                        found = "Y";
+                    }
+                }
+                if (found == "")
+                {
+                    DataRow dr = dtDtlGrid.NewRow();
+                    dtDtlGrid.Rows.Add(dr);
+                }
+                dgItem.DataSource = dtDtlGrid;
+                dgItem.DataBind();
+            }
+            else
+            {
+                getEmptyDtl();
+            }
+        }
+        else
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Your session is over. Try it again!!');", true);
+        }
+    }
+    protected void dgItem_RowDataBound(object sender, GridViewRowEventArgs e)
+    {
+        try
+        {
+            if (e.Row.RowType == DataControlRowType.DataRow)
+            {
+                e.Row.Cells[0].BackColor = Color.Bisque; e.Row.Cells[1].BackColor = Color.Bisque;
+                e.Row.Cells[2].BackColor = Color.Bisque; e.Row.Cells[3].BackColor = Color.Bisque;
+                e.Row.Cells[4].BackColor = Color.Bisque;
+            }
+        }
+        catch (FormatException fex)
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('" + fex.Message + "');", true);
+        }
+        catch (Exception ex)
+        {
+            if (ex.Message.Contains("Database"))
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Database Maintain Error. Contact to the Software Provider..!!');", true);
+            else
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('There is some problem to do the task. Try again properly.!!');", true);
+        }
+    } 
+    protected void dgHistory_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        txtID.Text = dgHistory.SelectedRow.Cells[1].Text;
+        DataTable dt = ShiftmentItemsCartoonManager.GetShowCartoonItemsDetails(txtID.Text);
+        if (dt.Rows.Count > 0)
+        {
+            txtCourtoon.Text = dt.Rows[0]["CartoonNo"].ToString();
+            txtShiftmentNo.Text = dt.Rows[0]["ShiftmentNO"].ToString();
+            lblShiftmentID.Text = dt.Rows[0]["ShiftmentID"].ToString();
+            txtRemarks.Text = dt.Rows[0]["Remarks"].ToString();
+            txtRemarks.Enabled = true;          
+            DataTable dtt = ShiftmentItemsCartoonManager.getShowShiftmentItemsCartoon(txtID.Text);
+            if (dtt.Rows.Count > 0)
+            {
+                DataRow dr = dtt.NewRow();
+                dtt.Rows.InsertAt(dr, dtt.Rows.Count+1);
+                dgItem.DataSource = dtt;
+                ViewState["itemdtl"] = dtt;
+                dgItem.DataBind();
+                tdHistory.Visible = lblNew.Visible = false;
+                dgItem.Enabled=ItemsDetails.Visible= true;
+            }
+        }
+    }
+
+    protected void dgHistory_RowDataBound(object sender, GridViewRowEventArgs e)
+    {
+        try
+        {
+            if (e.Row.RowType == DataControlRowType.DataRow)
+            {
+                e.Row.Cells[1].Attributes.Add("style", "display:none");
+            }
+            else if (e.Row.RowType == DataControlRowType.Header)
+            {
+                e.Row.Cells[1].Attributes.Add("style", "display:none");
+            }
+            else if (e.Row.RowType == DataControlRowType.Footer)
+            {
+                e.Row.Cells[1].Attributes.Add("style", "display:none");
+            }
+        }
+        catch (FormatException fex)
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('" + fex.Message + "');", true);
+        }
+        catch (Exception ex)
+        {
+            if (ex.Message.Contains("Database"))
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Database Maintain Error. Contact to the Software Provider..!!');", true);
+            else
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('There is some problem to do the task. Try again properly.!!');", true);
+        }
+    }
+
+    protected void dgHistory_PageIndexChanging(object sender, GridViewPageEventArgs e)
+    {
+        dgHistory.DataSource = ViewState["History"];
+        dgHistory.PageIndex = e.NewPageIndex;       
+        dgHistory.DataBind();
+    }      
+    private void GetClearColorAndSize()
+    {
+       // getEmptyDtl();
+        DataTable dt = IdManager.GetShowDataTable("SELECT '' CHK,[ID],[ColorName] FROM [ColorInfo]");
+        chkColor.DataSource = dt; chkColor.DataTextField = "ColorName"; chkColor.DataValueField = "ID";
+        chkColor.DataBind();
+        DataTable dt1 = IdManager.GetShowDataTable("SELECT '' CHK,[ID],[SizeName] FROM [SizeInfo]");
+        chkSize.DataSource = dt1; chkSize.DataTextField = "SizeName"; chkSize.DataValueField = "ID";
+        chkSize.DataBind();
+        getColor();
+        getSize();
+    }
+
+    private void GetColor(int Value)
+    {
+        getColor();
+        getSize();
+        DataTable dtColor = null;
+        if (Value == 0)
+        {
+            dtColor = IdManager.GetShowDataTable("SELECT '0' CHK,t1.[ID] ,t1.[ColorName] FROM [ColorInfo] t1 where t1.[ID]  not in (select tt.ColorID_SizeID from [Temp_ShiftmentItemsColorSize] tt where tt.[Type]=0 and tt.MasterId='" + ViewState["ItemsID"].ToString() + "')   UNION ALL SELECT '1' CHK,t1.[ColorID_SizeID]  ,t2.ColorName FROM [Temp_ShiftmentItemsColorSize] t1 inner join ColorInfo t2 on t2.ID=t1.ColorID_SizeID where t1.MasterId='" + ViewState["ItemsID"].ToString() + "' and t1.[Type]=0 order by t1.ID");
+        }
+        else
+        {
+            dtColor = IdManager.GetShowDataTable("SELECT '0' CHK,t1.[ID] ,t1.[ColorName] FROM [ColorInfo] t1 where t1.[ID]  not in (select tt.ColorID_SizeID from ShiftmentItemsBoxingColorSize tt where tt.BoxingItemsID='" + txtID.Text + "' and  tt.[Type]=0 and tt.ItemsID='" + ViewState["ItemsID"].ToString() + "')   UNION ALL SELECT '1' CHK,t1.[ColorID_SizeID] ,t2.ColorName FROM ShiftmentItemsBoxingColorSize t1 inner join ColorInfo t2 on t2.ID=t1.ColorID_SizeID where t1.BoxingItemsID='" + txtID.Text + "' and t1.ItemsID='" + ViewState["ItemsID"].ToString() + "' and t1.[Type]=0 order by t1.ID");
+        }
+        for (int i = 0; i < dtColor.Rows.Count; i++)
+        {
+            if (dtColor.Rows[i]["CHK"].ToString() == "1")
+            {
+                chkColor.Items[i].Selected = true;
+                tbColorSize.Visible = true;
+            }
+        }
+        DataTable dtSize = null;
+        if (Value == 0)
+        {
+            dtSize = IdManager.GetShowDataTable("SELECT '0' CHK,t1.[ID] ,t1.SizeName from SizeInfo t1 where t1.[ID]  not in (select tt.ColorID_SizeID from [Temp_ShiftmentItemsColorSize] tt where tt.[Type]=1 and tt.MasterId='" + ViewState["ItemsID"].ToString() + "')   UNION ALL SELECT '1' CHK,t1.[ColorID_SizeID],t2.SizeName FROM [Temp_ShiftmentItemsColorSize] t1 inner join SizeInfo t2 on t2.ID=t1.ColorID_SizeID where t1.MasterId='" + ViewState["ItemsID"].ToString() + "' and t1.[Type]=1 order by t1.ID");
+        }
+        else
+        {
+            dtSize = IdManager.GetShowDataTable("SELECT '0' CHK,t1.[ID] ,t1.SizeName from SizeInfo t1 where t1.[ID]  not in (select tt.ColorID_SizeID from ShiftmentItemsBoxingColorSize tt where tt.BoxingItemsID='" + txtID.Text + "' and  tt.[Type]=1 and tt.ItemsID='" + ViewState["ItemsID"].ToString() + "')   UNION ALL SELECT '1' CHK,t1.[ColorID_SizeID] ,t2.SizeName FROM ShiftmentItemsBoxingColorSize t1 inner join SizeInfo t2 on t2.ID=t1.ColorID_SizeID where t1.BoxingItemsID='" + txtID.Text + "' and t1.ItemsID='" + ViewState["ItemsID"].ToString() + "' and t1.[Type]=1 order by t1.ID");
+        }
+        for (int i = 0; i < dtSize.Rows.Count; i++)
+        {
+            if (dtSize.Rows[i]["CHK"].ToString() == "1")
+            {
+                chkSize.Items[i].Selected = true;
+                tbColorSize.Visible = true;
+            }
+        }        
+    }
+
+    protected void ddlCustomer_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        dgItem.DataSource = ViewState["itemdtl"];
+        dgItem.DataBind();
+        txtRemarks.Focus();
+        getEmptyDtl();
+    }
+
+    protected void btnCle_Click(object sender, EventArgs e)
+    {
+        PnlQty.Visible = btnOk.Visible = btnCle.Visible = false; Session["Img"] = ViewState["ColorInfo"] = ViewState["SizeInfo"] = ViewState["ItemsID"] = ViewState["Qty"] = null;
+        btnOk.Enabled = true;
+    }
+
+    //****************************** Tempory Table Saved *********************//
+
+    protected void btnOk_Click(object sender, EventArgs e)
+    {
+        DataTable dtImg = (DataTable)Session["Img"];
+        DataTable dtColor = (DataTable)ViewState["ColorInfo"];
+        DataTable dtSize = (DataTable)ViewState["SizeInfo"];
+        DataTable dtQt = new DataTable();
+        int Count = IdManager.GetShowSingleValueInt("Count(*)", "MasterId", "Temp_ShiftmentItemsQuantity", ViewState["ItemsID"].ToString());
+        if (Count > 0)
+        {
+            dtQt.Columns.Add("ColorID", typeof(string));
+            dtQt.Columns.Add("SizeID", typeof(string));
+            dtQt.Columns.Add("Quantity", typeof(string));
+            decimal Tot = decimal.Zero;
+            foreach (GridViewRow gvr in dgQty.Rows)
+            {
+                int ii = 2;
+                foreach (DataRow dr in dtSize.Rows)
+                {
+                    DataRow ddr = dtQt.NewRow();
+                    string txtSize = dr["SizeName"].ToString();
+                    ddr["SizeID"] = dr["ID"].ToString();
+                    ddr["ColorID"] = gvr.Cells[0].Text;
+                    TextBox tb = (TextBox)(gvr.Cells[ii].FindControl(txtSize));
+                    ddr["Quantity"] = tb.Text;
+                    if (tb.Text.Trim() != "")
+                    {
+                        Tot += Convert.ToDecimal(ddr["Quantity"].ToString());
+                    }
+                    string a = tb.Text;
+                    dtQt.Rows.Add(ddr);
+                    ii++;
+                }
+            }
+            ViewState["Qty"] = dtQt;
+            if (dtQt.Rows.Count > 0)
+            {
+                if (Tot == Convert.ToDecimal(ViewState["ItemQty"].ToString()))
+                {
+                    ShiftmentItemsCartoonManager.UpdateTempItemShiftmentForCartoon(ViewState["ItemsID"].ToString(), dtImg, dtColor, dtSize, dtQt);
+                    ScriptManager.RegisterClientScriptBlock((sender as Control), this.GetType(), "alert", "alert('Add Product this Cortoon...!!');", true);
+                    Session["Img"] = ViewState["ColorInfo"] = ViewState["SizeInfo"] = ViewState["ItemsID"] = ViewState["Qty"] = null;
+                    PnlQty.Visible = false;
+                }
+                else
+                {
+                    ScriptManager.RegisterClientScriptBlock((sender as Control), this.GetType(), "alert", "alert('Product Quantity Are not Same...!!');", true);
+                    return;
+                }
+            }
+            else
+            {
+                ScriptManager.RegisterClientScriptBlock((sender as Control), this.GetType(), "alert", "alert('Add Cartoon Color and Size Quantity ..!!');", true);
+                return;
+            }
+        }
+        else
+        {
+            dtQt.Columns.Add("ColorID", typeof(string));
+            dtQt.Columns.Add("SizeID", typeof(string));
+            dtQt.Columns.Add("Quantity", typeof(string));
+            decimal Tot = decimal.Zero;
+            foreach (GridViewRow gvr in dgQty.Rows)
+            {
+                int ii = 2;
+                foreach (DataRow dr in dtSize.Rows)
+                {
+                    DataRow ddr = dtQt.NewRow();
+                    string txtSize = dr["SizeName"].ToString();
+
+                    ddr["SizeID"] = dr["ID"].ToString();
+                    ddr["ColorID"] = gvr.Cells[0].Text;
+                    TextBox tb = (TextBox)(gvr.Cells[ii].FindControl(txtSize));
+                    ddr["Quantity"] = tb.Text;
+                    if (tb.Text.Trim() != "")
+                    {
+                        Tot += Convert.ToDecimal(ddr["Quantity"].ToString());
+                    }
+                    string a = tb.Text;
+                    dtQt.Rows.Add(ddr);
+                    ii++;
+                }
+            }
+            ViewState["Qty"] = dtQt;
+            if (dtQt.Rows.Count > 0)
+            {
+                if (Tot == Convert.ToDecimal(ViewState["ItemQty"].ToString()))
+                {
+                    ShiftmentItemsCartoonManager.SaveTempItemShiftmentForCartoon(ViewState["ItemsID"].ToString(), dtImg, dtColor, dtSize, dtQt);
+                    ScriptManager.RegisterClientScriptBlock((sender as Control), this.GetType(), "alert", "alert('Add Product this Cortoon..!!');", true);
+                   // Session["Img"] = ViewState["ColorInfo"] = ViewState["SizeInfo"] = ViewState["ItemsID"] = ViewState["Qty"] = null;
+                    PnlQty.Visible = false;
+                }
+                else
+                {
+                    ScriptManager.RegisterClientScriptBlock((sender as Control), this.GetType(), "alert", "alert('Product Quantity Are not Same...!!');", true);
+                    return;
+                }
+            }
+            else
+            {
+                ScriptManager.RegisterClientScriptBlock((sender as Control), this.GetType(), "alert", "alert('Add Cartoon Color and Size Quantity ..!!');", true);
+                return;
+            }
+        }
+        //btnOk.Enabled = false;
+       // UpdatePanel1.Update();
+    }
+    //*************************** Save Button ********************//
+    protected void lbSave_Click(object sender, EventArgs e)
+    {
+        string ChkQty = "";
+        bool IsCheck = false;
+        ShiftmentItemsCartoon aItemsCartoon = new ShiftmentItemsCartoon();
+       
+        if (txtCourtoon.Text == "")
+        {
+            ScriptManager.RegisterClientScriptBlock((sender as Control), this.GetType(), "alert", "alert('Enter Carton ....!!');", true);
+            txtCourtoon.Focus();
+            return;
+        }
+        if (txtShiftmentNo.Text == "")
+        {
+            ScriptManager.RegisterClientScriptBlock((sender as Control), this.GetType(), "alert", "alert('Enter Shipment No ....!!');", true);
+            txtShiftmentNo.Focus();
+            return;
+        }
+        DataTable dt = (DataTable)ViewState["itemdtl"];
+        if (dt.Rows.Count <= 1)
+        {
+            ScriptManager.RegisterClientScriptBlock((sender as Control), this.GetType(), "alert", "alert('Add Items In the List ....!!');", true);
+            return;
+        }
+
+        int count = IdManager.GetShowSingleValueInt("COUNT(*)", "ID", "[ShiftmentBoxingMst]", txtID.Text);
+        if (count > 0)
+        {
+            foreach (DataRow drCon in dt.Rows)
+            {
+                if (!string.IsNullOrEmpty(drCon["item_code"].ToString()))
+                {
+                    double totCourtoon = IdManager.GetShowSingleValueCurrency("SUM(Isnull([Quantity],0))", "MasterId", "Temp_ShiftmentItemsQuantity", drCon["item_code"].ToString());
+                    if (Convert.ToDouble(drCon["qty"]) > totCourtoon)
+                    {
+                        ChkQty = drCon["item_desc"].ToString().Replace("'", "");
+                        IsCheck = true;
+                        break;
+
+                    }
+                }
+            }
+            if (IsCheck == true)
+            {
+                ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Boxing Carton are not same.\\n please check this items : " + ChkQty + " .\\n then click ok button. !!');", true);
+                return;
+            }
+            int CheckReceived = IdManager.GetShowSingleValueInt("COUNT(*)", "ShiftmentBoxingMst where id=" + txtID.Text + " and ReceiveFlag IS NOT NULL");
+            if (CheckReceived > 0)
+            {
+                ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('This Carton already received you can not update.\\n if you want to update please contract your software administrator!!');", true);
+                return;
+            }
+            aItemsCartoon.ID = txtID.Text;
+            aItemsCartoon.CartoonNO = txtCourtoon.Text;
+            aItemsCartoon.ShiftmentNo = lblShiftmentID.Text;
+            aItemsCartoon.Remarks = txtRemarks.Text;
+            aItemsCartoon.SessionID = ddlSenderName.SelectedValue;
+            aItemsCartoon.CustomerID = ddlCustomer.SelectedValue;
+            aItemsCartoon.LoginBy = Session["user"].ToString().Trim();
+            ShiftmentItemsCartoonManager.UpdateCurtoonInformation(aItemsCartoon, dt);
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Record is/are Successfully Update..!!!!');", true);
+        }
+        else
+        {
+            int checkCar = IdManager.GetShowSingleValueIntTwo("COUNT(*)", "CartoonNo", "ShiftmentID", "ShiftmentBoxingMst", txtCourtoon.Text, lblShiftmentID.Text);
+            if (checkCar > 0)
+            {
+                ScriptManager.RegisterClientScriptBlock((sender as Control), this.GetType(), "alert", "alert('This Carton Name alrady saved ..!!');", true);
+                return;
+            }           
+            foreach (DataRow drCon in dt.Rows)
+            {
+                if (!string.IsNullOrEmpty(drCon["item_code"].ToString()))
+                {
+                    double totCourtoon = IdManager.GetShowSingleValueCurrency("SUM(Isnull([Quantity],0))", "MasterId", "Temp_ShiftmentItemsQuantity", drCon["item_code"].ToString());
+                    if (Convert.ToDouble(drCon["qty"]) > totCourtoon)
+                    {
+                        ChkQty = drCon["item_desc"].ToString().Replace("'", "");
+                        IsCheck = true;
+                        break;
+
+                    }
+                }
+            }
+            if (IsCheck == true)
+            {
+                ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Boxing Carton are not same.\\n please check this items : " + ChkQty + " .\\n then click ok button. !!');", true);
+                return; 
+            }
+            aItemsCartoon.CartoonNO = txtCourtoon.Text;
+            aItemsCartoon.ShiftmentNo = lblShiftmentID.Text;
+            aItemsCartoon.Remarks = txtRemarks.Text;           
+            aItemsCartoon.LoginBy = Session["user"].ToString().Trim();
+
+            aItemsCartoon.SessionID = ddlSenderName.SelectedValue;
+            aItemsCartoon.CustomerID = ddlCustomer.SelectedValue;
+
+            ShiftmentItemsCartoonManager.SaveItemsCurtoonInformation(aItemsCartoon, dt);
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Record is/are saved Successfully .!!!!');", true);
+            txtID.Text = IdManager.GetShowSingleValueIntNotParameter("top(1)[ID]", "ShiftmentBoxingMst order by ID desc").ToString();
+        }        
+        lbSave.Enabled = false;
+       // SELECT top(1)[ID]  FROM [ShiftmentBoxingMst] order by ID desc       
+    }
+    protected void lbClear_Click(object sender, EventArgs e)
+    {
+        //DataTable dt = (DataTable)ViewState["itemdtl"];
+        //if (dt != null)
+        //{
+        //    foreach (DataRow drCon in dt.Rows)
+        //    {
+        //        if (!string.IsNullOrEmpty(drCon["item_code"].ToString()))
+        //        {
+        //            ShiftmentItemsCartoonManager.DeleteTempTable(drCon["item_code"].ToString());
+        //        }
+        //    }
+        //}
+        var pageName = System.IO.Path.GetFileName(Request.Url.ToString());
+        Response.Redirect(pageName);
+    }
+
+    protected void lbFind_Click(object sender, EventArgs e)
+    {
+        //ViewState["History"]
+        DataTable dt = (DataTable)ViewState["History"];
+        dgHistory.DataSource = dt;
+        DataTable dt2 = ShiftmentItemsCartoonManager.GetShiftmentCartoonBySearch(txtCourtoon.Text, lblShiftmentID.Text);
+        ViewState["History"] = dt2;
+        dgHistory.DataSource = dt2;
+        if (dt2.Rows.Count > 0)
+        {
+            tdHistory.Visible = true;
+            ItemsDetails.Visible = false;
+        }
+        dgHistory.DataBind();
+    }
+
+    protected void lblNew_Click(object sender, EventArgs e)
+    {
+        txtCourtoon.Enabled = txtShiftmentNo.Enabled = txtRemarks.Enabled = ItemsDetails.Visible = true;
+        //UP3.Visible = true;
+        tdHistory.Visible = lblNew.Visible = false;
+        txtCourtoon.Focus();
+    }
+    protected void lbDelete1_Click(object sender, EventArgs e)
+    {
+        int CheckReceivedSatus =
+            IdManager.GetShowSingleValueInt("COUNT(*)", "[ShiftmentBoxingMst] where ID='" + txtID.Text + "' and ReceiveFlag IS NOT NULL ");
+        if (CheckReceivedSatus > 0)
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "ale",
+                "alert('this carton already received.you can not delete..!!');", true);
+            return;
+        }
+        ShiftmentItemsCartoonManager.DeleteCartoonItems(txtID.Text);
+        ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Record is Successfully delete..!!');", true);
+        lbDelete.Enabled = false;
+    }
+    //************************ GrideView Button OK *************//
+    protected void btnOk_Click1(object sender, EventArgs e)
+    {        
+        if (ViewState["itemdtl"] != null)
+        {           
+            Session["Img"] = ViewState["ColorInfo"] = ViewState["SizeInfo"] = ViewState["ItemsID"] = ViewState["Qty"] = null;
+            lbSave.Enabled = true;
+            dgQty.Visible = btnOk.Visible = btnCle.Visible = false;
+            GridViewRow gvr = (GridViewRow)((Button)sender).NamingContainer;            
+            DataTable dt = (DataTable)ViewState["itemdtl"];
+            if (dt.Rows.Count > 0)
+            {
+                GetClearColorAndSize();
+                DataRow dr = dt.Rows[gvr.DataItemIndex];                
+                if (dr["item_code"].ToString() == "" || dr["qty"].ToString() == "" || dr["Color"].ToString() == "")
+                { btnProductImage.OnClientClick = "javascript:OpenWindow('frmImage.aspx?ID=" + "" + "&RefNo=" + "00" + "');return false;"; }
+                else
+                {
+                    PnlQty.Visible = true; ViewState["ItemQty"] = dr["qty"].ToString(); ViewState["ItemsID"] = dr["item_code"].ToString();
+                    lblCurttonQty.Text = "Total Pcs in Carton : " + dr["qty"].ToString();
+                    int check = IdManager.GetShowSingleValueInt("COUNT(*)", "MasterId", "Temp_ShiftmentItemsColorSize", ViewState["ItemsID"].ToString());
+                    int ChkMst = IdManager.GetShowSingleValueInt("COUNT(*)", "ID", "ShiftmentBoxingMst", txtID.Text);
+                    if (check > 0)
+                    {
+                        GetColor(0);
+                        btnProductQuantity_Click(sender, e);
+                        DataTable dt11 = ShiftmentItemsCartoonManager.getTemp_ShiftmentItemsCartoonItemsQuantity(ViewState["ItemsID"].ToString(), "");
+                        if (dt11 != null)
+                        {
+                            if (dt11.Rows.Count > 0)
+                            {
+                                dgQty.DataSource = dt11;
+                                dgQty.DataBind();
+                                Pandel1.Enabled = Panel2.Enabled = false;
+                            }
+                        }
+                        else { GrideViewColumns(); dgQty.DataSource = null; dgQty.DataBind(); Pandel1.Enabled = Panel2.Enabled = true; }
+                        BindGridData(0, ViewState["ItemsID"].ToString());
+                        btnProductImage.OnClientClick = "javascript:OpenWindow('frmImage.aspx?ID=" + ViewState["ItemsID"].ToString() + "&RefNo=" + "00" + "');return false;";
+                    }
+                    else if (ChkMst > 0)
+                    {
+                        GetColor(1);
+                        btnProductQuantity_Click(sender, e);
+                        DataTable dt11 = ShiftmentItemsCartoonManager.getShiftmentItemsCartoonItemsQuantity(txtID.Text,
+                            ViewState["ItemsID"].ToString());
+                        if (dt11 != null)
+                        {
+                            if (dt11.Rows.Count > 0)
+                            {
+                                dgQty.DataSource = dt11;
+                                dgQty.DataBind();
+                                Pandel1.Enabled = Panel2.Enabled = false;
+                            }
+                            BindGridData(1, ViewState["ItemsID"].ToString());
+                            btnProductImage.OnClientClick = "javascript:OpenWindow('frmImage.aspx?ID=" + txtID.Text +
+                                                            "&RefNo=" + ViewState["ItemsID"].ToString() +
+                                                            "');return false;";
+                        }
+                        else
+                        {
+                            GrideViewColumns();
+                            dgQty.DataSource = null;
+                            dgQty.DataBind();
+                            Pandel1.Enabled = Panel2.Enabled = true;
+                        }
+
+                    }
+                    else
+                    {
+                        GrideViewColumns(); dgQty.DataSource = null; dgQty.DataBind(); Pandel1.Enabled = Panel2.Enabled = true;
+                        btnProductImage.OnClientClick = "javascript:OpenWindow('frmImage.aspx?ID=" + txtID.Text + "&RefNo=" + ViewState["ItemsID"].ToString() + "');return false;";
+                    }
+                }
+            }
+        }        
+    }
+    protected void lblPrint_Click(object sender, EventArgs e)
+    {
+        getShiftmentQtyPrint();
+    }
+
+    private BarcodeLib.Barcode barcode = new BarcodeLib.Barcode();
+    public void getShiftmentQtyPrint()
+    {
+        DataTable dtMst = ShiftmentItemsManager.GetShowItemsInfo(txtID.Text, "");
+        if (dtMst.Rows.Count > 0)
+        {
+            string filename = "Carton(" + txtShiftmentNo.Text + ")";
+            Response.Clear();
+            Response.ContentType = "application/pdf";
+            Response.AddHeader("content-disposition", "attachment; filename=" + filename + ".pdf");
+            Document document = new Document(PageSize.A4);
+            PdfWriter writer = PdfWriter.GetInstance(document, Response.OutputStream);
+            document.Open();
+            iTextSharp.text.Rectangle page = document.PageSize;
+            PdfPTable head = new PdfPTable(1);
+            head.TotalWidth = page.Width - 50;
+
+            barcode.Alignment = BarcodeLib.AlignmentPositions.CENTER;
+            int W = 550;
+            int H = 160;
+
+            BarcodeLib.TYPE type = BarcodeLib.TYPE.CODE128;
+            barcode.IncludeLabel = false;
+            barcode.RotateFlipType = (RotateFlipType)Enum.Parse(typeof(RotateFlipType), "RotateNoneFlipNone", true);
+            barcode.LabelPosition = BarcodeLib.LabelPositions.BOTTOMCENTER;
+
+            System.Drawing.Image generatedBarcode = barcode.Encode(type, txtID.Text, Color.Black, Color.White, W, H);
+            System.IO.MemoryStream stream = new System.IO.MemoryStream();
+            generatedBarcode.Save(stream, System.Drawing.Imaging.ImageFormat.Png);
+
+            byte[] logo2 = stream.ToArray();
+            iTextSharp.text.Image gif2 = iTextSharp.text.Image.GetInstance(logo2);
+            gif2.Alignment = iTextSharp.text.Image.MIDDLE_ALIGN;
+            gif2.ScalePercent(20f);
+
+            PdfPCell cell;
+            byte[] logo = GlBookManager.GetGlLogo(Session["book"].ToString());
+            iTextSharp.text.Image gif = iTextSharp.text.Image.GetInstance(logo);
+            gif.Alignment = iTextSharp.text.Image.MIDDLE_ALIGN;
+            gif.ScalePercent(8f);
+
+            float[] titwidth = new float[3] { 15, 40, 15 };
+            PdfPTable dth = new PdfPTable(titwidth);
+            dth.WidthPercentage = 100;
+
+            cell = new PdfPCell(gif);
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.VerticalAlignment = Element.ALIGN_TOP;
+            cell.HorizontalAlignment = Element.ALIGN_TOP;
+            cell.Rowspan = 4;
+            cell.BorderWidth = 0f;
+            dth.AddCell(cell);
+
+            cell = new PdfPCell(new Phrase(Session["org"].ToString(), FontFactory.GetFont(FontFactory.TIMES_ROMAN, 12, iTextSharp.text.Font.BOLD)));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.BorderWidth = 0f;
+            // cell.FixedHeight = 20f;
+            dth.AddCell(cell);
+
+            cell = new PdfPCell(gif2);
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.VerticalAlignment = Element.ALIGN_MIDDLE;
+            cell.HorizontalAlignment = Element.ALIGN_MIDDLE;
+            cell.Rowspan = 4;
+            cell.BorderWidth = 0f;
+            dth.AddCell(cell);
+
+            cell = new PdfPCell(new Phrase(Session["add1"].ToString(), FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD)));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.BorderWidth = 0f;
+            // cell.FixedHeight = 20f;
+            dth.AddCell(cell);
+            cell = new PdfPCell(new Phrase(Session["add2"].ToString(), FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD)));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.BorderWidth = 0f;
+            //cell.FixedHeight = 20f;
+            dth.AddCell(cell);
+            cell = new PdfPCell(new Phrase("Carton Information", FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD)));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.BorderWidth = 0f;
+            //cell.FixedHeight = 30f;
+            dth.AddCell(cell);
+            document.Add(dth);
+            //LineSeparator line = new LineSeparator(1, 100, null, Element.ALIGN_CENTER, -2);
+            //document.Add(line);
+
+            PdfPTable dtempty = new PdfPTable(1);
+            cell = new PdfPCell(FormatHeaderPhrase(""));
+            cell.BorderWidth = 0f;
+            cell.FixedHeight = 10f;
+            dtempty.AddCell(cell);
+            document.Add(dtempty);
+            int serial = 0;
+            foreach (DataRow drr in dtMst.Rows)
+            {
+                float[] MB = new float[1] { 100 };
+                PdfPTable pdMB = new PdfPTable(MB);
+                pdMB.WidthPercentage = 100;
+
+                float[] widthdtl = new float[6] { 20, 20, 20, 20, 20, 20 };
+                PdfPTable pdtdtl = new PdfPTable(widthdtl);
+                pdtdtl.WidthPercentage = 100;
+
+                if (serial == 0) { cell = new PdfPCell(FormatHeaderPhrase("CTN No : " + txtCourtoon.Text)); }
+                else { cell = new PdfPCell(FormatHeaderPhrase("")); }
+                cell.HorizontalAlignment = 0;
+                cell.VerticalAlignment = 1;
+                cell.Colspan = 2;
+                cell.BorderWidth = 0f;
+                pdtdtl.AddCell(cell);
+
+                if (serial == 0){cell = new PdfPCell(FormatHeaderPhrase("Shipment No. : " + txtShiftmentNo.Text));}
+                else{cell = new PdfPCell(FormatHeaderPhrase(""));}
+                cell.HorizontalAlignment = 0;
+                cell.VerticalAlignment = 1;
+                cell.Colspan = 2;
+                cell.BorderWidth = 0f;
+                pdtdtl.AddCell(cell);
+
+                if (serial == 0) { cell = new PdfPCell(FormatHeaderPhrase("Date : " + dtMst.Rows[0]["ShiftmentDate"].ToString())); }
+                else { cell = new PdfPCell(FormatHeaderPhrase("")); }
+                cell.HorizontalAlignment = 0;
+                cell.VerticalAlignment = 1;
+                cell.Colspan = 2;
+                cell.BorderWidth = 0f;
+                pdtdtl.AddCell(cell);
+
+                cell = new PdfPCell(FormatHeaderPhrase(""));
+                cell.HorizontalAlignment = 0;
+                cell.VerticalAlignment = 1;
+                cell.Colspan = 6;
+                cell.FixedHeight = 8f;
+                cell.BorderWidth = 0f;
+                pdtdtl.AddCell(cell);
+
+                cell = new PdfPCell(FormatHeaderPhrase("Supplier Name"));
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                //cell.BorderWidth = 0f;
+                //cell.FixedHeight = 20f;
+                cell.Colspan = 2;
+                pdtdtl.AddCell(cell);
+                cell = new PdfPCell(FormatHeaderPhrase("Items Name"));
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                // cell.BorderWidth = 0f;
+                //cell.FixedHeight = 20f;
+                cell.Colspan = 2;
+                pdtdtl.AddCell(cell);
+                cell = new PdfPCell(FormatHeaderPhrase("Label"));
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                // cell.BorderWidth = 0f;
+                // cell.FixedHeight = 30f;
+                cell.Colspan = 2;
+                pdtdtl.AddCell(cell);
+                if (dtMst.Rows.Count > 0)
+                {
+                    cell = new PdfPCell(FormatFontPhrase(drr["SupplierName"].ToString()));
+                    cell.HorizontalAlignment = 0;
+                    cell.VerticalAlignment = 1;
+                    //cell.BorderWidth = 0f;
+                    //cell.FixedHeight = 20f;
+                    cell.Colspan = 2;
+                    pdtdtl.AddCell(cell);
+                    cell = new PdfPCell(FormatFontPhrase(drr["Name"].ToString()));
+                    cell.HorizontalAlignment = 0;
+                    cell.VerticalAlignment = 1;
+                    //cell.BorderWidth = 0f;
+                    //cell.FixedHeight = 20f;
+                    cell.Colspan = 2;
+                    pdtdtl.AddCell(cell);
+                    cell = new PdfPCell(FormatFontPhrase(drr["Label"].ToString()));
+                    cell.HorizontalAlignment = 0;
+                    cell.VerticalAlignment = 1;
+                    //cell.BorderWidth = 0f;
+                    cell.Colspan = 2;
+                    pdtdtl.AddCell(cell);
+                }
+                cell = new PdfPCell(FormatFontPhrase(""));
+                cell.HorizontalAlignment = 0;
+                cell.VerticalAlignment = 1;
+                cell.BorderWidth = 0f;
+                cell.FixedHeight = 8;
+                cell.Colspan = 6;
+                pdtdtl.AddCell(cell);
+                DataTable dt = IdManager.GetShowDataTable("SELECT '' AS imagename,[ID] AS ImageID, [Image] AS Image from [ShiftmentBoxingItemsImage] where [BoxingItemsID] ='" + txtID.Text + "' and ItemsID='" + drr["SHITEMSid"].ToString() + "' ");
+                if (dt.Rows.Count > 0)
+                {
+                    PdfPTable pdtclient = new PdfPTable(dt.Rows.Count);
+                    pdtclient.WidthPercentage = 100;
+                    decimal tt = decimal.Zero;
+                    decimal tot = (6 / dt.Rows.Count);
+                    tt = 6 * Math.Ceiling(tot);
+                    for (int i = 0; i < tt; i++)
+                    {
+                        if (dt.Rows.Count - 1 < i)
+                        {
+                            cell = new PdfPCell(FormatHeaderPhrase(""));
+                            cell.HorizontalAlignment = 1;
+                            cell.VerticalAlignment = 1;
+                            cell.BorderWidth = 0f;
+                            pdtdtl.AddCell(cell);
+                        }
+                        else
+                        {
+                            DataRow dr = dt.Rows[i];
+                            byte[] logo1 = (byte[])dr["Image"];
+                            iTextSharp.text.Image gif1 = iTextSharp.text.Image.GetInstance(logo1);
+                            gif1.Alignment = iTextSharp.text.Image.MIDDLE_ALIGN;
+                            gif1.ScalePercent(30f);
+                            cell = new PdfPCell(gif1);
+                            cell.PaddingBottom = 10f;
+                            cell.HorizontalAlignment = 1;
+                            cell.VerticalAlignment = 1;
+                            cell.BorderWidth = 0f;
+                            pdtdtl.AddCell(cell);
+                        }
+                    }
+                }
+                //DataTable dt11 = ShiftmentItemsManager.GetShiftmentItemsQuantity(txtID.Text);
+                DataTable dt11 = ShiftmentItemsCartoonManager.getShiftmentItemsCartoonItemsQuantity(txtID.Text, drr["SHITEMSid"].ToString());
+                if (dt11 != null)
+                {
+                    float[] widthbi = new float[dt11.Columns.Count];
+                    for (int i = 0; i < dt11.Columns.Count; i++)
+                    {
+                        widthbi[i] = 100 / dt11.Columns.Count;
+                    }
+                    PdfPTable with1 = new PdfPTable(widthbi);
+                    with1.WidthPercentage = 100;
+
+                    cell = new PdfPCell(FormatHeaderPhrase("Color Name"));
+                    cell.HorizontalAlignment = 1;
+                    cell.VerticalAlignment = 1;
+                    with1.AddCell(cell);
+                    for (int i = 2; i < dt11.Columns.Count; i++)
+                    {
+                        cell = new PdfPCell(FormatHeaderPhrase(dt11.Columns[i].ColumnName));
+                        cell.HorizontalAlignment = 1;
+                        cell.VerticalAlignment = 1;
+                        with1.AddCell(cell);
+                    }
+                    cell = new PdfPCell(FormatHeaderPhrase("Total"));
+                    cell.HorizontalAlignment = 1;
+                    cell.VerticalAlignment = 1;
+                    with1.AddCell(cell);
+                    int ff = 0;
+                    double tot1 = 0;
+                    double tot2 = 0;
+                    for (int i = 0; i < dt11.Rows.Count; i++)
+                    {
+                        for (int j = 1; j < dt11.Columns.Count; j++)
+                        {
+                            cell = new PdfPCell(FormatFontPhrase(dt11.Rows[i][j].ToString()));
+                            if (ff == 0)
+                            { cell.HorizontalAlignment = 0; }
+                            else { cell.HorizontalAlignment = 1; }
+                            cell.VerticalAlignment = 1;
+                            with1.AddCell(cell);
+                            if (dt11.Rows[i][j].ToString() != "" && ff > 0)
+                            {
+                                tot1 += Convert.ToDouble(dt11.Rows[i][j].ToString());
+                                tot2 += Convert.ToDouble(dt11.Rows[i][j].ToString());
+                            }
+                            ff++;
+
+                        }
+                        cell = new PdfPCell(FormatFontPhrase(tot1.ToString()));
+                        cell.HorizontalAlignment = 2;
+                        cell.VerticalAlignment = 1;
+                        with1.AddCell(cell);
+                        ff = 0;
+                        tot1 = 0;
+                    }
+                    cell = new PdfPCell(FormatHeaderPhrase("Total"));
+                    cell.HorizontalAlignment = 2;
+                    cell.VerticalAlignment = 1;
+                    cell.Colspan = dt11.Columns.Count - 1;
+                    with1.AddCell(cell);
+                    cell = new PdfPCell(FormatHeaderPhrase(tot2.ToString()));
+                    cell.HorizontalAlignment = 2;
+                    cell.VerticalAlignment = 1;
+                    cell.Colspan = dt11.Columns.Count - 1;
+                    with1.AddCell(cell);
+
+                    string Remarks = IdManager.GetShowSingleValueString("Remarks", "ID", "ShiftmentBoxingMst", txtID.Text);
+                    cell = new PdfPCell(FormatHeaderPhrase("Remarks : " + Remarks));
+                    cell.HorizontalAlignment = 0;
+                    cell.VerticalAlignment = 1;
+                    cell.Colspan = dt11.Columns.Count - 1+dt11.Columns.Count - 1;
+                    with1.AddCell(cell);                   
+                   
+
+                    cell = new PdfPCell(pdtdtl);
+                    cell.BorderWidth = 1f;
+                    pdMB.AddCell(cell);
+
+                    cell = new PdfPCell(with1);
+                    cell.BorderWidth = 1f;
+                    pdMB.AddCell(cell);
+                    document.Add(pdMB);
+                    serial++;
+                }
+            }
+            document.Close();
+            Response.Flush();
+            Response.End();
+        }
+    }
+    private static PdfPCell SignatureFormat(Document document, PdfPCell cell)
+    {
+        float[] widtl = new float[5] { 20, 20, 20, 20, 20 };
+        PdfPTable pdtsig = new PdfPTable(widtl);
+        pdtsig.WidthPercentage = 100;
+        cell = new PdfPCell(FormatPhrase(""));
+        cell.HorizontalAlignment = 1;
+        cell.VerticalAlignment = 1;
+        cell.Border = 0;
+        cell.Colspan = 5;
+        cell.FixedHeight = 40f;
+        cell.BorderColor = BaseColor.LIGHT_GRAY;
+        pdtsig.AddCell(cell);
+
+
+        cell = new PdfPCell(FormatPhrase("Prepared by"));
+        cell.HorizontalAlignment = 1;
+        cell.VerticalAlignment = 1;
+        cell.Border = 1;
+        cell.FixedHeight = 20f;
+        cell.BorderColor = BaseColor.LIGHT_GRAY;
+        pdtsig.AddCell(cell);
+
+        cell = new PdfPCell(FormatPhrase(""));
+        cell.HorizontalAlignment = 1;
+        cell.VerticalAlignment = 1;
+        cell.Border = 0;
+        cell.FixedHeight = 20f;
+        cell.BorderColor = BaseColor.LIGHT_GRAY;
+        pdtsig.AddCell(cell);
+        cell = new PdfPCell(FormatPhrase("Checked by"));
+        cell.HorizontalAlignment = 1;
+        cell.VerticalAlignment = 1;
+        cell.Border = 1;
+        cell.FixedHeight = 20f;
+        cell.BorderColor = BaseColor.LIGHT_GRAY;
+        pdtsig.AddCell(cell);
+
+        cell = new PdfPCell(FormatPhrase(""));
+        cell.HorizontalAlignment = 1;
+        cell.VerticalAlignment = 1;
+        cell.Border = 0;
+        cell.FixedHeight = 20f;
+        cell.BorderColor = BaseColor.LIGHT_GRAY;
+        pdtsig.AddCell(cell);
+        cell = new PdfPCell(FormatPhrase("Authorised by"));
+        cell.HorizontalAlignment = 1;
+        cell.VerticalAlignment = 1;
+        cell.Border = 1;
+        cell.FixedHeight = 20f;
+        cell.BorderColor = BaseColor.LIGHT_GRAY;
+        pdtsig.AddCell(cell);
+        document.Add(pdtsig);
+        return cell;
+    }
+
+    private static Phrase FormatPhrase(string value)
+    {
+        return new Phrase(value, FontFactory.GetFont(FontFactory.TIMES_ROMAN, 9));
+    }
+
+    private static Phrase FormatHeaderPhrase(string value)
+    {
+        return new Phrase(value, FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD));
+    }
+    private static Phrase FormatFontPhrase(string value)
+    {
+        return new Phrase(value, FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.NORMAL));
+    }
+
+    
+}

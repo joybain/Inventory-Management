@@ -1,0 +1,264 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using System.Data;
+using System.Data.SqlClient;
+using Delve;
+
+public partial class frmSetAuthLevel : System.Web.UI.Page
+{
+    private static Permis per;
+    private static DataTable dtmsr;
+
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        if (Session["user"] == null)
+        {
+            if (Session.SessionID != "" | Session.SessionID != null)
+            {
+                clsSession ses = clsSessionManager.getSession(Session.SessionID);
+                if (ses != null)
+                {
+                    Session["user"] = ses.UserId;
+                    Session["book"] = "AMB";
+                    string connectionString = DataManager.OraConnString();
+                    SqlDataReader dReader;
+                    SqlConnection conn = new SqlConnection();
+                    conn.ConnectionString = connectionString;
+                    SqlCommand cmd = new SqlCommand();
+                    cmd.Connection = conn;
+                    cmd.CommandType = CommandType.Text;
+                    cmd.CommandText =
+                        "Select user_grp,[description],UserType,case when UserType=1 then 'Bangladesh' else 'Philippine' end AS[LoginCountry] from utl_userinfo where upper(user_name)=upper('" +
+                        Session["user"].ToString().ToUpper() + "') and status='A'";
+                    conn.Open();
+                    dReader = cmd.ExecuteReader();
+                    string wnot = "", userType = "";
+                    if (dReader.HasRows == true)
+                    {
+                        while (dReader.Read())
+                        {
+                            Session["userlevel"] = int.Parse(dReader["user_grp"].ToString());
+                            //Session["dept"] = dReader["dept"].ToString();
+                            wnot = "Welcome " + dReader["description"].ToString();
+                            Session["LoginCountry"] = dReader["LoginCountry"].ToString();
+                            userType = dReader["UserType"].ToString();
+                        }
+                        Session["wnote"] = wnot;
+                        cmd = new SqlCommand();
+                        cmd.Connection = conn;
+                        cmd.CommandType = CommandType.Text;
+                        //cmd.CommandText = "Select book_desc,company_address1,company_address2,separator_type from gl_set_of_books where book_name='" + Session["book"].ToString() + "' ";
+                        if (Convert.ToInt32(userType) == 2)
+                        {
+
+                            Session["bookMAN"] = "MAN";
+                        }
+                        else
+                        {
+                            Session["bookMAN"] = Session["book"].ToString();
+                        }
+                        cmd.CommandText = "Select book_desc,company_address1,company_address2,separator_type,ShotName from gl_set_of_books where book_name='" + Session["bookMAN"] + "' ";
+
+                        if (dReader.IsClosed == false)
+                        {
+                            dReader.Close();
+                        }
+                        dReader = cmd.ExecuteReader();
+                        if (dReader.HasRows == true)
+                        {
+                            while (dReader.Read())
+                            {
+                                Session["septype"] = dReader["separator_type"].ToString();
+                                Session["org"] = dReader["book_desc"].ToString();
+                                Session["add1"] = dReader["company_address1"].ToString();
+                                Session["add2"] = dReader["company_address2"].ToString();
+                            }
+                        }
+                    }
+                    dReader.Close();
+                    conn.Close();
+                }
+            }
+        }
+        try
+        {
+            string pageName = DataManager.GetCurrentPageName();
+            string modid = PermisManager.getModuleId(pageName);
+            per = PermisManager.getUsrPermis(Session["user"].ToString().Trim().ToUpper(), modid);
+            if (per != null && per.AllowView == "Y")
+            {
+                ((Label)Page.Master.FindControl("lblLogin")).Text = Session["wnote"].ToString();
+                ((Label)Page.Master.FindControl("lblCountryName")).Text = Session["LoginCountry"].ToString();
+                ((LinkButton)Page.Master.FindControl("lbLogout")).Visible = true;
+            }
+            else
+            {
+                Response.Redirect("Home.aspx?sid=sam");
+            }
+        }
+        catch
+        {
+            Response.Redirect("Default.aspx?sid=sam");
+        }
+        if (!Page.IsPostBack)
+        {
+           
+        }
+    }
+    protected void dgMsr_RowCancelingEdit(object sender, GridViewCancelEditEventArgs e)
+    {
+        DataTable dt = (DataTable)Session["dtauth"];
+        dgMsr.DataSource = dt;
+        dgMsr.EditIndex = -1;
+        dgMsr.DataBind();
+        dgMsr.FooterRow.Visible = false;
+        dgMsr.ShowFooter = false;
+    }
+    protected void dgMsr_RowCommand(object sender, GridViewCommandEventArgs e)
+    {
+        DataTable dt = (DataTable)Session["dtauth"];
+        if (e.CommandName == "Add")
+        {
+            dgMsr.ShowFooter = true;
+            dgMsr.DataSource = dt;
+            dgMsr.DataBind();
+        }
+        else if (e.CommandName == "Insert")
+        {
+            clsSetAuthLevel msr = new clsSetAuthLevel();
+            msr.ModId = ((DropDownList)dgMsr.FooterRow.FindControl("ddlModId")).SelectedValue;
+            msr.AuthLevel = ((DropDownList)dgMsr.FooterRow.FindControl("ddlAuthLevel")).SelectedValue;
+            clsSetAuthLevelManager.CreateAuthLevel(msr);
+            dgMsr.ShowFooter = false;
+            dgMsr.DataSource = dt;
+            dgMsr.DataBind();
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Records are successfully saved!!');", true);
+
+        }
+    }
+
+    public DataTable PopulateModules()
+    {
+        dtmsr = PermisManager.getModulesGrid();
+        DataRow dr = dtmsr.NewRow();
+        dtmsr.Rows.InsertAt(dr, 0);
+        return dtmsr;
+    }   
+    
+    protected void dgMsr_RowEditing(object sender, GridViewEditEventArgs e)
+    {
+        string mod = ((Label)dgMsr.Rows[e.NewEditIndex].FindControl("lblModId")).Text;
+        string auth = ((Label)dgMsr.Rows[e.NewEditIndex].FindControl("lblAuthLevel")).Text;
+        DataTable dt = (DataTable)Session["dtauth"];
+        dgMsr.DataSource = dt;
+        dgMsr.EditIndex = e.NewEditIndex;
+        dgMsr.DataBind();
+        dgMsr.ShowFooter = false;
+        ((DropDownList)dgMsr.Rows[e.NewEditIndex].FindControl("ddlModId")).SelectedIndex = ((DropDownList)dgMsr.Rows[e.NewEditIndex].FindControl("ddlModId")).Items.IndexOf(((DropDownList)dgMsr.Rows[e.NewEditIndex].FindControl("ddlModId")).Items.FindByText(mod));
+        ((DropDownList)dgMsr.Rows[e.NewEditIndex].FindControl("ddlAuthLevel")).SelectedIndex = ((DropDownList)dgMsr.Rows[e.NewEditIndex].FindControl("ddlAuthLevel")).Items.IndexOf(((DropDownList)dgMsr.Rows[e.NewEditIndex].FindControl("ddlAuthLevel")).Items.FindByText(auth));
+    }
+    protected void dgMsr_RowUpdating(object sender, GridViewUpdateEventArgs e)
+    {
+        DataTable dt = (DataTable)Session["dtauth"];
+        dt.Rows[dgMsr.Rows[e.RowIndex].DataItemIndex]["mod_id"] = ((DropDownList)dgMsr.Rows[e.RowIndex].FindControl("ddlModId")).SelectedValue;
+        dt.Rows[dgMsr.Rows[e.RowIndex].DataItemIndex]["mod_desc"] = ((DropDownList)dgMsr.Rows[e.RowIndex].FindControl("ddlModId")).SelectedItem.Text;
+        dt.Rows[dgMsr.Rows[e.RowIndex].DataItemIndex]["auth_level"] = ((DropDownList)dgMsr.Rows[e.RowIndex].FindControl("ddlAuthLevel")).SelectedValue;
+        dt.Rows[dgMsr.Rows[e.RowIndex].DataItemIndex]["auth_level_desc"] = ((DropDownList)dgMsr.Rows[e.RowIndex].FindControl("ddlAuthLevel")).SelectedItem.Text;
+        dgMsr.DataSource = dt;
+        dgMsr.ShowFooter = false;
+
+        clsSetAuthLevel msr = clsSetAuthLevelManager.GetAuthLevel(((DropDownList)dgMsr.Rows[e.RowIndex].FindControl("ddlModId")).SelectedValue,txtDept.Text);
+        msr.AuthLevel = ((DropDownList)dgMsr.Rows[e.RowIndex].FindControl("ddlAuthLevel")).SelectedValue;
+        clsSetAuthLevelManager.UpdateAuthLevel(msr);
+
+        dgMsr.EditIndex = -1;
+        dgMsr.DataBind();      
+
+        ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Record are successfully updated!!');", true);
+    }
+    protected void txtDept_TextChanged(object sender, EventArgs e)
+    {
+        txtDeptName.Text = SegCoaManager.GetSegCoaDesc(txtDept.Text);
+        DataTable dt = clsSetAuthLevelManager.GetAuthLevelGrid(txtDept.Text);
+        DataTable dt1 = PermisManager.getModulesGrid();
+        DataRow dr;
+        if (dt.Columns.Count == 0)
+        {
+            dt.Columns.Add("mod_id", typeof(string));
+            dt.Columns.Add("mod_desc", typeof(string));
+            dt.Columns.Add("auth_level", typeof(string));
+            dt.Columns.Add("auth_level_desc", typeof(string));
+        }
+        if (dt.Rows.Count == 0)
+        {
+            for (int i = 0; i < dt1.Rows.Count; i++)
+            {
+                dr = dt.NewRow();
+                dr[0] = ((DataRow)dt1.Rows[i])["mod_id"].ToString();
+                dr[1] = ((DataRow)dt1.Rows[i])["mod_desc"].ToString();
+                dt.Rows.Add(dr);
+                clsSetAuthLevel auth = new clsSetAuthLevel();
+                auth.Dept = txtDept.Text;
+                auth.ModId = ((DataRow)dt1.Rows[i])["mod_id"].ToString();
+                auth.AuthLevel = "";
+                clsSetAuthLevelManager.CreateAuthLevel(auth);
+            }
+        }
+        else
+        {
+            for (int i = 0; i < dt1.Rows.Count; i++)
+            {
+                string found="";
+                for (int j = 0; j < dt.Rows.Count; j++)
+                {
+                    if (((DataRow)dt1.Rows[i])["mod_id"].ToString() == ((DataRow)dt.Rows[j])["mod_id"].ToString())
+                    {
+                        found = "Y";
+                    }                    
+                }
+                if (found != "Y")
+                {
+                    dr = dt.NewRow();
+                    dr[0] = ((DataRow)dt1.Rows[i])["mod_id"].ToString();
+                    dr[1] = ((DataRow)dt1.Rows[i])["mod_desc"].ToString();
+                    dt.Rows.Add(dr);
+
+                    clsSetAuthLevel auth = new clsSetAuthLevel();
+                    auth.Dept = txtDept.Text;
+                    auth.ModId = ((DataRow)dt1.Rows[i])["mod_id"].ToString();
+                    auth.AuthLevel = "";
+                    clsSetAuthLevelManager.CreateAuthLevel(auth);
+                }
+            }
+            for (int i = 0; i < dt.Rows.Count; i++)
+            {
+                string found = "";
+                for (int j = 0; j < dt1.Rows.Count; j++)
+                {
+                    if (((DataRow)dt.Rows[i])["mod_id"].ToString() == ((DataRow)dt1.Rows[j])["mod_id"].ToString())
+                    {
+                        found = "Y";
+                    }
+                }
+                if (found == "")
+                {
+                    clsSetAuthLevel auth = clsSetAuthLevelManager.GetAuthLevel(((DataRow)dt.Rows[i])["mod_id"].ToString(), txtDept.Text);
+                    if (auth != null)
+                    {
+                        clsSetAuthLevelManager.DeleteAuthLevel(auth);
+                    }
+                    dt.Rows.RemoveAt(i);                    
+                }
+            }
+        }
+        dgMsr.DataSource = dt;
+        dgMsr.ShowFooter = false;
+        dgMsr.EditIndex = -1;
+        dgMsr.DataBind();
+        Session["dtauth"] = dt;
+    }
+}

@@ -1,0 +1,789 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Data.SqlClient;
+using System.Drawing;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using Delve;
+using System.Data;
+using sales;
+
+public partial class ShiftmentAssigen : System.Web.UI.Page
+{
+    private static Permis per;
+    ShiftmentAssignManager _aShiftmentAssignManager=new ShiftmentAssignManager();
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        if (Session["user"] == null)
+        {
+            if (Session.SessionID != "" | Session.SessionID != null)
+            {
+                clsSession ses = clsSessionManager.getSession(Session.SessionID);
+                if (ses != null)
+                {
+                    Session["user"] = ses.UserId;
+                    Session["book"] = "AMB";
+                    string connectionString = DataManager.OraConnString();
+                    SqlDataReader dReader;
+                    SqlConnection conn = new SqlConnection();
+                    conn.ConnectionString = connectionString;
+                    SqlCommand cmd = new SqlCommand();
+                    cmd.Connection = conn;
+                    cmd.CommandType = CommandType.Text;
+                    cmd.CommandText =
+                        "Select user_grp,[description],UserType,case when UserType=1 then 'Bangladesh' else 'Philippine' end AS[LoginCountry] from utl_userinfo where upper(user_name)=upper('" +
+                        Session["user"].ToString().ToUpper() + "') and status='A'";
+                    conn.Open();
+                    dReader = cmd.ExecuteReader();
+                    string wnot = "", userType = "";
+                    if (dReader.HasRows == true)
+                    {
+                        while (dReader.Read())
+                        {
+                            Session["userlevel"] = int.Parse(dReader["user_grp"].ToString());
+                            //Session["dept"] = dReader["dept"].ToString();
+                            wnot = "Welcome " + dReader["description"].ToString();
+                            Session["LoginCountry"] = dReader["LoginCountry"].ToString();
+                            userType = dReader["UserType"].ToString();
+                        }
+                        Session["wnote"] = wnot;
+                        cmd = new SqlCommand();
+                        cmd.Connection = conn;
+                        cmd.CommandType = CommandType.Text;
+                        //cmd.CommandText = "Select book_desc,company_address1,company_address2,separator_type from gl_set_of_books where book_name='" + Session["book"].ToString() + "' ";
+                        if (Convert.ToInt32(userType) == 2)
+                        {
+
+                            Session["bookMAN"] = "MAN";
+                        }
+                        else
+                        {
+                            Session["bookMAN"] = Session["book"].ToString();
+                        }
+                        cmd.CommandText = "Select book_desc,company_address1,company_address2,separator_type,ShotName from gl_set_of_books where book_name='" + Session["bookMAN"] + "' ";
+
+                        if (dReader.IsClosed == false)
+                        {
+                            dReader.Close();
+                        }
+                        dReader = cmd.ExecuteReader();
+                        if (dReader.HasRows == true)
+                        {
+                            while (dReader.Read())
+                            {
+                                Session["septype"] = dReader["separator_type"].ToString();
+                                Session["org"] = dReader["book_desc"].ToString();
+                                Session["add1"] = dReader["company_address1"].ToString();
+                                Session["add2"] = dReader["company_address2"].ToString();
+                            }
+                        }
+                    }
+                    dReader.Close();
+                    conn.Close();
+                }
+            }
+        }
+        try
+        {
+            string pageName = DataManager.GetCurrentPageName();
+            string modid = PermisManager.getModuleId(pageName);
+            per = PermisManager.getUsrPermis(Session["user"].ToString().Trim().ToUpper(), modid);
+            if (per != null && per.AllowView == "Y")
+            {
+                ((Label)Page.Master.FindControl("lblLogin")).Text = Session["wnote"].ToString();
+                ((Label)Page.Master.FindControl("lblCountryName")).Text = Session["LoginCountry"].ToString();
+                ((LinkButton)Page.Master.FindControl("lbLogout")).Visible = true;
+            }
+            else
+            {
+                Response.Redirect("Home.aspx?sid=sam");
+            }
+        }
+        catch
+        {
+            Response.Redirect("Default.aspx?sid=sam");
+        }
+        if (!IsPostBack)
+        {
+            RefreshAll();
+            LoadAllGridview();
+            Clear();
+            getEmptyShipmentSenderTable();
+            getEmptyShipment_Define_to_Customer();
+            tabVch.ActiveTabIndex = 1;
+        }
+    }
+
+    private void RefreshAll()
+    {
+        txtShiftmentNo.Text = txtID.Text =txtRemark.Text=txtSearchSender.Text="";//txtCustomer.Text = hfCustomerID.Value =lblShiftmentID.Text=txtParentShiftmentNo.Text= "";
+        txtShiftmentDate.Text = DateTime.Now.ToString("dd/MM/yyyy");
+        DataTable dt = _aShiftmentAssignManager.GetShipmentSenderInfo(txtID.Text,"","","1");
+        dgShiftment.DataSource = dt;
+        ViewState["History"] = dt;
+        dgShiftment.DataBind();
+        rbStatus.SelectedValue = "2";
+
+        dgAddSender.DataSource = null;
+        dgAddSender.DataBind();
+
+        txtShiftmentNo.Focus();
+    }
+    protected void btnSave_Click(object sender, EventArgs e)
+    {
+        if (txtShiftmentNo.Text == "")
+        {
+            ScriptManager.RegisterClientScriptBlock((sender as Control), this.GetType(), "alert", "alert('Enter Shiftment No ....!!');", true);
+            txtShiftmentNo.Focus();
+            return;
+        }
+        if (txtShiftmentDate.Text == "")
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Enter Shipment Name..!!');", true);
+            txtShiftmentDate.Focus();
+            return;
+        }
+        int checkStatus = IdManager.GetShowSingleValueInt("[Status]", "ID", "ShiftmentAssigen", txtID.Text);
+        if (checkStatus.Equals(1))
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('this Shipment  already complete.\\ you can not update this Shipment.!!');", true);
+            txtShiftmentDate.Focus();
+            return;
+        }
+        int count = IdManager.GetShowSingleValueInt("COUNT(*)", "ID", "ShiftmentAssigen", txtID.Text);
+        string LoginBy = Session["user"].ToString();
+        DataTable dtShipmentSender = (DataTable) ViewState["SenderList"];
+        if (count > 0)
+        {
+
+            ShiftmentAssignManager.UpdateShiftmentAssigInfo(txtID.Text, txtShiftmentNo.Text, txtShiftmentDate.Text,
+                LoginBy, rbStatus.SelectedValue, dtShipmentSender, txtRemark.Text);
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Record are update successfully...!!');", true);
+            RefreshAll();
+        }
+        else
+        {
+            ShiftmentAssignManager.SaveShiftmentAssigInfo(txtShiftmentNo.Text, txtShiftmentDate.Text, LoginBy,
+                rbStatus.SelectedValue, dtShipmentSender, txtRemark.Text);
+
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Record is/are Saved successfully...!!');", true);
+            RefreshAll();
+        }
+    }
+    protected void DeleteButton_Click(object sender, EventArgs e)
+    {
+        if (txtID.Text == "")
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Enter ID..!!');", true);
+            return;
+        }
+        if (txtShiftmentNo.Text == "")
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Enter Shipment No ...!!');", true);
+            return;
+        }
+        ShiftmentAssignManager.DeleteShiftmentAssigInfo(txtID.Text);
+        ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Record are delete successfully...!!');", true);
+        RefreshAll();
+    }
+    protected void dgShiftment_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        txtID.Text = dgShiftment.SelectedRow.Cells[1].Text;
+        DataTable dtShipInfo = _aShiftmentAssignManager.GetShipmentSenderInfo(txtID.Text,"","","1");
+        if (dtShipInfo.Rows.Count > 0)
+        {
+            txtShiftmentNo.Text = dtShipInfo.Rows[0]["ShiftmentNO"].ToString();
+            txtShiftmentDate.Text = dtShipInfo.Rows[0]["ShiftmentDate"].ToString();
+            rbStatus.SelectedValue = dtShipInfo.Rows[0]["Status"].ToString();
+            txtRemark.Text = dtShipInfo.Rows[0]["Note"].ToString();
+
+            DataTable dtShipSenderInfo = _aShiftmentAssignManager.GetShipmentSenderInfo(txtID.Text, "", "", "2");
+            dgAddSender.DataSource = dtShipSenderInfo;
+            ViewState["SenderList"] = dtShipSenderInfo;
+            dgAddSender.DataBind();
+        }
+    }
+    protected void CloseButton_Click(object sender, EventArgs e)
+    {
+        RefreshAll();
+    }
+    protected void dgShiftment_RowDataBound(object sender, GridViewRowEventArgs e)
+    {
+        if (e.Row.RowType == DataControlRowType.Header | e.Row.RowType == DataControlRowType.Footer)
+        {
+            e.Row.Cells[1].Attributes.Add("style", "display:none");
+            //e.Row.Cells[4].Attributes.Add("style", "display:none");
+            //e.Row.Cells[5].Attributes.Add("style", "display:none");
+            //e.Row.Cells[8].Attributes.Add("style", "display:none");  
+        }
+        else if (e.Row.RowType == DataControlRowType.DataRow)
+        {
+            if (e.Row.Cells[4].Text.Equals("2"))
+            {
+                e.Row.BackColor = Color.Khaki;
+                if (e.Row.Cells[4].Text != "&nbsp;")
+                {
+                    e.Row.BackColor = Color.MistyRose;
+                   // e.Row.ForeColor = Color.White;
+                }
+            }
+            e.Row.Cells[1].Attributes.Add("style", "display:none");
+        }
+    }
+    protected void dgShiftment_PageIndexChanging(object sender, GridViewPageEventArgs e)
+    {
+        dgShiftment.DataSource = ViewState["History"];
+        dgShiftment.PageIndex = e.NewPageIndex;
+        dgShiftment.DataBind();
+    }
+    clsClientInfoManager _aclsClientInfoManager=new clsClientInfoManager();
+    //protected void txtCustomer_TextChanged(object sender, EventArgs e)
+    //{
+    //    DataTable dtCustomer = _aclsClientInfoManager.GetCustomerOnSearch("where UPPER(SearchName) = UPPER('" + txtCustomer.Text + "')");
+    //    if (dtCustomer.Rows.Count > 0)
+    //    {
+    //        hfCustomerID.Value = dtCustomer.Rows[0]["ID"].ToString();
+    //       // txtCustomer.Text = dtCustomer.Rows[0]["ContactName"].ToString();
+    //        Session["Customer_COA"] = dtCustomer.Rows[0]["Gl_CoaCode"].ToString();
+    //    }
+    //    else
+    //    {
+    //        ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('You are not Permitted this Step.!!');", true);
+    //        Session["Customer_COA"] = null;
+    //        hfCustomerID.Value = "";
+    //        return;
+    //    }
+    //}
+
+    protected void txtParentShiftmentNo_TextChanged(object sender, EventArgs e)
+    {
+        //  DataTable dt = ShiftmentAssignManager.GetShowShiftmentAssignOnSearch(txtParentShiftmentNo.Text);
+        //int ID = IdManager.GetShowSingleValueInt("ID",
+        //    " [ShiftmentAssigen] WHERE UPPER([ShiftmentNO]+' - '+CONVERT(NVARCHAR,[ShiftmentDate],103)) = upper('" +
+        //    txtParentShiftmentNo.Text + "')");
+        //if (ID > 0)
+        //{
+        //    lblShiftmentID.Text = ID.ToString();
+        //}
+        //else
+        //{
+        //    txtParentShiftmentNo.Text = "";
+        //    lblShiftmentID.Text = "";
+        //    txtParentShiftmentNo.Focus();
+        //}
+    }
+
+    public void getEmptyShipmentSenderTable()
+    {
+        DataTable dtDocument = new DataTable();
+        dtDocument.Columns.Add("ID", typeof(string));
+        dtDocument.Columns.Add("SenderID", typeof(string));
+        dtDocument.Columns.Add("SenderName", typeof(string));
+        ViewState["SenderList"] = dtDocument;
+    }
+    protected void ibAdd_Click(object sender, ImageClickEventArgs e)
+    {
+        DataRow drDoc;
+        DataTable dtDoc = (DataTable)ViewState["SenderList"];
+        bool IsCheck = false;
+        if (dtDoc != null)
+        {
+            foreach (DataRow dr in dtDoc.Rows)
+            {
+                if (dr["SenderID"].ToString().Equals(hfSenderID.Value))
+                {
+                    IsCheck = true;
+                    break;
+                }
+            }
+
+            if (IsCheck)
+            {
+                ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('this Sender already exist in the list.!!');",
+                    true);
+                return;
+            }
+            else
+            {
+                drDoc = dtDoc.NewRow();
+                drDoc["ID"] = "0";
+                drDoc["SenderID"] = hfSenderID.Value;
+                drDoc["SenderName"] = txtSearchSender.Text;
+                dtDoc.Rows.Add(drDoc);
+                dgAddSender.DataSource = ViewState["SenderList"];
+                dgAddSender.DataBind();
+            }
+        }
+        else
+        {
+            drDoc = dtDoc.NewRow();
+            drDoc["ID"] = "0";
+            drDoc["SenderID"] = hfSenderID.Value;
+            drDoc["SenderName"] = txtSearchSender.Text;
+            dtDoc.Rows.Add(drDoc);
+            dgAddSender.DataSource = ViewState["SenderList"];
+            dgAddSender.DataBind();
+        }
+
+        hfSenderID.Value = txtSearchSender.Text = string.Empty;
+    }
+
+    protected void dgAddSender_RowDataBound(object sender, GridViewRowEventArgs e)
+    {
+        if (e.Row.RowType == DataControlRowType.DataRow | e.Row.RowType == DataControlRowType.Footer | e.Row.RowType == DataControlRowType.Header)
+        {
+
+            e.Row.Cells[1].Attributes.Add("style", "display:none");
+        }
+    }
+
+    protected void dgAddSender_RowDeleting(object sender, GridViewDeleteEventArgs e)
+    {
+        if (ViewState["SenderList"] != null)
+        {
+            DataTable dtDtlGrid = (DataTable)ViewState["SenderList"];
+            dtDtlGrid.Rows.RemoveAt(dgAddSender.Rows[e.RowIndex].DataItemIndex);
+            if (dtDtlGrid.Rows.Count > 0)
+            {
+                dgAddSender.DataSource = dtDtlGrid;
+                dgAddSender.DataBind();
+            }
+            else
+            {
+                getEmptyShipmentSenderTable();
+            }
+        }
+        else
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Your session is over. Try it again!!');",
+                true);
+        }
+    }
+
+    protected void txtSearchSender_TextChanged(object sender, EventArgs e)
+    {
+        DataTable dt = ShiftmentAssignManager.GetShowAllSender(txtSearchSender.Text);
+        if (dt.Rows.Count > 0)
+        {
+            hfSenderID.Value = dt.Rows[0]["ID"].ToString();
+            txtSearchSender.Text = dt.Rows[0]["Name"].ToString();
+        }
+        else
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('No items Found.!!');",
+                true);
+            hfSenderID.Value = txtSearchSender.Text = "";
+            txtSearchSender.Focus();
+        }
+    }
+
+    //********************************* Shipment Sender *******************************//
+
+    public readonly ShipmentSenderManagers _aShipmentSenderManagers = new ShipmentSenderManagers();
+
+    public void LoadAllGridview()
+    {
+        DataTable dtAgencyDetails = _aShipmentSenderManagers.GetAgencyDetails("", "");
+        dgSender.DataSource = dtAgencyDetails;
+        dgSender.DataBind();
+    }
+    public void Clear()
+    {
+        hfID.Value = "";
+        txtSebderName.Text = "";
+        LoadAllGridview();
+        btnDeleteShipSender.Visible = false;
+       // btnUpdate.Visible = false;
+        btnSave.Visible = true;
+    }
+
+    protected void btnSaveShipSender_Click(object sender, EventArgs e)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(hfID.Value))
+            {
+                ShipmentSender agency = new ShipmentSender();
+                agency.Name = txtSebderName.Text.Replace("'", "''");
+                agency.LoginBy = Session["user"].ToString();
+                if (!string.IsNullOrEmpty(agency.Name))
+                {
+                    var agencyDetails = _aShipmentSenderManagers.GetAgencyDetails("", agency.Name);
+                    if (agencyDetails.Rows.Count > 0)
+                    {
+                        ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('The Same Name Already Save..!!');", true);
+                    }
+                    else
+                    {
+
+                        int success = _aShipmentSenderManagers.Save(agency);
+                        if (success > 0)
+                        {
+                            ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Save Success..!!');", true);
+                            Clear();
+                        }
+                        else
+                        {
+                            ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Save Fail..!!');", true);
+                            Clear();
+                        }
+                    }
+                }
+                else
+                {
+                    ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Input Name..!!');", true);
+                }
+            }
+            else
+            {
+                Update();
+            }
+        }
+        catch (FormatException fex)
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('" + fex.Message + "');", true);
+        }
+        catch (Exception ex)
+        {
+            if (ex.Message.Contains("Database"))
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Database Maintain Error. Contact to the Software Provider..!!');", true);
+            else
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('There is some problem to do the task. Try again properly.!!');", true);
+        }
+    }
+    public void Update()
+    {
+        ShipmentSender agency = new ShipmentSender();
+        agency.Name = txtSebderName.Text.Replace("'", "''");
+        agency.LoginBy = Session["user"].ToString();
+        agency.Id = Convert.ToInt32(hfID.Value);
+        if (!string.IsNullOrEmpty(agency.Name))
+        {
+            var agencyDetails = _aShipmentSenderManagers.GetAgencyDetails("", agency.Name);
+            if (agencyDetails.Rows.Count > 0)
+            {
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('The Same Name Already Save..!!');", true);
+            }
+            else
+            {
+
+                int success = _aShipmentSenderManagers.Update(agency);
+                if (success > 0)
+                {
+                    ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Update Success..!!');", true);
+                    Clear();
+                }
+                else
+                {
+                    ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Update Fail..!!');", true);
+                    Clear();
+                }
+            }
+        }
+        else
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert(' Input Name..!!');", true);
+        }
+    }
+    protected void btnDeleteShipSender_Click(object sender, EventArgs e)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(hfID.Value))
+            {
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('First find then Delete..!!');", true);
+            }
+            else
+            {
+                ShipmentSender agency = new ShipmentSender();
+
+                agency.LoginBy = Session["user"].ToString();
+                agency.Id = Convert.ToInt32(hfID.Value);
+
+                int success = _aShipmentSenderManagers.Delete(agency);
+                if (success > 0)
+                {
+                    ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Delete Success..!!');", true);
+                    Clear();
+                }
+                else
+                {
+                    ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Delete Fail..!!');", true);
+                    Clear();
+                }
+            }
+        }
+        catch (FormatException fex)
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('" + fex.Message + "');", true);
+        }
+        catch (Exception ex)
+        {
+            if (ex.Message.Contains("Database"))
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Database Maintain Error. Contact to the Software Provider..!!');", true);
+            else
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('There is some problem to do the task. Try again properly.!!');", true);
+        }
+    }
+    protected void btnClearShipSender_Click(object sender, EventArgs e)
+    {
+        try
+        {
+            Clear();
+        }
+        catch (FormatException fex)
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('" + fex.Message + "');", true);
+        }
+        catch (Exception ex)
+        {
+            if (ex.Message.Contains("Database"))
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Database Maintain Error. Contact to the Software Provider..!!');", true);
+            else
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('There is some problem to do the task. Try again properly.!!');", true);
+        }
+    }
+    protected void dgSender_RowDataBound(object sender, GridViewRowEventArgs e)
+    {
+        if (e.Row.RowType == DataControlRowType.DataRow | e.Row.RowType == DataControlRowType.Footer | e.Row.RowType == DataControlRowType.Header)
+        {
+
+            e.Row.Cells[1].Attributes.Add("style", "display:none");
+
+        }
+    }
+    protected void dgSender_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        hfID.Value = dgSender.SelectedRow.Cells[1].Text;
+        txtSebderName.Text = dgSender.SelectedRow.Cells[2].Text;
+    }
+    //**************** Shipment Define to Customer **************//
+
+    public void getEmptyShipment_Define_to_Customer()
+    {
+        DataTable dtDocument = new DataTable();
+        dtDocument.Columns.Add("ID", typeof(string));
+        dtDocument.Columns.Add("SubShiperName", typeof(string));
+        dtDocument.Columns.Add("CustomerID", typeof(string));
+        dtDocument.Columns.Add("CustomerName", typeof(string));
+        ViewState["SenderDetailsList"] = dtDocument;
+        dgDefineCustomer.DataSource = dtDocument;
+        dgDefineCustomer.DataBind();
+    }
+    protected void txtSearchShipment_TextChanged(object sender, EventArgs e)
+    {
+        DataTable dt = ShiftmentAssignManager.GetShowShiftmentAssignOnSearch(txtSearchShipment.Text);
+        if (dt.Rows.Count > 0)
+        {
+           // hfShipmentID.Value = dt.Rows[0]["ID"].ToString();
+            hfShipmentID.Value = dt.Rows[0]["ID"].ToString();
+            Session["ShipmentName"] = dt.Rows[0]["ShiftmentNO"].ToString();
+            txtSearchShipment.Text = dt.Rows[0]["ShiftmentNO"].ToString();
+
+            DataTable dtShipSenderInfo = _aShiftmentAssignManager.GetShipmentSenderInfo(hfShipmentID.Value, "", "", "2");
+            if (dtShipSenderInfo.Rows.Count > 0)
+            {
+                ddlSenderName.DataSource = dtShipSenderInfo;
+                ddlSenderName.DataTextField = "Search";
+                ddlSenderName.DataValueField = "SenderID";
+                ddlSenderName.DataBind();
+                ddlSenderName.Items.Insert(0, "");
+            }
+        }
+    }
+    //protected void txtSearchSenderWithShipment_TextChanged(object sender, EventArgs e)
+    //{
+    //    DataTable dt = ShiftmentAssignManager.GetShowShiftmentSenderSearch(hfShipmentID.Value, txtSearchSenderWithShipment.Text);
+    //    if (dt.Rows.Count > 0)
+    //    {
+    //        hfSenderIDWithShip.Value = dt.Rows[0]["ShipmentID"].ToString();
+    //        txtSearchSenderWithShipment.Text = dt.Rows[0]["SenderName"].ToString();
+    //    }
+    //    else
+    //    {
+    //        ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('No Search Found.!!');",
+    //            true);
+    //        hfSenderIDWithShip.Value =txtSearchSenderWithShipment.Text= "";
+    //        txtSearchSenderWithShipment.Focus();
+    //    }
+    //}
+    protected void txtSearchCustomer_TextChanged(object sender, EventArgs e)
+    {
+        DataTable dtCustomer = _aclsClientInfoManager.GetCustomerOnSearch("where UPPER(SearchName) = UPPER('" + txtSearchCustomer.Text + "')");
+        if (dtCustomer.Rows.Count > 0)
+        {
+            hfCustomerID.Value = dtCustomer.Rows[0]["ID"].ToString();
+            txtSearchCustomer.Text = dtCustomer.Rows[0]["ContactName"].ToString();
+            Session["Customer_COA"] = dtCustomer.Rows[0]["Gl_CoaCode"].ToString();
+        }
+        else
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('You are not Permitted this Step.!!');", true);
+            Session["Customer_COA"] = null;
+            hfCustomerID.Value =txtSearchCustomer.Text= "";
+            txtSearchCustomer.Focus();
+        }
+    }
+    protected void ibAddCustomer_Click(object sender, ImageClickEventArgs e)
+    {
+        DataRow drDoc;
+        DataTable dtDoc = (DataTable)ViewState["SenderDetailsList"];
+        bool IsCheck = false;
+        if (dtDoc != null)
+        {
+            foreach (DataRow dr in dtDoc.Rows)
+            {
+                if (dr["CustomerID"].ToString().Equals(hfCustomerID.Value))
+                {
+                    IsCheck = true;
+                    break;
+                }
+            }
+
+            if (IsCheck)
+            {
+                ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('this Customer already exist in the list.!!');",
+                    true);
+                return;
+            }
+            else
+            {
+                drDoc = dtDoc.NewRow();
+                drDoc["ID"] = "0";
+                drDoc["SubShiperName"] = txtShipSubName.Text;
+                drDoc["CustomerID"] = hfCustomerID.Value;
+                drDoc["CustomerName"] = txtSearchCustomer.Text;
+                dtDoc.Rows.Add(drDoc);
+                dgDefineCustomer.DataSource = ViewState["SenderDetailsList"];
+                dgDefineCustomer.DataBind();
+            }
+        }
+        else
+        {
+            drDoc = dtDoc.NewRow();
+            drDoc["ID"] = "0";
+            drDoc["SubShiperName"] = txtShipSubName.Text;
+            drDoc["CustomerID"] = hfCustomerID.Value;
+            drDoc["CustomerName"] = txtSearchCustomer.Text;
+            dtDoc.Rows.Add(drDoc);
+            dgDefineCustomer.DataSource = ViewState["SenderDetailsList"];
+            dgDefineCustomer.DataBind();
+        }
+
+        hfCustomerID.Value = txtSearchCustomer.Text =txtShipSubName.Text= string.Empty;
+    }
+    protected void dgDefineCustomer_RowDataBound(object sender, GridViewRowEventArgs e)
+    {
+        if (e.Row.RowType == DataControlRowType.DataRow | e.Row.RowType == DataControlRowType.Footer | e.Row.RowType == DataControlRowType.Header)
+        {
+
+            e.Row.Cells[1].Attributes.Add("style", "display:none");
+        }
+    }
+    protected void btnSaveCustomer_Click(object sender, EventArgs e)
+    {
+        if (string.IsNullOrEmpty(hfShipmentID.Value))
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Search Shipment..!!');", true);
+            return;
+        }
+        //if (string.IsNullOrEmpty(txtShipSubName.Text))
+        //{
+        //    ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Input Sub Sender Name..!!');", true);
+        //    return;
+        //}
+        if (string.IsNullOrEmpty(ddlSenderName.SelectedItem.Text))
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Select Sender.!!');", true);
+            return;
+        }
+        string LoginBy = Session["user"].ToString();
+        DataTable dtDoc = (DataTable)ViewState["SenderDetailsList"];
+        if (dtDoc.Rows.Count <= 0)
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Please Add Custome then saved.!!');", true);
+            return;
+        }
+        _aShiftmentAssignManager.ShipmentSenderCustomerDetaile(hfShipmentID.Value, ddlSenderName.SelectedValue, LoginBy,
+            dtDoc, txtShipSubName.Text.Replace("'", ""));
+       // ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Save Successfully.!!');", true);
+
+        ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Record is/are Saved successfully...!!');", true);
+        btnClearCustomer_Click(sender, e);
+    }
+    protected void btnClearCustomer_Click(object sender, EventArgs e)
+    {
+        txtSebderName.Text =txtSearchCustomer.Text= txtSearchShipment.Text =txtShipSubName.Text= string.Empty;
+        ddlSenderName.SelectedIndex = -1;
+        dgDefineCustomer.DataSource = null;
+        dgDefineCustomer.DataBind();
+        getEmptyShipment_Define_to_Customer();
+        txtSebderName.Focus();
+    }
+    protected void btnDeleteCustomer_Click(object sender, EventArgs e)
+    {
+        if (string.IsNullOrEmpty(hfShipmentID.Value))
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Search Shipment..!!');", true);
+            return;
+        }
+        if (string.IsNullOrEmpty(ddlSenderName.SelectedItem.Text))
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Select Sender.!!');", true);
+            return;
+        }
+        string LoginBy = Session["user"].ToString();
+        DataTable dtDoc = (DataTable)ViewState["SenderDetailsList"];
+        _aShiftmentAssignManager.DeleteShipmentSenderCustomerDetaile(hfShipmentID.Value, ddlSenderName.SelectedValue, LoginBy, dtDoc);
+     
+        ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Record are delete successfully...!!');", true);
+        btnClearCustomer_Click(sender, e);
+    }
+
+
+    protected void ddlSenderName_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        DataTable dtShipSenderInfo = _aShiftmentAssignManager.GetShipmentSenderInfo(hfShipmentID.Value, "", ddlSenderName.SelectedValue, "3");
+        if (dtShipSenderInfo != null)
+        {
+            if (dtShipSenderInfo.Rows.Count > 0)
+            {
+                dgDefineCustomer.DataSource = dtShipSenderInfo;
+                ViewState["SenderDetailsList"] = dtShipSenderInfo;
+                dgDefineCustomer.DataBind();
+            }
+            else
+            {
+                getEmptyShipment_Define_to_Customer();
+            }
+        }
+        else
+        {
+            getEmptyShipment_Define_to_Customer();
+        }
+    }
+    protected void dgDefineCustomer_RowDeleting(object sender, GridViewDeleteEventArgs e)
+    {
+        if (ViewState["SenderDetailsList"] != null)
+        {
+            DataTable dtDtlGrid = (DataTable)ViewState["SenderDetailsList"];
+            dtDtlGrid.Rows.RemoveAt(dgDefineCustomer.Rows[e.RowIndex].DataItemIndex);
+            if (dtDtlGrid.Rows.Count > 0)
+            {
+                dgDefineCustomer.DataSource = dtDtlGrid;
+                dgDefineCustomer.DataBind();
+            }
+            else
+            {
+                getEmptyShipment_Define_to_Customer();
+            }
+        }
+        else
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Your session is over. Try it again!!');",
+                true);
+        }
+    }
+}

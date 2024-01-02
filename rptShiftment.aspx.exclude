@@ -1,0 +1,255 @@
+﻿<%@ Page Title="Shipment Report.-SDL" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true" CodeFile="rptShiftment.aspx.cs" Inherits="rptShiftment" %>
+
+<asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
+    <%--<script type="text/javascript">
+    function LoadModalDiv() {
+
+        var bcgDiv = document.getElementById("divBackground");
+        bcgDiv.style.display = "block";
+
+    }
+    function HideModalDiv() {
+
+        var bcgDiv = document.getElementById("divBackground");
+        bcgDiv.style.display = "none";
+
+    }
+</script>--%>
+    <div id="frmMainDiv" style="background-color:White; width:100%;">  
+    <table style="width: 100%">
+        <tr>
+            <td style="width:20%;">
+                &nbsp;</td>
+            <td style="width:54%;" valign="top" align="right">
+                 <asp:Panel ID="pnlChangePass" runat="server"  CssClass="modalPopup" 
+                            Style=" display: none; background-color: White; width:800px; height:550px; ">
+                <asp:ImageButton ID="ibCancel" runat="server" ImageUrl="~/img/delete.png" 
+                    onclick="ibCancel_Click" Width="30px" />
+                <br/>
+                           <asp:Literal ID="ltEmbed" runat="server" />
+                        </asp:Panel>
+                        <%--</ContentTemplate></asp:UpdatePanel>--%>
+                         <asp:Button ID="Button1" style="display: none;" runat="server" Height="1px" Width="1px" />
+                         <ajaxToolkit:ModalPopupExtender ID="ModalPopupExtenderLogin" runat="server" 
+                    BackgroundCssClass="modalBackground" DropShadow="true" 
+                    PopupControlID="pnlChangePass" TargetControlID="Button1" />
+            </td>
+            <td style="width:15%;">
+                &nbsp;</td>
+        </tr>
+        <tr>
+            <td style="width:20%;" valign="top">
+               
+                &nbsp;</td>
+            <td style="width:54%;" align="right">
+                <asp:ImageButton ID="ibHelp" Width="40px" runat="server" 
+                    ImageUrl="~/Help/Help_Desk.jpg" onclick="ibHelp_Click" />
+            </td>
+            <td style="width:15%;">
+                &nbsp;</td>
+        </tr>
+        <tr>
+            <td style="width:20%;" valign="top">
+               
+            </td>
+            <td style="width:54%;">
+            <fieldset style="vertical-align: top; border: solid 1px #8BB381;text-align:left;"><legend style="color: maroon;"><b>Shipment Report</b> </legend>
+                <asp:UpdatePanel ID="Up1" runat="server" UpdateMode="Conditional"><ContentTemplate>
+                <table style="width: 100%">
+                    <tr>
+                        <td style="width:15%;">
+                            <asp:Label ID="Label1" runat="server" Text="Select Report Type" 
+                                style="font-weight: 700"></asp:Label>
+                        </td>
+                        <td colspan="4">
+                            <table style="width: 100%">
+                                <tr>
+                                    <td style="width: 75%">
+                                        <asp:DropDownList ID="ddlReportType" runat="server" AutoPostBack="True" CssClass="txtVisibleAlign"
+                                            Height="35px" onselectedindexchanged="ddlReportType_SelectedIndexChanged" 
+                                            Width="100%" Font-Size="14pt">
+                                            <asp:ListItem></asp:ListItem>
+                                            <asp:ListItem Value="SWR">Shipment Wise Cartoon Report</asp:ListItem>
+                                            <asp:ListItem Value="PSWR">Supplier &amp; Style Wise Report</asp:ListItem>
+                                            <asp:ListItem Value="SWRC">Style Wise Report</asp:ListItem>
+                                            <asp:ListItem Value="SBR">Shipment Barcode Report</asp:ListItem>
+                                            <asp:ListItem Value="SBRI">Shipment Barcode Report(Image)</asp:ListItem>
+                                            <asp:ListItem Value="PLR">Packing List Report</asp:ListItem>
+                                            <asp:ListItem Value="PLRWS">Packing List Report Without Supplier</asp:ListItem>
+                                            <asp:ListItem Value="ALD">All Shipment Details</asp:ListItem>
+                                            <%--<asp:ListItem Value="SCL">Send Cartoon List</asp:ListItem>--%>
+                                            <asp:ListItem Value="SRLT">Goods Received Check List.</asp:ListItem>
+                                            <asp:ListItem Value="SRL">Goods Receved Report(Carton wise).</asp:ListItem>
+                                            <%--<asp:ListItem Value="SRLT">Cartoon Received List Template</asp:ListItem> --%>
+                                            <asp:ListItem Value="TIS">Total Items Stock</asp:ListItem>
+                                        </asp:DropDownList>
+                                    </td>
+                                    <td  style="width: 2%">
+                                        &nbsp;</td>
+                                    <td>
+                                        <asp:CheckBox ID="chkIsNameChange" runat="server" Text="Is Name Change" />
+                                        <asp:RadioButtonList ID="rbPdf" runat="server" RepeatDirection="Horizontal" 
+                                            Visible="False">
+                                            <asp:ListItem Selected="True" Value="PDF">PDF</asp:ListItem>
+                                            <asp:ListItem Value="EXCEL">EXCEL</asp:ListItem>
+                                        </asp:RadioButtonList>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="5">
+                            <div id="tab1" runat="server">
+                                <table style="width:100%;">
+                                      <tr>
+                        <td style="width:288px;">
+                            <asp:Label ID="lblShiftmentNo" runat="server" Text="Shipment No :" 
+                                style="font-weight: 700"></asp:Label>
+                            <asp:TextBox ID="txtShiftmentNo" runat="server" AutoPostBack="True" 
+                                CssClass="txtVisibleAlign" Font-Size="8pt" ontextchanged="txtShiftmentNo_TextChanged" 
+                                PlaceHoder="Search Shipment No." PlaceHolder="Search Shipment No ..." 
+                                SkinId="tbPlain" style="text-align:left;text-align:center;" Width="90%" 
+                                Height="18px"></asp:TextBox>
+                            <ajaxToolkit:AutoCompleteExtender ID="txtShiftmentNo_AutoCompleteExtender" 
+                                runat="server" CompletionInterval="20" CompletionSetCount="30" 
+                                EnableCaching="true" MinimumPrefixLength="2" ServiceMethod="GetShiftmentInfo" 
+                                ServicePath="~/AutoComplete.asmx" TargetControlID="txtShiftmentNo">
+                            </ajaxToolkit:AutoCompleteExtender>
+                        </td>
+                        <td style="width:3%;" align="right">
+                            <asp:Label ID="lblShiftmentID" runat="server" Visible="False"></asp:Label>
+                                    <asp:HiddenField ID="hfItemID" runat="server" />
+                                    </td>
+                        <td>
+                            <asp:Label ID="lblName" runat="server" style="font-weight: 700"></asp:Label>
+                            <asp:TextBox ID="txtName" runat="server" AutoPostBack="True" CssClass="txtVisibleAlign"
+                                placeHolder="Search Carton No" Width="95%" Height="18px"></asp:TextBox>
+                            <asp:TextBox ID="txtParty" runat="server" AutoPostBack="True" CssClass="txtVisibleAlign"
+                                ontextchanged="txtParty_TextChanged" placeHolder="Search Supplier Name..." 
+                                Width="95%" Height="18px"></asp:TextBox>
+                            <asp:TextBox ID="txtItemsName" runat="server" AutoPostBack="True" CssClass="txtVisibleAlign"
+                                ontextchanged="txtItemsName_TextChanged" placeHolder="Search Item's Name" 
+                                Width="95%" Height="18px"></asp:TextBox>
+                           <%-- <ajaxToolkit:AutoCompleteExtender ID="autoComplete1" runat="server" 
+                                CompletionInterval="1000" CompletionSetCount="12" EnableCaching="true" 
+                                MinimumPrefixLength="1" ServiceMethod="GetShipmentItem" 
+                                ServicePath="AutoComplete.asmx" TargetControlID="txtItemsName" />--%>
+                            <ajaxToolkit:AutoCompleteExtender ID="txtItemsName_AutoCompleteExtender" 
+                                runat="server" CompletionInterval="20" CompletionSetCount="30" 
+                                EnableCaching="true" MinimumPrefixLength="0" ServiceMethod="GetShipmentItem" 
+                                ServicePath="~/AutoComplete.asmx" TargetControlID="txtItemsName">
+                            </ajaxToolkit:AutoCompleteExtender>
+                            <ajaxToolkit:AutoCompleteExtender ID="AutoCompleteExtender1" runat="server" 
+                                CompletionInterval="20" CompletionSetCount="30" EnableCaching="true" 
+                                MinimumPrefixLength="2" ServiceMethod="GetSupplierBD" 
+                                ServicePath="~/AutoComplete.asmx" TargetControlID="txtParty">
+                            </ajaxToolkit:AutoCompleteExtender>
+                            
+                             <ajaxToolkit:AutoCompleteExtender ID="AutoCompleteExtender2" runat="server" 
+                                CompletionInterval="20" CompletionSetCount="30" EnableCaching="true" 
+                                 ServiceMethod="GetCartonListSearch" MinimumPrefixLength="0"
+                                ServicePath="~/AutoComplete.asmx" TargetControlID="txtName">
+                            </ajaxToolkit:AutoCompleteExtender>
+
+                        </td>
+                    </tr>
+                                      <tr>
+                                          <td style="width:288px; font-weight: 700;">
+                                              Shipment Receiver<asp:DropDownList ID="ddlSenderName" runat="server" 
+                                                  AutoPostBack="True" Height="26px" 
+                                                  OnSelectedIndexChanged="ddlSenderName_SelectedIndexChanged" Width="93%">
+                                              </asp:DropDownList>
+                                          </td>
+                                          <td align="right" style="width:3%;">
+                                              &nbsp;</td>
+                                          <td style="font-weight: 700">
+                                              Customer/Buyer<asp:DropDownList ID="ddlCustomer" runat="server" Height="26px" 
+                                                  Width="98%">
+                                              </asp:DropDownList>
+                                          </td>
+                                      </tr>
+                                </table>
+                            </div>  
+                           
+                             <div id="tab2" runat="server">
+                                <table style="width:100%;">
+                                    <tr>
+                                        <td style="width:11%; font-weight: 700;">Carton No.</td>
+                                        <td style="width:20%;" align="right">
+                                            <asp:TextBox ID="txtCart1" CssClass="txtVisibleAlign" style="text-align:center" 
+                                                placeholder="Ex. : 1" runat="server" Width="98%" Height="18px"></asp:TextBox>
+                                        </td>
+                                        <td style="width:5%; font-weight: 700;" align="center">TO</td>
+                                        <td style="width:20%;">
+                                            <asp:TextBox ID="txtCart2" CssClass="txtVisibleAlign" style="text-align:center" 
+                                                placeholder="Ex. : 10" runat="server" Width="98%" Height="18px"></asp:TextBox>
+                                        </td>
+                                        
+                                    </tr>
+                                </table>
+                            </div>                         
+                        </td>
+                    </tr>                  
+                    <tr>
+                        <td style="width:15%;">
+                            &nbsp;</td>
+                        <td style="width:18%;">
+                            &nbsp;</td>
+                        <td style="width:3%;">
+                            <asp:Label ID="lblPartyID" runat="server" Visible="False"></asp:Label>
+                        </td>
+                        <td style="width:15%;">
+                            <asp:Label ID="lblItemsID" runat="server" Visible="False"></asp:Label>
+                        </td>
+                        <td style="width:20%;">
+                            &nbsp;</td>
+                    </tr>
+                </table>
+                </ContentTemplate>
+                </asp:UpdatePanel>
+                </fieldset>
+            </td>
+            <td style="width:15%;">
+                &nbsp;</td>
+        </tr>
+        <tr>
+            <td style="width:20%;">
+                &nbsp;</td>
+            <td style="width:54%;" align="center">
+                <asp:Button ID="txtPreviewAll" runat="server" onclick="txtPreviewAll_Click" Text="Preview " 
+                    Width="130px" Height="35px" />
+&nbsp;
+                <asp:Button ID="txtPrint" runat="server" onclick="txtPrint_Click" Text="Print" 
+                    Width="130px" Height="35px" />
+&nbsp;
+                <asp:Button ID="txtClear" runat="server" onclick="txtClear_Click" Text="Clear" 
+                    Width="130px" Height="35px" />
+            </td>
+            <td style="width:15%;">
+                &nbsp;</td>
+        </tr>
+        <tr>
+            <td style="width:20%;">
+                &nbsp;</td>
+            <td style="width:54%;" align="center">
+                
+            </td>
+            <td style="width:15%;">
+                &nbsp;</td>
+        </tr>
+        <tr>
+            <td style="width:20%;">
+                &nbsp;</td>
+            <td style="width:54%;" align="right">
+                
+            </td>
+            <td style="width:15%;">
+                &nbsp;</td>
+        </tr>
+    </table></div>
+    <div id="divBackground" style="position: fixed; z-index: 999; height: 100%; width: 100%;
+        top: 0; left:0; background-color: Black; filter: alpha(opacity=60); opacity: 0.6; -moz-opacity: 0.8;-webkit-opacity: 0.8;display:none">
+    </div>
+</asp:Content>
+

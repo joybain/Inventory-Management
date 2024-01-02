@@ -1,0 +1,145 @@
+﻿<%@ Page Title="" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true" CodeFile="frmCurrencySetup.aspx.cs" Inherits="frmCurrencySetup" %>
+<%@ Register Assembly="AjaxControlToolkit" Namespace="AjaxControlToolkit" TagPrefix="cc" %>
+<%@ Import Namespace="System.Data" %>
+
+<asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
+
+<script language="javascript" type="text/javascript" >    
+
+    function isNumber(evt) {
+        evt = (evt) ? evt : window.event;
+        var charCode = (evt.which) ? evt.which : evt.keyCode;
+        if (charCode != 46 && charCode > 31
+            && (charCode < 48 || charCode > 57)) {
+            return false;
+        }
+        return true;
+    }
+
+ </script>
+
+   <div id="frmMainDiv"  style="width:99.5%; background-color:transparent; padding:3px;">
+    <table id="pageFooterWrapper">
+         <tr>
+	        <td style="vertical-align:middle; height:100%;" align="center">
+                <asp:Button  ID="BtnDelete" runat="server"  ToolTip="Delete Record"  TabIndex="903" 
+                    onclientclick="javascript:return window.confirm('are u really want to delete these data')"             
+                    Text="Delete" Width="110px" Height="35px" BorderStyle="Outset" 
+                    BorderWidth="1px" onclick="BtnDelete_Click" /></td>
+	
+    <td style="vertical-align:middle;" align="center">
+        <asp:Button ID="Button1" 
+                    runat="server" ToolTip="Find" TabIndex="901" Text="Find"             
+                     Width="110px" Height="35px" BorderStyle="Outset" BorderWidth="1px" 
+                    onclick="Button1_Click" /></td>
+
+	        <td style="vertical-align:middle;" align="center">
+                <asp:Button ID="BtnSave" 
+                    runat="server" ToolTip="Save or Update Record" TabIndex="901" Text="Save"             
+                     Width="110px" Height="35px" BorderStyle="Outset" BorderWidth="1px" 
+                    onclick="BtnSave_Click" /></td>
+	        <td style="vertical-align:middle;" align="center">
+                <asp:Button ID="BtnReset" runat="server" ToolTip="Clear Form" TabIndex="904"   
+                    Text="Clear" Width="110px" Height="35px" BorderStyle="Outset" 
+                    BorderWidth="1px" onclick="BtnReset_Click"  />
+            </td>      
+	        </tr>		
+	  </table>
+        <table style="width: 100%">
+            <tr>
+                <td style="width:32%">
+                    &nbsp;</td>
+                <td style="width:36%">
+                    &nbsp;</td>
+                <td style="width:32%">
+                    &nbsp;</td>
+            </tr>
+            <tr>
+                <td style="width:32%">
+                    &nbsp;</td>
+                <td style="width:36%">
+                <fieldset style="vertical-align: top; border: solid 1px #8BB381;"><legend style="color: maroon;"><b>Currency Setup</b></legend>
+                
+                    <table style="width: 100%">
+                        <tr>
+                            <td style="width:24%; height: 29px;" align="right">
+                                <asp:Label ID="Label1" runat="server" Text="Currency Date"></asp:Label>
+                            </td>
+                            <td style="width:2%; height: 29px;">
+                                <asp:TextBox ID="txtCurrencyId" runat="server" Width="95%" Visible="False"></asp:TextBox>
+                            </td>
+                            <td style="width:50%; height: 29px;" align="left">
+                                        <asp:TextBox ID="txtCurrencyDate" runat="server" Font-Size="9" PlaceHolder="dd/MM/yyyy"
+                                            MaxLength="18" SkinID="tbGray" Width="90%"></asp:TextBox>
+                                            <ajaxToolkit:CalendarExtender ID="txtCurrencyDate_CalendarExtender" runat="server" 
+                    Format="dd/MM/yyyy" TargetControlID="txtCurrencyDate" />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="width:24%; height: 32px;" align="right">
+                                <asp:Label ID="Label2" runat="server" Text="Currency Rate"></asp:Label>
+                            </td>
+                            <td style="width:2%; height: 32px;">
+                                </td>
+                            <td style="width:50%; height: 32px;" align="left">
+                                        <asp:TextBox ID="txtCurrencyRate" runat="server" Font-Size="9" onFocus="this.select()" onkeypress="return isNumber(event)"
+                                            style="text-align:right;" PlaceHolder="0.00"
+                                            MaxLength="18" SkinID="tbGray" Width="90%"></asp:TextBox>
+                            </td>
+                        </tr>
+                    </table>
+                </fieldset>
+                </td>
+                <td style="width:32%" valign="top">
+                    <fieldset style="vertical-align: top; border: solid 1px #8BB381;">
+                        <legend style="color: maroon;"><b>Auto Authoriz</b></legend>
+                        <table style="width: 100%">
+                            <tr>
+                                <td align="center" style="height: 29px;">
+                                    <cc:CalendarExtender ID="txtCurrencyDate_CalendarExtender0" runat="server" 
+                                        Format="dd/MM/yyyy" TargetControlID="txtCurrencyDate" />
+                                    <asp:Button ID="btnAutoAuthoriz" runat="server" Font-Bold="True" 
+                                        Font-Size="14pt" Height="40px" onclick="btnAutoAuthoriz_Click" Text="Active" 
+                                        Width="60%" />
+                                </td>
+                            </tr>
+                            </table>
+                    </fieldset></td>
+            </tr>
+            <tr>
+                <td style="width:32%; height: 6px;">
+                    </td>
+                <td style="width:36%; height: 6px;" align="center">
+                    <asp:GridView ID="dgCurrency" runat="server" Width="100%" 
+                        AutoGenerateColumns="False" CssClass="mGrid" 
+                        onpageindexchanging="dgCurrency_PageIndexChanging" 
+                        onrowdatabound="dgCurrency_RowDataBound" 
+                        AllowPaging="True" ToolTip="Currency History" 
+                        onselectedindexchanged="dgCurrency_SelectedIndexChanged" PageSize="50">
+                        <Columns>
+                            <asp:CommandField ItemStyle-HorizontalAlign="center" ShowSelectButton="True" />
+                            <asp:BoundField DataField="ID" HeaderText="ID" />
+                            <asp:BoundField DataField="CurrencyDate" ItemStyle-HorizontalAlign="center" HeaderText="Currency Date" />
+                            <asp:BoundField DataField="CurrencyRate" ItemStyle-HorizontalAlign="Right" HeaderText="Currency Rate" />
+                        </Columns>
+                    </asp:GridView>
+                    </td>
+                <td style="width:32%; height: 6px;">
+                    </td>
+            </tr>
+            <tr>
+                <td colspan="3" align="center">
+                    &nbsp;</td>
+            </tr>
+            <tr>
+                <td style="width:32%">
+                    &nbsp;</td>
+                <td style="width:36%">
+                    &nbsp;</td>
+                <td style="width:32%">
+                    &nbsp;</td>
+            </tr>
+        </table>
+    </div>
+</asp:Content>
+

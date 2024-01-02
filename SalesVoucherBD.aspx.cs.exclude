@@ -1,0 +1,810 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using Delve;
+using System.Data;
+using sales;
+using System.Data.SqlClient;
+
+
+public partial class SalesVoucherBD : System.Web.UI.Page
+{
+    private static Permis per;
+    ClsItemDetailsManager _aClsItemDetailsManager=new ClsItemDetailsManager();
+    clsClientInfoManager _aclsClientInfoManager=new clsClientInfoManager();
+
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        if (Session["user"] == null)
+        {
+            if (Session.SessionID != "" | Session.SessionID != null)
+            {
+                clsSession ses = clsSessionManager.getSession(Session.SessionID);
+                if (ses != null)
+                {
+                    Session["user"] = ses.UserId;
+                    Session["book"] = "AMB";
+                    string connectionString = DataManager.OraConnString();
+                    SqlDataReader dReader;
+                    SqlConnection conn = new SqlConnection();
+                    conn.ConnectionString = connectionString;
+                    SqlCommand cmd = new SqlCommand();
+                    cmd.Connection = conn;
+                    cmd.CommandType = CommandType.Text;
+                    cmd.CommandText =
+                        "Select user_grp,[description],UserType,case when UserType=1 then 'Bangladesh' else 'Philippine' end AS[LoginCountry] from utl_userinfo where upper(user_name)=upper('" +
+                        Session["user"].ToString().ToUpper() + "') and status='A'";
+                    conn.Open();
+                    dReader = cmd.ExecuteReader();
+                    string wnot = "", userType = "";
+                    if (dReader.HasRows == true)
+                    {
+                        while (dReader.Read())
+                        {
+                            Session["userlevel"] = int.Parse(dReader["user_grp"].ToString());
+                            //Session["dept"] = dReader["dept"].ToString();
+                            wnot = "Welcome " + dReader["description"].ToString();
+                            Session["LoginCountry"] = dReader["LoginCountry"].ToString();
+                            userType = dReader["UserType"].ToString();
+                            Session["UserType"] = userType;
+                        }
+                        Session["wnote"] = wnot;
+                        cmd = new SqlCommand();
+                        cmd.Connection = conn;
+                        cmd.CommandType = CommandType.Text;
+                        //cmd.CommandText = "Select book_desc,company_address1,company_address2,separator_type from gl_set_of_books where book_name='" + Session["book"].ToString() + "' ";
+                        if (Convert.ToInt32(userType) == 2)
+                        {
+
+                            Session["bookMAN"] = "MAN";
+                        }
+                        else
+                        {
+                            Session["bookMAN"] = Session["book"].ToString();
+                        }
+                        cmd.CommandText = "Select book_desc,company_address1,company_address2,separator_type,ShotName from gl_set_of_books where book_name='" + Session["bookMAN"] + "' ";
+
+                        if (dReader.IsClosed == false)
+                        {
+                            dReader.Close();
+                        }
+                        dReader = cmd.ExecuteReader();
+                        if (dReader.HasRows == true)
+                        {
+                            while (dReader.Read())
+                            {
+                                Session["septype"] = dReader["separator_type"].ToString();
+                                Session["org"] = dReader["book_desc"].ToString();
+                                Session["add1"] = dReader["company_address1"].ToString();
+                                Session["add2"] = dReader["company_address2"].ToString();
+                            }
+                        }
+                    }
+                    dReader.Close();
+                    conn.Close();
+                }
+            }
+        }
+        try
+        {
+            string pageName = DataManager.GetCurrentPageName();
+            string modid = PermisManager.getModuleId(pageName);
+            per = PermisManager.getUsrPermis(Session["user"].ToString().Trim().ToUpper(), modid);
+            if (per != null && per.AllowView == "Y")
+            {
+                ((Label)Page.Master.FindControl("lblLogin")).Text = Session["wnote"].ToString();
+                ((Label)Page.Master.FindControl("lblCountryName")).Text = Session["LoginCountry"].ToString();
+                ((LinkButton)Page.Master.FindControl("lbLogout")).Visible = true;
+            }
+            else
+            {
+                Response.Redirect("Home.aspx?sid=sam");
+            }
+        }
+        catch
+        {
+            Response.Redirect("Default.aspx?sid=sam");
+        }  
+        if (!IsPostBack)
+        {
+            try
+            {
+                UP1.Update();
+                if (Convert.ToInt32(Session["UserType"].ToString()) == 2)
+                {
+                    ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('you login PH user.\\n please login BD user. Thanks ..!!!');", true);
+                    return;
+                }
+                txtDate.Attributes.Add("onBlur", "formatdate('" + txtDate.ClientID + "')");
+                txtDeleveryDate.Attributes.Add("onBlur", "formatdate('" + txtDeleveryDate.ClientID + "')");
+                txtDate.Text = DateTime.Now.ToString("dd/MM/yyyy");
+                Panel1.Visible =SalesMst.Visible= false;
+                dgSVMst.Visible = true;
+                DataTable dt1 = IdManager.GetShowDataTable("SELECT * FROM [FixGlCoaCode]");
+                Session["Cash_Code"] = dt1.Rows[0]["CashInHand_BD"].ToString();
+                Session["Cash_Name"] = dt1.Rows[0]["CashName_BD"].ToString();
+                btnDelete.Enabled = btnSave.Enabled = btnNew.Visible = true;
+                DataTable dtBdSales = SalesManager.GetShow_BD_SalesDetails("", "", "", "");
+                dgSVMst.DataSource = dtBdSales;
+                ViewState["SvMst"] = dtBdSales;
+                dgSVMst.DataBind();
+                double CurrencyRate = BankAndCashBlanceCheck.GetCurrency(btnSave, txtDate, 0);
+                ViewState["CurrencyRate"] = CurrencyRate;
+                Session["UserType"] = IdManager.GetShowSingleValueString(" t.UserType", "t.USER_NAME", "UTL_USERINFO t",
+                    Session["user"].ToString());
+
+                hfItemsID.Value = hfCustomerID.Value = txtCustomer.Text = string.Empty;
+                ViewState["Customer_COA"] = null;
+                tblSearch.Visible = true;
+                txtItemsCode.Focus();
+                if (Session["SalesVoucherBD"] != null)
+                {
+                    lblInvNo.Text = Session["SalesVoucherBD"].ToString();
+                    btnFind_Click(sender, e);
+                    tblSearch.Visible = false;
+                    Session["SalesVoucherBD"] = null;
+                }
+            }
+            catch (FormatException fex)
+            {
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('" + fex.Message + "');", true);
+            }
+            catch (Exception ex)
+            {
+
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('" + ex.Message + "');", true);
+            }
+        }
+
+    }
+
+    private string GetAutoId()
+    {
+        string AutoID = "";
+        int ID = IdManager.GetShowSingleValueInt("isnull(BDINVSerial,0)", "FixGlCoaCode");
+
+        AutoID =
+            "INVBD-" + DateTime.Now.Day.ToString() + DateTime.Now.Month.ToString() + DateTime.Now.Year.ToString() +
+            "-0" + ID.ToString();
+        return AutoID;
+    }
+    private void getEmptyDtl()
+    {
+
+        DataTable dtDtlGrid = new DataTable();
+        dtDtlGrid.Columns.Add("ID", typeof(string));
+        dtDtlGrid.Columns.Add("Code", typeof(string));
+        dtDtlGrid.Columns.Add("Name", typeof(string));
+        dtDtlGrid.Columns.Add("Tax", typeof(string));
+        dtDtlGrid.Columns.Add("DiscountAmount", typeof(string));
+        dtDtlGrid.Columns.Add("SPrice", typeof(string));
+        dtDtlGrid.Columns.Add("Qty", typeof(string));
+        dtDtlGrid.Columns.Add("Total", typeof(decimal));
+        dtDtlGrid.Columns.Add("ClosingStock", typeof(string));
+        dtDtlGrid.Columns.Add("ItemCode", typeof(string));
+        dtDtlGrid.Columns.Add("SaleQty", typeof(string));
+        DataRow dr = dtDtlGrid.NewRow();
+        dr["Tax"] = 0;
+        dr["DiscountAmount"] = 0;
+        dr["SPrice"] = 0;
+        dr["Qty"] = 0;
+        dr["Total"] = 0;
+        dr["ClosingStock"] = 0;
+        dr["SaleQty"] = 0;
+        dtDtlGrid.Rows.Add(dr);
+        dgSV.DataSource = dtDtlGrid;
+        dgSV.DataBind();
+    }
+    private void Clear()
+    {
+        Panel1.Visible = true;
+            txtItemsCode.Enabled = true;
+        txtDeleveryDate.Text = DateTime.Now.ToString("dd/MM/yyyy");
+        dgSVMst.Visible = false;
+        txtSubTotal.Text = txtVat.Text = txtDiscount.Text = txtPayment.Text = txtDue.Text = txtChequeAmount.Text = "0";
+        ddlDelevery.SelectedIndex = ddlBank.SelectedIndex = ddlPaymentMethord.SelectedIndex = -1;
+        txtChequeNo.Text = txtChequeDate.Text = txtRemarks.Text = txtDRNo.Text = txtCustomer.Text = string.Empty;
+        getEmptyDtl();
+        ViewState["SV"] = null;
+        ViewState["OldStock"] = null;
+        txtItemsCode.Focus();
+    }
+  
+    protected void txtCustomer_TextChanged(object sender, EventArgs e)
+    {
+        DataTable dtCustomer = _aclsClientInfoManager.GetCustomerOnSearch("where UPPER(SearchName) = UPPER('" + txtCustomer.Text + "')");
+        if (dtCustomer.Rows.Count > 0)
+        {
+            hfCustomerID.Value = dtCustomer.Rows[0]["ID"].ToString();
+            txtCustomer.Text = dtCustomer.Rows[0]["ContactName"].ToString();
+            ViewState["Customer_COA"] = dtCustomer.Rows[0]["Gl_CoaCode"].ToString();
+        }
+        else
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('You are not Permitted this Step.!!');", true);
+            ViewState["Customer_COA"] = null;
+            hfCustomerID.Value = "";
+            return;
+        }
+    }
+    protected void txtItemsCode_TextChanged(object sender, EventArgs e)
+    {
+        DataTable dtItem = _aClsItemDetailsManager.GetItemsDetailsOnSearch(txtItemsCode.Text.ToUpper());
+        hfItemsID.Value = dtItem.Rows[0]["ID"].ToString();
+        bool IsChk = false;
+        DataTable dt =
+            IdManager.GetShowDataTable(@"SELECT * FROM [View_BD_SalesItemsDetails] where id='" + hfItemsID.Value + "'");
+        DataTable DT1 = new DataTable();
+        DT1 = (DataTable)ViewState["SV"];
+        if (DT1 == null)
+        {
+            DT1 = dt;
+        }
+        else
+        {
+            if (dt.Rows.Count > 0)
+            {
+                foreach (DataRow dr in DT1.Rows)
+                {
+                    if (dr["ID"].ToString() == dt.Rows[0]["ID"].ToString())
+                    {
+                        IsChk = true;
+                        break;
+                    }
+                }
+                if (IsChk == false)
+                { DT1.ImportRow(dt.Rows[0]); }
+            }
+        }
+        dgSV.DataSource = DT1;
+        ViewState["SV"] = DT1;
+        dgSV.DataBind();
+        ShowFooterTotal(DT1);
+        txtItemsCode.Text = "";
+        // UPCustomer.Update();
+        //UpSearch.Update();
+        //UpItemsDetails.Update();
+        txtItemsCode.Focus();
+       // txtName.Text = dtItem.Rows[0]["Name"].ToString();
+    }
+    protected void dgPVMst_RowDataBound(object sender, GridViewRowEventArgs e)
+    {
+        try
+        {
+            if (e.Row.RowType == DataControlRowType.DataRow | e.Row.RowType == DataControlRowType.Header | e.Row.RowType == DataControlRowType.Footer)
+            {
+                // e.Row.Cells[9].BackColor = Color.BurlyWood; 
+                e.Row.Cells[0].Attributes.Add("style", "display:none");
+                e.Row.Cells[5].Attributes.Add("style", "display:none");
+                e.Row.Cells[10].Attributes.Add("style", "display:none");
+            }
+        }
+        catch (FormatException fex)
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('" + fex.Message + "');", true);
+        }
+        catch (Exception ex)
+        {
+            if (ex.Message.Contains("Database"))
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Database Maintain Error. Contact to the Software Provider..!!');", true);
+            else
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('There is some problem to do the task. Try again properly.!!');", true);
+        }
+    }
+    protected void dgSV_RowDeleting(object sender, GridViewDeleteEventArgs e)
+    {
+        if (ViewState["SV"] != null)
+        {
+            DataTable dtDtlGrid = (DataTable)ViewState["SV"];
+            dtDtlGrid.Rows.RemoveAt(dgSV.Rows[e.RowIndex].DataItemIndex);
+            if (dtDtlGrid.Rows.Count == 0)
+            {
+                DataRow dr = dtDtlGrid.NewRow();
+                dr["Tax"] = 0;
+                dr["DiscountAmount"] = 0;
+                dr["Qty"] = 0;
+                dr["Total"] = 0;
+                dtDtlGrid.Rows.Add(dr);
+            }
+            dgSV.DataSource = dtDtlGrid;
+            dgSV.DataBind();
+            ShowFooterTotal(dtDtlGrid);
+        }
+        else
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Your session is over. Try it again!!');", true);
+        }
+    }
+    private void ShowFooterTotal(DataTable DT1)
+    {
+        decimal totVat = 0; decimal totDis = 0; decimal Qty = 0; decimal tot = 0;
+        foreach (DataRow dr in DT1.Rows)
+        {
+            totVat += Convert.ToDecimal(dr["Tax"]);
+            totDis += Convert.ToDecimal(dr["DiscountAmount"]);
+            Qty += Convert.ToDecimal(dr["Qty"]);
+            tot += Convert.ToDecimal(dr["Total"]);
+        }
+        txtSubTotal.Text = tot.ToString("N2");
+        txtVat.Text = totVat.ToString();
+        txtPayment.Text = (tot + ((tot * totVat) / 100)).ToString("N2");
+        txtDue.Text = (tot + ((tot * totVat) / 100)).ToString("N2");
+    }
+    protected void btnNew_Click(object sender, EventArgs e)
+    {
+        txtDate.Text = DateTime.Now.ToString("dd/MM/yyyy");
+        Panel1.Visible = false;
+            txtItemsCode.Enabled = false;
+        dgSVMst.Visible = SalesMst.Visible = true;
+        string query2 = "select '' [bank_id],'' [bank_name]  union select [bank_id] ,[bank_name] from [bank_info] order by 1";
+        util.PopulationDropDownList(ddlBank, "bank_info", query2, "bank_name", "bank_id");
+        DataTable dt1 = IdManager.GetShowDataTable("SELECT * FROM [FixGlCoaCode]");
+        Session["Cash_Code"] = dt1.Rows[0]["CashInHand_BD"].ToString();
+        Session["Cash_Name"] = dt1.Rows[0]["CashName_BD"].ToString();
+        Clear();
+        btnNew.Visible = false;
+        ViewState["Customer_COA"] = null;
+        tblSearch.Visible = false;
+        txtInvoiceNo.Text = GetAutoId();
+        txtItemsCode.Focus();
+    }
+    protected void txtQty_TextChanged(object sender, EventArgs e)
+    {
+        try
+        {
+            Quantity(sender);
+            ((TextBox)dgSV.Rows[dgSV.Rows.Count - 1].FindControl("txtSalesPrice")).Focus();
+        }
+        catch (Exception ex)
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('" + ex + "');", true);
+        }
+    }
+    protected void txtSalesPrice_TextChanged(object sender, EventArgs e)
+    {
+        try
+        {
+            decimal tot = 0;
+            decimal dis = 0;
+            GridViewRow gvr = (GridViewRow)((TextBox)sender).NamingContainer;
+            DataTable dt = (DataTable)ViewState["SV"];
+            if (dt.Rows.Count > 0)
+            {
+                DataRow dr = dt.Rows[gvr.DataItemIndex];
+                dr["SPrice"] = ((TextBox)gvr.FindControl("txtSalesPrice")).Text;
+                dr["Qty"] = ((TextBox)gvr.FindControl("txtQty")).Text;
+                dr["DiscountAmount"] = ((TextBox)gvr.FindControl("txtDiscount")).Text;
+                tot = Convert.ToDecimal(((TextBox)gvr.FindControl("txtSalesPrice")).Text) * Convert.ToDecimal(((TextBox)gvr.FindControl("txtQty")).Text);
+                dis = ((Convert.ToDecimal(((TextBox)gvr.FindControl("txtSalesPrice")).Text) * (Convert.ToDecimal(((TextBox)gvr.FindControl("txtDiscount")).Text) * Convert.ToDecimal(((TextBox)gvr.FindControl("txtQty")).Text))) / 100);
+                dr["Total"] = (tot - dis).ToString("N2");
+
+            }
+            dgSV.DataSource = dt;
+            dgSV.DataBind();
+            ShowFooterTotal(dt);
+            ((TextBox)dgSV.Rows[dgSV.Rows.Count - 1].FindControl("txtQty")).Focus();
+        }
+        catch (Exception ex)
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('" + ex + "');", true);
+        }
+    }
+    private void Quantity(object sender)
+    {
+        decimal tot = 0;
+        decimal dis = 0;
+        GridViewRow gvr = (GridViewRow)((TextBox)sender).NamingContainer;
+        DataTable dt = (DataTable)ViewState["SV"];
+        if (dt.Rows.Count > 0)
+        {
+            DataRow dr = dt.Rows[gvr.DataItemIndex];
+            if ((Convert.ToDouble(dr["ClosingStock"]) + Convert.ToDouble(gvr.Cells[10].Text)) < Convert.ToDouble(((TextBox)gvr.FindControl("txtQty")).Text))
+            {
+                string Mgs = "Items Quantity Over This Closing Quantity.\\n Tolat Closing Qiantity : (" + dr["ClosingStock"].ToString() + ")..!!";
+                //ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('" + Mgs + "');", true);
+                ScriptManager.RegisterClientScriptBlock((sender as Control), this.GetType(), "alert", "alert('" + Mgs + "');", true);
+                ((TextBox)gvr.FindControl("txtQty")).Text = "0";
+                return;
+            }
+            else
+            {
+                dr["SPrice"] = ((TextBox)gvr.FindControl("txtSalesPrice")).Text;
+                dr["Qty"] = ((TextBox)gvr.FindControl("txtQty")).Text;
+                dr["DiscountAmount"] = ((TextBox)gvr.FindControl("txtDiscount")).Text;
+                tot = Convert.ToDecimal(((TextBox)gvr.FindControl("txtSalesPrice")).Text) * Convert.ToDecimal(((TextBox)gvr.FindControl("txtQty")).Text);
+                dis = ((Convert.ToDecimal(((TextBox)gvr.FindControl("txtSalesPrice")).Text) * (Convert.ToDecimal(((TextBox)gvr.FindControl("txtDiscount")).Text) * Convert.ToDecimal(((TextBox)gvr.FindControl("txtQty")).Text))) / 100);
+                dr["Total"] = (tot - dis).ToString("N2");
+            }
+        }
+        dgSV.DataSource = dt;
+        dgSV.DataBind();
+        ShowFooterTotal(dt);
+
+
+    }
+    protected void txtDiscount_TextChanged(object sender, EventArgs e)
+    {
+        try
+        {
+            Quantity(sender);
+            ((TextBox)dgSV.Rows[dgSV.Rows.Count - 1].FindControl("txtQty")).Focus();
+
+        }
+        catch (Exception ex)
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('" + ex + "');", true);
+        }
+    }
+    protected void btnSave_Click(object sender, EventArgs e)
+    {
+        if (string.IsNullOrEmpty(txtRemarks.Text))
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Input Particulars..!!');", true);
+            return;
+        }
+        if (string.IsNullOrEmpty(txtCustomer.Text))
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Select Customer..!!');", true);
+            return;
+        }
+        DataTable dt = (DataTable)ViewState["SV"];
+        if (dt.Rows.Count > 0)
+        {
+            foreach (DataRow drRow in dt.Rows)
+            {
+                if (!string.IsNullOrEmpty(drRow["SPrice"].ToString()))
+                {
+                    if (Convert.ToDecimal(drRow["SPrice"].ToString()) <= 0)
+                    {
+                        ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Please Input Sales Price.!!');", true);
+                        return;
+                    }
+                }
+                else
+                {
+                    ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Please Input Sales Price.!!');", true);
+                    return;
+                }
+            }
+        }
+        double Dis = 0;
+        if (Panel1.Visible == false) { }
+        else
+        {
+            Sales aSales = SalesManager.GetShow_BD_SaleSalesInfo(lblInvNo.Text);
+            Dis = (Convert.ToDouble(txtSubTotal.Text) * Convert.ToDouble(txtDiscount.Text)) / 100;
+            UPPaymentMtd.Update();
+            if (aSales != null)
+            {
+                if (per.AllowEdit == "Y")
+                {
+                    int CountInvoice = IdManager.GetShowSingleValueInt("COUNT(*)", "UPPER(InvoiceNo)", "[Order_BD]",
+                        txtInvoiceNo.Text.ToUpper(), Convert.ToInt32(lblInvNo.Text));
+                    if (CountInvoice > 0)
+                    {
+                        ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Warning : \\n this Invoice No. alradey exist.!!');", true);
+                        return;
+                    }
+                    aSales.ID = lblInvNo.Text;
+                    aSales.Invoice = txtInvoiceNo.Text;
+                    aSales.Date = txtDate.Text;
+                    aSales.Total = txtSubTotal.Text.Replace("'", "");
+                    aSales.Tax = txtVat.Text.Replace(",", "");
+                    aSales.Disount = txtDiscount.Text.Replace(",", "");
+                    aSales.GTotal = (Convert.ToDouble(txtSubTotal.Text) - Dis).ToString().Replace(",", "");
+                    aSales.CReceive = txtPayment.Text.Replace(",", "");
+                    aSales.Due = txtDue.Text.Replace(",", "");
+                    aSales.Customer = hfCustomerID.Value;
+                    aSales.CustomerName = txtCustomer.Text;
+                    aSales.DvStatus = ddlDelevery.SelectedValue;
+                    aSales.DvDate = txtDate.Text;
+                    aSales.Remarks = txtRemarks.Text.Replace("'", "");
+                    aSales.PMethod = ddlPaymentMethord.SelectedValue;
+                    aSales.PMNumber = txtChequeNo.Text;
+                    aSales.BankId = ddlBank.SelectedValue;
+                    aSales.ChequeDate = txtChequeDate.Text;
+                    aSales.ChequeAmount = txtChequeAmount.Text.Replace(",", "");
+                    aSales.Chk_Status = ddlChequeStatus.SelectedValue;
+                    aSales.DrNo = txtDRNo.Text.Replace("'", "");
+                    aSales.LoginBy = Session["user"].ToString();
+                    DataTable dtOld = (DataTable)ViewState["OldStock"];
+
+                    //********************** Journal Voucher Update *************//
+
+                    string VCH_SYS_NO = IdManager.GetShowSingleValueString("VCH_SYS_NO",
+                        "t1.PAYEE='SVBD' and SUBSTRING(t1.VCH_REF_NO,1,2)='JV' and t1.SERIAL_NO", "GL_TRANS_MST t1",
+                        txtInvoiceNo.Text);
+                    VouchMst vmst = VouchManager.GetVouchMst(VCH_SYS_NO.Trim());
+                    if (vmst != null)
+                    {
+                        vmst.FinMon = FinYearManager.getFinMonthByDate(txtDate.Text);
+                        vmst.ValueDate = txtDate.Text;
+                        vmst.VchCode = "03";
+                        //vmst.SerialNo = txtGRNO.Text.Trim();
+                        vmst.Particulars = txtRemarks.Text;
+                        vmst.ControlAmt = txtSubTotal.Text.Replace(",", "");
+                        vmst.Payee = "SVBD";
+                        vmst.CheqAmnt = "0";
+                        vmst.UpdateUser = Session["user"].ToString().ToUpper();
+                        vmst.UpdateDate = System.DateTime.Now.ToString("dd/MM/yyyy");
+                        vmst.AuthoUserType = Session["userlevel"].ToString();
+                    }
+
+                    //  decimal TotalPurchasePrice = 
+                    SalesManager.Update_BD_SalesInfo(aSales, dt, dtOld, ViewState["CurrencyRate"].ToString(), vmst,
+                        Session["UserType"].ToString(), ViewState["Customer_COA"].ToString());
+                    //*********** Auto Voucher generate off **********//
+                    //SV_Acc_JurnalVoucher_Update(TotalPurchasePrice);
+                    //CV_Acc_CreaditVoucher_Update();
+                    ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Record has been update successfully...!!');", true);
+                    btnSave.Enabled = false;
+                }
+                else
+                {
+                    ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('You are not Permitted this Step...!!');", true);
+                }
+            }
+            else
+            {
+                if (ViewState["SV"] == null)
+                {
+                    ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('No Items In this list...!!');", true);
+                }
+                else if (ddlPaymentMethord.SelectedValue == "Q" && ddlChequeStatus.SelectedItem.Text == "") { ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Select Cheque Status..!!');", true); }
+                else
+                {
+                    if (per.AllowAdd == "Y")
+                    {
+                        int CountInvoice = IdManager.GetShowSingleValueInt("COUNT(*)", "UPPER(InvoiceNo)", "[Order]",
+                            txtInvoiceNo.Text.ToUpper());
+                        if (CountInvoice > 0)
+                        {
+                            ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Warning : \\n this Invoice No. alradey exist.!!');", true);
+                            return;
+                        }
+
+                        aSales = new Sales();
+                        aSales.Date = txtDate.Text;
+                        aSales.Total = txtSubTotal.Text.Replace(",", "");
+                        aSales.Tax = txtVat.Text.Replace(",", "");
+                        aSales.Disount = txtDiscount.Text.Replace(",", "");
+                        aSales.GTotal = (Convert.ToDouble(txtSubTotal.Text) - Dis).ToString().Replace(",", "");
+                        aSales.CReceive = txtPayment.Text.Replace(",", "");
+                        aSales.Due = txtDue.Text.Replace(",", "");
+                        //if (ddlCustomer.SelectedItem.Text == "")
+                        //{
+                        //    DataTable dt1 = clsClientInfoManager.GetCommonClient();
+                        //    ViewState["ComDt"] = dt1;
+                        //    aSales.Customer = dt1.Rows[0]["ID"].ToString();
+                        //}
+                        //else { aSales.Customer = ddlCustomer.SelectedValue; }
+                        aSales.Customer = hfCustomerID.Value;
+                        aSales.CustomerName = txtCustomer.Text;
+                        aSales.DvStatus = ddlDelevery.SelectedValue;
+                        aSales.DvDate = txtDate.Text;
+                        aSales.Remarks = txtRemarks.Text.Replace("'", "");
+                        aSales.PMethod = ddlPaymentMethord.SelectedValue;
+                        aSales.PMNumber = txtChequeNo.Text;
+                        aSales.BankId = ddlBank.SelectedValue;
+                        aSales.ChequeDate = txtChequeDate.Text;
+                        aSales.ChequeAmount = txtChequeAmount.Text.Replace(",", "");
+                        aSales.Chk_Status = ddlChequeStatus.SelectedValue;
+                        aSales.LoginBy = Session["user"].ToString();
+                        aSales.DrNo = txtDRNo.Text.Replace("'", "");
+                        // DataTable dt = (DataTable)ViewState["SV"];
+                        Users usr = Delve.UsersManager.getUser(Session["user"].ToString());
+                        if (usr != null) { aSales.BranchID = usr.Dept; }
+                        txtInvoiceNo.Text = GetAutoId();
+                        aSales.Invoice = GetAutoId();
+
+                        //*************************** Account Entry ******************//
+                        //********* Jurnal Voucher *********//
+                        VouchMst vmst = new VouchMst();
+                        vmst.FinMon = FinYearManager.getFinMonthByDate(txtDate.Text);
+                        vmst.ValueDate = txtDate.Text;
+                        vmst.VchCode = "03";
+                        vmst.RefFileNo = "";
+                        vmst.VolumeNo = "";
+                        vmst.SerialNo = txtInvoiceNo.Text.Trim();
+                        vmst.Particulars = txtRemarks.Text;
+                        vmst.ControlAmt = aSales.GTotal;
+                        vmst.Payee = "SVBD";
+                        vmst.CheckNo = txtChequeNo.Text;
+                        vmst.CheqDate = txtChequeDate.Text;
+                        vmst.CheqAmnt = "0";
+                        vmst.MoneyRptNo = "";
+                        vmst.MoneyRptDate = "";
+                        vmst.TransType = "R";
+                        vmst.BookName = "AMB";
+                        vmst.EntryUser = Session["user"].ToString();
+                        vmst.EntryDate = DateTime.Parse(DateTime.Now.ToString()).ToString("dd/MM/yyyy");
+                        vmst.Status = "U";
+                        vmst.AuthoUserType = Session["userlevel"].ToString();
+                        vmst.VchSysNo = IdManager.GetNextID("gl_trans_mst", "vch_sys_no").ToString();
+                        vmst.VchRefNo = "JV-" + vmst.VchSysNo.ToString().PadLeft(10, '0');
+
+                        decimal ID = SalesManager.Save_BD_SalesInfo(aSales, dt, ViewState["CurrencyRate"].ToString(), vmst,
+                            Session["UserType"].ToString(), ViewState["Customer_COA"].ToString());
+                        //*********** Auto Voucher generate off **********//
+                        // SV_Acc_JurnalVoucher_Save(TotalPurchasePrice);
+                        //CV_Acc_CreaditVoucher_Save();
+                        ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Record has been saved successfully...!!');", true);
+                        btnSave.Enabled = false;
+                        lblInvNo.Text = ID.ToString();
+                    }
+                    else
+                    {
+                        ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('You are not Permitted this Step...!!');", true);
+                    }
+                }
+            }
+
+        }
+    }
+    protected void btnDelete_Click(object sender, EventArgs e)
+    {
+        if (per.AllowDelete == "Y")
+        {
+            Sales aSales = SalesManager.GetShow_BD_SaleSalesInfo(lblInvNo.Text);
+            if (aSales != null)
+            {
+                DataTable dtOldStock = (DataTable)ViewState["OldStock"];
+                aSales.ID = lblInvNo.Text;
+                aSales.Invoice = txtInvoiceNo.Text;
+                SalesManager.Delete_BD_SalesVoucher(aSales, dtOldStock);
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Record has been delete successfully...!!');", true);
+                btnDelete.Enabled = false;
+                btnSave.Enabled = false;
+            }
+        }
+        else
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('You are not Permitted this Step...!!');", true);
+        }
+    }
+   
+    protected void btnClear_Click(object sender, EventArgs e)
+    {
+        var pageName = System.IO.Path.GetFileName(Request.Url.ToString());
+        Response.Redirect(pageName);
+    }
+    protected void btnPrint_Click(object sender, EventArgs e)
+    {
+
+    }
+    protected void btnChallan_Click(object sender, EventArgs e)
+    {
+
+    }
+
+    protected void btnFind_Click(object sender, EventArgs e)
+    {
+        Sales aSales = SalesManager.GetShow_BD_SaleSalesInfo(lblInvNo.Text);
+        if (aSales != null)
+        {
+            Clear();
+            txtInvoiceNo.Text = aSales.Invoice;
+            txtDate.Text = aSales.Date;
+            txtSubTotal.Text = aSales.Total;
+            txtVat.Text = aSales.Tax;
+            txtDiscount.Text = aSales.Disount;
+            txtSubTotal.Text = aSales.GTotal;
+            txtPayment.Text = aSales.CReceive;
+            hfCustomerID.Value = aSales.Customer;
+            DataTable dtCustomer = _aclsClientInfoManager.GetCustomerOnSearch("WHERE ID='" + hfCustomerID.Value + "' ");
+            if (dtCustomer.Rows.Count > 0)
+            {
+                hfCustomerID.Value = dtCustomer.Rows[0]["ID"].ToString();
+                txtCustomer.Text = dtCustomer.Rows[0]["ContactName"].ToString();
+                ViewState["Customer_COA"] = dtCustomer.Rows[0]["Gl_CoaCode"].ToString();
+            }
+            ddlDelevery.SelectedValue = aSales.DvStatus;
+            txtDeleveryDate.Text = aSales.DvDate;
+            txtRemarks.Text = aSales.Remarks;
+            ddlPaymentMethord.SelectedValue = aSales.PMethod;
+            if (aSales.PMethod != "C")
+            {
+                txtChequeNo.Text = aSales.PMNumber;
+                ddlBank.SelectedValue = aSales.BankId;
+                txtChequeDate.Text = aSales.ChequeDate;
+                txtChequeAmount.Text = aSales.ChequeAmount;
+            }
+            DataTable DT1 = SalesManager.Get_BD_SalesDetails(lblInvNo.Text, lblBranchID.Text);
+            if (DT1.Rows.Count > 0)
+            {
+                dgSV.DataSource = DT1;
+                ViewState["SV"] = DT1;
+                ViewState["OldStock"] = DT1;
+                dgSV.DataBind();
+                ShowFooterTotal(DT1);
+            }
+            txtDue.Text = Convert.ToDouble(aSales.Due).ToString("N3");
+            txtDRNo.Text = aSales.DrNo;
+            btnNew.Visible = false;
+            SalesMst.Visible = true;
+            UP1.Update();
+        }
+    }
+    protected void txtInvoiceNo_TextChanged(object sender, EventArgs e)
+    {
+
+    }
+    protected void txtDate_TextChanged(object sender, EventArgs e)
+    {
+
+    }
+
+
+    //******************* Search Option *************************//
+
+    protected void BtnSearch_Click(object sender, EventArgs e)
+    {
+        DataTable dt = SalesManager.GetShow_BD_SalesDetails(txtsearhInvoice.Text, hfSearchCustomerID.Value, txtFromDate.Text, txtToDate.Text);
+        dgSVMst.DataSource = dt;
+        ViewState["SvMst"] = dt;
+        dgSVMst.DataBind();
+    }
+    protected void Refresh_Click(object sender, EventArgs e)
+    {
+        txtsearhInvoice.Text =
+           hfCustomerID.Value = txtFromDate.Text = txtToDate.Text = txtSearchCustomer.Text = string.Empty;
+        DataTable dtBdSales = SalesManager.GetShow_BD_SalesDetails("", "", "", "");
+        dgSVMst.DataSource = dtBdSales;
+        ViewState["SvMst"] = dtBdSales;
+        dgSVMst.DataBind();
+        txtsearhInvoice.Focus();
+    }
+    protected void txtSearchCustomer_TextChanged(object sender, EventArgs e)
+    {
+        DataTable dtCustomer = _aclsClientInfoManager.GetCustomerOnSearch("where UPPER(SearchName) = UPPER('" + txtSearchCustomer.Text + "')");
+        if (dtCustomer.Rows.Count > 0)
+        {
+            hfSearchCustomerID.Value = dtCustomer.Rows[0]["ID"].ToString();
+            txtSearchCustomer.Text = dtCustomer.Rows[0]["ContactName"].ToString();
+            Session["Customer_COA"] = dtCustomer.Rows[0]["Gl_CoaCode"].ToString();
+        }
+        else
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('You are not Permitted this Step.!!');", true);
+            Session["Customer_COA"] = null;
+            hfCustomerID.Value = "";
+            return;
+        }
+    }
+    protected void dgSVMst_PageIndexChanging(object sender, GridViewPageEventArgs e)
+    {
+
+    }
+    protected void dgSVMst_RowDataBound(object sender, GridViewRowEventArgs e)
+    {
+        try
+        {
+            if (e.Row.RowType == DataControlRowType.DataRow | e.Row.RowType == DataControlRowType.Header | e.Row.RowType == DataControlRowType.Footer)
+            {
+                e.Row.Cells[6].Attributes.Add("style", "display:none");
+                e.Row.Cells[5].Attributes.Add("style", "display:none");
+            }
+        }
+        catch (FormatException fex)
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('" + fex.Message + "');", true);
+        }
+        catch (Exception ex)
+        {
+            if (ex.Message.Contains("Database"))
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Database Maintain Error. Contact to the Software Provider..!!');", true);
+            else
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('There is some problem to do the task. Try again properly.!!');", true);
+        }
+    }
+    protected void dgSVMst_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        Session["SalesVoucherBD"] = dgSVMst.SelectedRow.Cells[6].Text.Trim();
+        Response.Write("<script>");
+        Response.Write("window.open('SalesVoucherBD.aspx?mno=6.28','_blank')");
+        Response.Write("</script>");  
+    }
+}

@@ -1,0 +1,127 @@
+﻿<%@ Page Title="" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true" CodeFile="frmInvChequeStatement.aspx.cs" Inherits="frmInvChequeStatement" %>
+<%@ Register Assembly="AjaxControlToolkit" Namespace="AjaxControlToolkit" TagPrefix="cc" %>
+<asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
+    <div style="background-color:White; width:100%; min-height:700px; height:auto !important; height:700px; font-family:Tahoma;">
+   <table style="width: 100%">
+        <tr>
+            <td style="width:30%;"></td>
+            <td></td>
+            <td style="width:30%;"></td>
+        </tr>
+        
+        <tr>
+            <td style="width:20%; height: 50px;"></td>
+            <td style="height: 50px"></td>
+            <td style="width:20%; height: 50px;"></td>
+        </tr>
+        
+        <tr>
+            <td style="width:20%;">&nbsp;</td>
+            <td>
+                <asp:UpdatePanel ID="UPInvReport" runat="server" UpdateMode="Conditional">
+                <ContentTemplate>                 
+               <fieldset style="vertical-align: top; border: solid 1px #8BB381;"><legend style="color: maroon;"><b>
+                   Cheque Bank Statement </b></legend>
+                <table style="width: 100%">
+                    <tr>
+                        <td style="height: 15px" valign="top" align="center">
+                        <fieldset style="border:1px solid lightgray;">
+                           
+                            <asp:RadioButtonList ID="RadioButtonList1" runat="server" AutoPostBack="True" 
+                                onselectedindexchanged="RadioButtonList1_SelectedIndexChanged" 
+                                RepeatDirection="Horizontal">
+                                <asp:ListItem Value="SCS" Selected="True">Supplier Cheque Statement</asp:ListItem>
+                                <asp:ListItem Value="CCS">Customer Cheque Statement</asp:ListItem>
+                            </asp:RadioButtonList>
+                             </fieldset>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="height: 15px" valign="top">
+                            <%--Sales & Purchase Panel--%>
+                            <asp:Panel ID="PnlSales" runat="server">
+                                <table style="width: 99%;border:1px solid lightgray;">
+                                    <tr>
+                                        <td align="center" colspan="3">
+                                            <asp:RadioButtonList ID="RadioButtonList2" runat="server" AutoPostBack="True" 
+                                                onselectedindexchanged="RadioButtonList1_SelectedIndexChanged" 
+                                                RepeatDirection="Horizontal">
+                                                <asp:ListItem Selected="True" Value="P">Pending</asp:ListItem>
+                                                <asp:ListItem Value="A">Approved</asp:ListItem>
+                                                <asp:ListItem Value="B">Bounce</asp:ListItem>
+                                            </asp:RadioButtonList>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td align="center" style="width: 203px; height: 6px;">
+                                        </td>
+                                        <td style="width: 85px; height: 6px;" align="center"></td>
+                                        <td align="center" style="width: 182px; height: 6px;">
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td align="right" style="width: 203px">
+                                            <asp:TextBox ID="txtStartDate" runat="server" placeHolder="dd/MM/yyyy" Width="90%"></asp:TextBox>
+                                             <cc:CalendarExtender ID="txtStartDate_CalendarExtender" runat="server" 
+                                                Format="dd/MM/yyyy" TargetControlID="txtStartDate" />
+                                        </td>
+                                        <td align="center" style="width: 85px">
+                                            <b>TO </b></td>
+                                        <td align="left" style="width: 182px">
+                                            <asp:TextBox ID="txtEndDate" runat="server" placeHolder="dd/MM/yyyy" Width="90%"></asp:TextBox>
+                                            <cc:CalendarExtender ID="CalendarExtender1" runat="server" 
+                                                Format="dd/MM/yyyy" TargetControlID="txtEndDate" />
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td align="right" style="width: 203px; height: 3px;">
+                                        </td>
+                                        <td align="center" style="width: 85px; height: 3px;">
+                                        </td>
+                                        <td align="left" style="width: 182px; height: 3px;">
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td align="left" colspan="3">
+                                            <asp:Label ID="lblSupOrCus" runat="server" Text="Supplier"></asp:Label>
+                                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                            <asp:DropDownList ID="ddlSupplier" placeHolder="Select Supplier" runat="server" Height="27px" Width="60%">
+                                            </asp:DropDownList>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </asp:Panel>                           
+                        </td>
+                    </tr>
+                </table>
+                </fieldset>
+                </ContentTemplate>
+                </asp:UpdatePanel>
+            </td>
+            <td style="width:20%;">&nbsp;</td>
+        </tr>
+        
+        <tr>
+            <td style="width:20%;">&nbsp;</td>
+            <td align="right">
+                <asp:Button ID="btnPrint" runat="server" Text="Preview" Width="80px" 
+                    Height="25px" onclick="btnPrint_Click" />
+            &nbsp;&nbsp;
+                <asp:Button ID="btnClear" runat="server" Text="Clear" Width="80px" 
+                    onclick="btnClear_Click" Height="25px" />
+            </td>
+            <td style="width:20%;">&nbsp;</td>
+        </tr>
+        
+        <tr>
+            <td style="width:20%;">&nbsp;</td>
+            <td align="right">&nbsp;</td>
+            <td style="width:20%;">&nbsp;</td>
+        </tr>
+        
+    </table>
+    </div>
+</asp:Content>
+
+
+

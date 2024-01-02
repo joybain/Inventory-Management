@@ -1,0 +1,181 @@
+﻿<%@ Page Title="" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true" CodeFile="frmParty.aspx.cs" Inherits="frmParty" %>
+
+<asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
+ <div id="frmMainDiv" style="background-color:White; width:100%;">
+    <table  id="pageFooterWrapper">
+          <tr>  
+                <td align="center" >&nbsp;</td>   
+                <td align="center">
+                <asp:Button ID="btnDelete" runat="server" ToolTip="Delete" 
+            
+                         Text="Delete" 
+                Height="30px" Width="110px" BorderStyle="Outset" onclick="btnDelete_Click"  />
+                </td>       
+                <td align="center" >&nbsp;</td>       
+                <td align="center" >
+                <asp:Button ID="btnSave" runat="server" ToolTip="Save Purchase Record" 
+                        onclick="btnSave_Click" Text="Save" 
+                Height="30px" Width="110px" BorderStyle="Outset"  />
+                </td>
+                <td align="center" >&nbsp;</td>
+                <td align="center" >
+                <asp:Button ID="btnClear" runat="server"  ToolTip="Clear" Text="Clear" 
+                Height="30px" Width="110px" BorderStyle="Outset" onclick="Clear_Click"  />
+                </td>
+                <td align="center" >&nbsp;</td>           
+           </tr>
+   </table>
+    <table style="width: 100%">
+        <tr>
+            <td style="width:15%;">
+                &nbsp;</td>
+            <td style="width:70%;">
+                <asp:Label ID="lblID" runat="server" Visible="False"></asp:Label>
+            &nbsp;
+                </td>
+            <td style="width:20%;">
+                &nbsp;</td>
+        </tr>
+        <tr>
+            <td style="width:15%;">
+                &nbsp;</td>
+            <td style="width:70%;">
+             <fieldset style="vertical-align: top; border: solid 1px #8BB381;text-align:left;"><legend style="color: maroon;"><b>Party Information </b></legend>
+                <table style="width: 100%">
+                    <tr>
+                        <td style="width:12%; height: 26px;" align="right">
+                            Party Code</td>
+                        <td style="width:1%; height: 26px;">
+                            </td>
+                        <td style="width:20%; height: 26px;" align="left">
+<asp:TextBox SkinID="tbPlain" ID="txtPartyCode" runat="server"  Width="100%" 
+        Font-Size="9pt"  CssClass="tbc" Enabled="False"></asp:TextBox>
+                        </td>
+                        <td style="width:15%; height: 26px;" align="right">
+                            Mobile</td>
+                        <td style="width:1%; height: 26px;">
+                            </td>
+                        <td style="width:20%; height: 26px;">
+<asp:TextBox SkinID="tbPlain" ID="txtMobile" style="text-align:left;" runat="server"  Width="94%" 
+        Font-Size="9pt"  CssClass="tbc"></asp:TextBox>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="width:12%; height: 26px;" align="right">
+                            Party Name&nbsp; </td>
+                        <td style="width:1%; height: 26px;">
+                            </td>
+                        <td style="height: 26px;" align="left" colspan="4">
+<asp:TextBox SkinID="tbPlain" ID="txtPartyName" runat="server"  Width="98%" style="text-align:left;"
+        Font-Size="9pt"  CssClass="tbc"></asp:TextBox>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="width:12%; height: 26px;" align="right">
+                            Address&nbsp; </td>
+                        <td style="width:1%; height: 26px;">
+                            </td>
+                        <td style="height: 26px;" align="left" colspan="4">
+<asp:TextBox SkinID="tbPlain" ID="txtAddress" runat="server"  style="text-align:left;" Width="98%" 
+        Font-Size="9pt"  CssClass="tbc"></asp:TextBox>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="width:12%; height: 26px;" align="right">
+                            Phone&nbsp; </td>
+                        <td style="width:1%; height: 26px;">
+                            </td>
+                        <td style="width:20%; height: 26px;">
+<asp:TextBox SkinID="tbPlain" ID="txtPhone" style="text-align:left;" runat="server"  Width="100%" 
+        Font-Size="9pt"  CssClass="tbc"></asp:TextBox>
+                        </td>
+                        <td style="width:15%; height: 26px;" align="right">
+                            E-mail&nbsp; </td>
+                        <td style="width:1%; height: 26px;">
+                            </td>
+                        <td style="width:20%; height: 26px;">
+<asp:TextBox SkinID="tbPlain" ID="txtEmail" style="text-align:left;" runat="server"  Width="94%" 
+        Font-Size="9pt"  CssClass="tbc"></asp:TextBox>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="width:12%; height: 26px;" align="right">
+                            Country</td>
+                        <td style="width:1%; height: 26px;">
+                            </td>
+                        <td style="width:20%; height: 26px;">
+    <asp:DropDownList ID="ddlCountry" runat="server" Height="26px" Width="100%">
+    </asp:DropDownList>
+                            </td>
+                        <td style="width:15%; height: 26px;" align="right">
+                            Segment Code</td>
+                        <td style="width:1%; height: 26px;">
+                            </td>
+                        <td style="width:20%; height: 26px;">
+<asp:TextBox SkinID="tbPlain" ID="txtGlCoa" style="text-align:left;" runat="server"  Width="94%" 
+        Font-Size="9pt"  CssClass="tbc"></asp:TextBox>
+                            </td>
+                    </tr>
+                </table>
+                </fieldset>
+            </td>
+            <td style="width:20%;">
+                &nbsp;</td>
+        </tr>
+        <tr>
+            <td align="center" colspan="3">
+<asp:GridView CssClass="mGrid" PagerStyle-CssClass="pgr"  AlternatingRowStyle-CssClass="alt" 
+ID="dgParty" runat="server" AutoGenerateColumns="False" Width="70%" 
+        AllowPaging="True" BackColor="White" BorderWidth="1px" BorderStyle="Solid"
+        CellPadding="2" BorderColor="LightGray" Font-Size="9pt" 
+        AllowSorting="True" PageSize="20" 
+                    onselectedindexchanged="dgParty_SelectedIndexChanged" onrowdatabound="dgParty_RowDataBound" 
+        >
+  <HeaderStyle Font-Size="9pt"  Font-Bold="True" HorizontalAlign="center" BackColor="Silver"/>
+  <FooterStyle BackColor="Silver" Font-Bold="True" ForeColor="White" />
+  <Columns>
+  <asp:CommandField ShowSelectButton="True"  ItemStyle-Width="40px" 
+          ItemStyle-HorizontalAlign="Center" ItemStyle-ForeColor="Blue" 
+          ItemStyle-Height="25px">
+<ItemStyle HorizontalAlign="Center" ForeColor="Blue" Height="25px" Width="40px"></ItemStyle>
+      </asp:CommandField>
+  <asp:BoundField  HeaderText="PartyCode" DataField="PartyCode" ItemStyle-Width="100px" 
+          ItemStyle-HorizontalAlign="Center">
+<ItemStyle HorizontalAlign="Center" Width="100px"></ItemStyle>
+      </asp:BoundField>
+  <asp:BoundField  HeaderText="Name" DataField="PartyName" ItemStyle-Width="200px" 
+          ItemStyle-HorizontalAlign="Left">
+<ItemStyle HorizontalAlign="Left" Width="200px"></ItemStyle>
+      </asp:BoundField>
+  <asp:BoundField  HeaderText="Address" DataField="Address" ItemStyle-Width="200px" 
+          ItemStyle-HorizontalAlign="Left">  
+<ItemStyle HorizontalAlign="Left" Width="200px"></ItemStyle>
+      </asp:BoundField>
+  <asp:BoundField  HeaderText="Mobile" DataField="Mobile" ItemStyle-Width="100px" 
+          ItemStyle-HorizontalAlign="Left">
+<ItemStyle HorizontalAlign="Left" Width="100px"></ItemStyle>
+      </asp:BoundField>
+   <asp:BoundField  HeaderText="ID" DataField="ID" ItemStyle-Width="100px" 
+          ItemStyle-HorizontalAlign="Left">
+<ItemStyle HorizontalAlign="Left" Width="100px"></ItemStyle>
+      </asp:BoundField>
+  </Columns>
+                        <RowStyle BackColor="white" />
+                        <EditRowStyle BackColor="" />
+                        <PagerStyle  HorizontalAlign="Center" />
+                        <AlternatingRowStyle BackColor="" />
+  </asp:GridView>
+            </td>
+        </tr>
+        <tr>
+            <td style="width:15%;">
+                &nbsp;</td>
+            <td style="width:70%;">
+                &nbsp;</td>
+            <td style="width:20%;">
+                &nbsp;</td>
+        </tr>
+    </table>
+</div>
+</asp:Content>
+

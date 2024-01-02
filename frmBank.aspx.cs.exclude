@@ -1,0 +1,401 @@
+﻿using System;
+using System.Collections;
+using System.Configuration;
+using System.Data;
+using System.Data.SqlClient;
+using System.Linq;
+using System.Web;
+using System.Web.Security;
+using System.Web.UI;
+using System.Web.UI.HtmlControls;
+using System.Web.UI.WebControls;
+using System.Web.UI.WebControls.WebParts;
+using System.Xml.Linq;
+using Delve;
+
+
+
+public partial class frmBank : System.Web.UI.Page
+{
+    private static Permis per;
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        if (Session["user"] == null)
+        {
+            if (Session.SessionID != "" | Session.SessionID != null)
+            {
+                clsSession ses = clsSessionManager.getSession(Session.SessionID);
+                if (ses != null)
+                {
+                    Session["user"] = ses.UserId;
+                    Session["book"] = "AMB";
+                    string connectionString = DataManager.OraConnString();
+                    SqlDataReader dReader;
+                    SqlConnection conn = new SqlConnection();
+                    conn.ConnectionString = connectionString;
+                    SqlCommand cmd = new SqlCommand();
+                    cmd.Connection = conn;
+                    cmd.CommandType = CommandType.Text;
+                    cmd.CommandText =
+                        "Select user_grp,[description],UserType,case when UserType=1 then 'Bangladesh' else 'Philippine' end AS[LoginCountry] from utl_userinfo where upper(user_name)=upper('" +
+                        Session["user"].ToString().ToUpper() + "') and status='A'";
+                    conn.Open();
+                    dReader = cmd.ExecuteReader();
+                    string wnot = "", userType = "";
+                    if (dReader.HasRows == true)
+                    {
+                        while (dReader.Read())
+                        {
+                            Session["userlevel"] = int.Parse(dReader["user_grp"].ToString());
+                            //Session["dept"] = dReader["dept"].ToString();
+                            wnot = "Welcome " + dReader["description"].ToString();
+                            Session["LoginCountry"] = dReader["LoginCountry"].ToString();
+                            userType = dReader["UserType"].ToString();
+                        }
+                        Session["wnote"] = wnot;
+                        cmd = new SqlCommand();
+                        cmd.Connection = conn;
+                        cmd.CommandType = CommandType.Text;
+                        //cmd.CommandText = "Select book_desc,company_address1,company_address2,separator_type from gl_set_of_books where book_name='" + Session["book"].ToString() + "' ";
+                        if (Convert.ToInt32(userType) == 2)
+                        {
+
+                            Session["bookMAN"] = "MAN";
+                        }
+                        else
+                        {
+                            Session["bookMAN"] = Session["book"].ToString();
+                        }
+                        cmd.CommandText = "Select book_desc,company_address1,company_address2,separator_type,ShotName from gl_set_of_books where book_name='" + Session["bookMAN"] + "' ";
+
+                        if (dReader.IsClosed == false)
+                        {
+                            dReader.Close();
+                        }
+                        dReader = cmd.ExecuteReader();
+                        if (dReader.HasRows == true)
+                        {
+                            while (dReader.Read())
+                            {
+                                Session["septype"] = dReader["separator_type"].ToString();
+                                Session["org"] = dReader["book_desc"].ToString();
+                                Session["add1"] = dReader["company_address1"].ToString();
+                                Session["add2"] = dReader["company_address2"].ToString();
+                            }
+                        }
+                    }
+                    dReader.Close();
+                    conn.Close();
+                }
+            }
+        }
+        try
+        {
+            string pageName = DataManager.GetCurrentPageName();
+            string modid = PermisManager.getModuleId(pageName);
+            per = PermisManager.getUsrPermis(Session["user"].ToString().Trim().ToUpper(), modid);
+            if (per != null && per.AllowView == "Y")
+            {
+                ((Label)Page.Master.FindControl("lblLogin")).Text = Session["wnote"].ToString();
+                ((Label)Page.Master.FindControl("lblCountryName")).Text = Session["LoginCountry"].ToString();
+                ((LinkButton)Page.Master.FindControl("lbLogout")).Visible = true;
+            }
+            else
+            {
+                Response.Redirect("Home.aspx?sid=sam");
+            }
+        }
+        catch
+        {
+            Response.Redirect("Default.aspx?sid=sam");
+        }  
+        if (!Page.IsPostBack)
+        {
+          RefreshAll();
+        }
+    }
+
+    private void RefreshAll()
+    {
+        dgMst.DataSource = clsBankManager.getBankMsts();
+        dgMst.DataBind();
+        dgMst.Visible = true;
+        dgBranch.Visible = false;
+        txtBankId.Text = txtBankName.Text = string.Empty;
+        txtBankName.Focus();
+    }
+
+    private void getEmptyBranch()
+    {
+        DataTable dt = new DataTable();
+        dt.Columns.Add("branch_id", typeof(string));
+        dt.Columns.Add("branch_name", typeof(string));
+        dt.Columns.Add("addr1", typeof(string));
+        dt.Columns.Add("addr2", typeof(string));
+        dt.Columns.Add("phone", typeof(string));
+        DataRow dr = dt.NewRow();
+        dt.Rows.Add(dr);
+        dgBranch.DataSource = dt;
+        Session["branch"] = dt;
+        dgBranch.ShowFooter = true;
+        dgBranch.DataBind();
+        ((TextBox)dgBranch.FooterRow.FindControl("txtBranchId")).Text = "01";
+    }
+
+    protected void btnClear_Click(object sender, EventArgs e)
+    {
+        var pageName = System.IO.Path.GetFileName(Request.Url.ToString());
+        Response.Redirect(pageName);
+    }
+    protected void btnSave_Click(object sender, EventArgs e)
+    {
+        clsBankMst mst = clsBankManager.getBankMst(txtBankId.Text);
+        if (mst != null)
+        {
+            mst.BankName = txtBankName.Text.Replace("'","");
+            clsBankManager.UpdateBankMst(mst);
+            //clsBankManager.DeleteBankDtl(mst.BankId);
+            //DataTable dt = (DataTable)Session["branch"];
+            //foreach (DataRow dr in dt.Rows)
+            //{
+            //    if (dr["branch_name"].ToString() != "")
+            //    {
+            //        clsBankDtl dtl = new clsBankDtl();
+            //        dtl.BankId = mst.BankId;
+            //        dtl.BranchId = dr["branch_id"].ToString();
+            //        dtl.BranchName = dr["branch_name"].ToString();
+            //        dtl.Addr1 = dr["addr1"].ToString();
+            //        dtl.Addr2 = dr["addr2"].ToString();
+            //        dtl.Phone = dr["phone"].ToString();
+            //        clsBankManager.CreateBankDtl(dtl);
+            //    }
+            //}
+            //dgMst.DataSource = clsBankManager.getBankMsts();
+            //dgMst.DataBind();
+            //dgMst.Visible = true;
+            //dgBranch.Visible = false;
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Record has been update suceessfully.....!!');", true);
+            RefreshAll();
+        }
+        else
+        {
+            mst = new clsBankMst();
+            //txtBankId.Text = IdManager.getAutoIdWithParameter("102", "GL_SEG_COA", "SEG_COA_CODE", "1020000", "0000", "4");
+            mst.BankId = txtBankId.Text;
+            mst.BankName = txtBankName.Text;
+            clsBankManager.CreateBankMst(mst);
+            //SegCoa sg = new SegCoa();
+            //sg.GlSegCode = mst.BankId;
+            //sg.SegCoaDesc = mst.BankName;
+            //sg.LvlCode = "02";
+            //sg.ParentCode = "1020000";
+            //sg.BudAllowed = "Y";
+            //sg.PostAllowed = "N";
+            //sg.AccType = "A";
+            //sg.OpenDate = DateTime.Now.Date.ToString("dd/MM/yyyy");
+            //sg.RootLeaf = "L";
+            //sg.Status = "A";
+            //sg.Taxable = "N";
+            //sg.BookName = "AMB";
+            //sg.EntryUser = "ACC";
+            //sg.EntryDate = DateTime.Now.Date.ToString("dd/MM/yyyy");
+            //sg.AuthoDate = DateTime.Now.Date.ToString("dd/MM/yyyy");
+            //sg.AuthoUser = "ACC";
+            //SegCoaManager.CreateSegCoa(sg);
+            ////string dept = SegCoaManager.GetSegCoaDesc(Session["dept"].ToString());
+            //GlCoa gl = new GlCoa();
+            //gl.GlCoaCode = "1-" +mst.BankId;
+            //gl.CoaEnabled = "Y";
+            //gl.BudAllowed = "N";
+            //gl.PostAllowed = "Y";
+            //gl.Taxable = "N";
+            //gl.AccType = "A";
+            //gl.Status = "A";
+            //gl.BookName = "AMB";
+            //gl.CoaDesc = Session["org"].ToString().Substring(0, 5) + "," + txtBankName.Text;
+            //gl.CoaCurrBal = "0.00";
+            //gl.CoaNaturalCode = mst.BankId;
+            //GlCoaManager.CreateGlCoa(gl);
+            //DataTable dt = (DataTable)Session["branch"];
+            //dgMst.Visible = true;
+            //dgBranch.Visible = false;
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Record has been saved suceessfully.....!!');", true);
+            RefreshAll();
+        }
+    }
+    protected void btnDelete_Click(object sender, EventArgs e)
+    {
+        if (txtBankId.Text != "")
+        {
+            clsBankMst mst = clsBankManager.getBankMst(txtBankId.Text);            
+            clsBankManager.DeleteBankMst(mst);
+                // clsBankManager.DeleteBankDtl(mst.BankId);
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Record has been delete suceessfully.....!!');", true);
+            RefreshAll();
+        }
+    }
+    protected void btnFind_Click(object sender, EventArgs e)
+    {
+        if (txtBankId.Text != "")
+        {
+            clsBankMst mst = clsBankManager.getBankMst(txtBankId.Text);
+            if (mst != null)
+            {
+                txtBankId.Text = mst.BankId;
+                txtBankName.Text = mst.BankName;
+                DataTable dt = clsBankManager.getBankDtls(mst.BankId);
+                dgBranch.DataSource = dt;
+                dgBranch.EditIndex = -1;
+                dgBranch.ShowFooter = false;
+                dgBranch.DataBind();
+                dgMst.Visible = false;
+                dgBranch.Visible = true;
+            }            
+        }
+    }
+    protected void dgBranch_RowCancelingEdit(object sender, GridViewCancelEditEventArgs e)
+    {
+        if (Session["branch"] != null)
+        {
+            DataTable dt = (DataTable)Session["branch"];
+            if (dt.Rows.Count > 1)
+            {
+                dgBranch.DataSource = dt;
+                dgBranch.EditIndex = -1;
+                dgBranch.ShowFooter = false;
+                dgBranch.DataBind();
+            }
+            else if (dt.Rows.Count == 1 && ((DataRow)dt.Rows[0])["branch_id"].ToString() != "")
+            {
+                dgBranch.DataSource = dt;
+                dgBranch.EditIndex = -1;
+                dgBranch.ShowFooter = false;
+                dgBranch.DataBind();
+            }
+            else
+            {
+                getEmptyBranch();
+            }
+        }
+    }
+    protected void dgBranch_RowCommand(object sender, GridViewCommandEventArgs e)
+    {
+        if (Session["branch"] != null)
+        {
+            if (e.CommandName == "AddNew")
+            {
+                DataTable dt = (DataTable)Session["branch"];
+                dgBranch.DataSource = dt;
+                dgBranch.ShowFooter = true;
+                dgBranch.DataBind();
+                ((TextBox)dgBranch.FooterRow.FindControl("txtBranchId")).Text = (dt.Rows.Count + 1).ToString();
+            }
+            else if (e.CommandName == "Insert") 
+            {
+                DataTable dt = (DataTable)Session["branch"];
+                DataRow dr = dt.NewRow();
+                dr["branch_id"] = ((TextBox)dgBranch.FooterRow.FindControl("txtBranchId")).Text;
+                dr["branch_name"] = ((TextBox)dgBranch.FooterRow.FindControl("txtBranchName")).Text;
+                dr["addr1"] = ((TextBox)dgBranch.FooterRow.FindControl("txtAddr1")).Text;
+                dr["addr2"] = ((TextBox)dgBranch.FooterRow.FindControl("txtAddr2")).Text;
+                dr["phone"] = ((TextBox)dgBranch.FooterRow.FindControl("txtPhone")).Text;
+                dt.Rows.Add(dr);
+                dgBranch.DataSource = dt;
+                dgBranch.ShowFooter = false;
+                dgBranch.DataBind();
+            }
+        }
+    }
+    protected void dgBranch_RowDeleting(object sender, GridViewDeleteEventArgs e)
+    {
+        if (Session["branch"] != null)
+        {
+            DataTable dt = (DataTable)Session["branch"];
+            DataRow dr = dt.Rows[dgBranch.Rows[e.RowIndex].DataItemIndex];
+            dt.Rows.Remove(dr);
+            dgBranch.DataSource = dt;
+            dgBranch.ShowFooter = false;
+            dgBranch.DataBind();
+        }
+    }
+    protected void dgBranch_RowEditing(object sender, GridViewEditEventArgs e)
+    {
+        if (Session["branch"] != null)
+        {
+            DataTable dt = (DataTable)Session["branch"];
+            dgBranch.DataSource = dt;
+            dgBranch.EditIndex = e.NewEditIndex;
+            dgBranch.ShowFooter = false;
+            dgBranch.DataBind();
+        }
+    }
+    protected void dgBranch_RowUpdating(object sender, GridViewUpdateEventArgs e)
+    {
+        DataTable dt = (DataTable)Session["branch"];
+        DataRow dr = dt.Rows[dgBranch.Rows[e.RowIndex].DataItemIndex];
+        dr["branch_id"] = ((TextBox)dgBranch.Rows[e.RowIndex].FindControl("txtBranchId")).Text;
+        dr["branch_name"] = ((TextBox)dgBranch.Rows[e.RowIndex].FindControl("txtBranchName")).Text;
+        dr["addr1"] = ((TextBox)dgBranch.Rows[e.RowIndex].FindControl("txtAddr1")).Text;
+        dr["addr2"] = ((TextBox)dgBranch.Rows[e.RowIndex].FindControl("txtAddr2")).Text;
+        dr["phone"] = ((TextBox)dgBranch.Rows[e.RowIndex].FindControl("txtPhone")).Text;
+        dgBranch.DataSource = dt;
+        dgBranch.ShowFooter = false;
+        dgBranch.EditIndex = -1;
+        dgBranch.DataBind();
+    }
+    protected void dgBranch_RowDataBound(object sender, GridViewRowEventArgs e)
+    {
+        if (e.Row.RowType == DataControlRowType.DataRow)
+        {
+            if (((DataRowView)e.Row.DataItem)["branch_id"].ToString() == String.Empty)
+            {
+                e.Row.Visible = false;
+            }
+            e.Row.Cells[1].Attributes.Add("style", "display:none");
+        }
+        else if (e.Row.RowType == DataControlRowType.Header)
+        {
+            e.Row.Cells[1].Attributes.Add("style", "display:none");
+        }
+        else if (e.Row.RowType == DataControlRowType.Footer)
+        {
+            e.Row.Cells[1].Attributes.Add("style", "display:none");
+        }
+    }
+    protected void dgMst_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        txtBankId.Text = dgMst.SelectedRow.Cells[1].Text.Trim();
+        txtBankName.Text = dgMst.SelectedRow.Cells[2].Text.Trim();
+        //DataTable dt = clsBankManager.getBankDtls(dgMst.SelectedRow.Cells[1].Text.Trim());
+        //if (dt.Rows.Count > 1)
+        //{
+        //    dgBranch.DataSource = dt;
+        //    Session["branch"] = dt;
+        //    dgBranch.EditIndex = -1;
+        //    dgBranch.ShowFooter = false;
+        //    dgBranch.DataBind();
+        //}
+        //else if (dt.Rows.Count == 1 && ((DataRow)dt.Rows[0])["branch_id"].ToString() != "")
+        //{
+        //    dgBranch.DataSource = dt;
+        //    Session["branch"] = dt;
+        //    dgBranch.EditIndex = -1;
+        //    dgBranch.ShowFooter = false;
+        //    dgBranch.DataBind();
+        //}
+        //else
+        //{
+        //    getEmptyBranch();            
+        //}
+        //dgMst.Visible = false;
+        //dgBranch.Visible = true;
+    }
+    protected void dgMst_RowDataBound(object sender, GridViewRowEventArgs e)
+    {
+        if (e.Row.RowType == DataControlRowType.DataRow | e.Row.RowType == DataControlRowType.Footer | e.Row.RowType == DataControlRowType.Header)
+        {
+            e.Row.Cells[1].Attributes.Add("style", "display:none");
+        }
+    }
+}
+

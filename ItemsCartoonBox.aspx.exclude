@@ -1,0 +1,400 @@
+﻿<%@ Page Title="Carton Info.-SDL" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true" CodeFile="ItemsCartoonBox.aspx.cs" Inherits="ItemsCartoonBox" EnableEventValidation="False" ValidateRequest="false" %>
+<asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
+
+<script type="text/javascript">
+    function OpenWindow(Url) {
+        var popUpObj;
+        //        var testwindow = window.open(Url, '', 'width=500px,height=420,top=200,left=500,scrollbars=1');
+        //        testwindow.blur();
+
+        popUpObj = window.open(Url, "ModalPopUp", "toolbar=no," + "scrollbars=no," + "location=no," + "statusbar=no," + "menubar=no," + "resizable=0," + "width=650px," +
+
+    "height=600px," + "left = 300," + "top=150");
+        popUpObj.focus();
+        LoadModalDiv();
+    }
+
+    function LoadModalDiv() {
+
+        var bcgDiv = document.getElementById("divBackground");
+        bcgDiv.style.display = "block";
+
+    }
+    function HideModalDiv() {
+
+        var bcgDiv = document.getElementById("divBackground");
+        bcgDiv.style.display = "none";
+
+    }
+    function setClient(id) {
+        $('input:text[id$=txtMeemPrice]').val(id);
+    }
+
+    </script>
+<script language="javascript" type="text/javascript" >
+    function setDecimal(abc) {
+        var dt = document.getElementById(abc).value;
+        if (dt.length > 0) {
+            document.getElementById(abc).value = parseFloat(dt).toFixed(2);
+        }
+    }
+    function isNumber(evt) {
+        evt = (evt) ? evt : window.event;
+        var charCode = (evt.which) ? evt.which : evt.keyCode;
+        if (charCode != 46 && charCode > 31
+            && (charCode < 48 || charCode > 57)) {
+            return false;
+        }
+        return true;
+    }
+
+    onblur = function () {
+        setTimeout('self.focus()', 100);
+    }
+</script>
+    <div id="frmMainDiv" style="background-color:White; width:100%;">   
+    <table style="width:100%;">
+        <tr>
+            <td align="center" style="width:10%;">
+                &nbsp;</td>
+            <td align="center" style="width:80%;">
+                <table style="width:100%;">
+                        <tr>
+                            <td style="width: 20%;" align="left">
+                            </td>
+                            <td style="width: 60%;border: 1px solid;" align="center">
+                                &nbsp;<asp:LinkButton runat="server" 
+                                    ID="lblNew" Text="New" ForeColor="Navy" 
+                                    Font-Size="13pt" Font-Bold="True" OnClick="lblNew_Click"></asp:LinkButton>
+                                &nbsp;&nbsp; |&nbsp;&nbsp;&nbsp;
+                                <asp:LinkButton runat="server" ID="lbSave" Text="Save" ForeColor="Navy"  onclientclick="javascript:return window.confirm('are u really want to save these data')"
+                                    Font-Size="13pt" Font-Bold="True" OnClick="lbSave_Click"></asp:LinkButton>
+                            &nbsp; &nbsp;|&nbsp;&nbsp;
+                                <asp:LinkButton runat="server" ID="lbFind" Text="Find" ForeColor="Navy" 
+                                    Font-Size="13pt" Font-Bold="True" onclick="lbFind_Click"></asp:LinkButton>&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;
+                                <asp:LinkButton runat="server" ID="lbDelete" Text="Delete" ForeColor="Navy" 
+                                    Font-Size="13pt" Font-Bold="True" onclick="lbDelete1_Click"></asp:LinkButton>&nbsp;&nbsp; |&nbsp;&nbsp;
+                                <asp:LinkButton runat="server" ID="lbClear" Text="Clear" ForeColor="Navy" 
+                                    Font-Size="13pt" Font-Bold="True" onclick="lbClear_Click"></asp:LinkButton>&nbsp;&nbsp; 
+                                |&nbsp;
+                                <asp:LinkButton runat="server" ID="lblPrint" Text="Print" ForeColor="Navy" 
+                                    Font-Size="13pt" Font-Bold="True" onclick="lblPrint_Click"></asp:LinkButton>
+                            </td>
+                            <td style="width: 20%;" align="right">
+                                &nbsp;</td>
+                        </tr>
+                    </table></td>
+            <td align="center" style="width:10%;">
+                &nbsp;</td>
+        </tr>
+        <tr>
+            <td align="center" style="width:10%;">
+                &nbsp;</td>
+            <td align="center" style="width:80%;">
+              <%--  <asp:UpdatePanel ID="UP1" runat="server" UpdateMode="Conditional"><ContentTemplate>--%>
+                        <fieldset style="vertical-align: top; border: solid 1px #8BB381; text-align:left;">
+                            <legend style="color: maroon;"><b>Carton Information</b></legend>
+                            <table style="width:100%;">
+                                <tr>
+                                    <td align="left" style="width: 15%; ">
+                                        Carton No.</td>
+                                    <td align="left" style="width: 32%; " valign="middle">
+                                        <asp:TextBox ID="txtCourtoon" runat="server"
+                                            CssClass="txtVisibleAlign" Font-Size="8pt" 
+                                             PlaceHolder="Search By Carton No." 
+                                            SkinId="tbPlain" style="text-align:left;text-align:center;" Width="40%" 
+                                            Height="18px"></asp:TextBox>  
+                                     &nbsp;</td>
+                                    <td style=" width:3%;">
+                                        <asp:TextBox ID="txtID" runat="server" AutoPostBack="True" CssClass="tbc" 
+                                            Font-Size="8pt" PlaceHoder="Search By Shipment No." 
+                                            PlaceHolder="Search By Shipment No." SkinId="tbPlain" style="text-align:left;" 
+                                            Visible="False" Width="45%"></asp:TextBox>
+                                        <ajaxToolkit:AutoCompleteExtender ID="txtID_AutoCompleteExtender" 
+                                            runat="server" CompletionInterval="20" CompletionSetCount="30" 
+                                            EnableCaching="true" MinimumPrefixLength="2" ServiceMethod="GetShiftmentInfo" 
+                                            ServicePath="~/AutoComplete.asmx" TargetControlID="txtID">
+                                        </ajaxToolkit:AutoCompleteExtender>
+                                    </td>
+                                    <td align="left" style="width: 15%; ">
+                                        Shipment No.<asp:Label ID="lblShiftmentID" runat="server" Visible="False"></asp:Label>
+                                    </td>
+                                    <td align="left" style="width: 30%; ">
+                                        <asp:TextBox ID="txtShiftmentNo" runat="server" AutoPostBack="True" 
+                                            CssClass="txtVisible" Font-Size="8pt" PlaceHolder="Search By Shipment No ..." 
+                                            SkinId="tbPlain" style="text-align:left;text-align:center;" Width="95%" 
+                                            ontextchanged="txtShiftmentNo_TextChanged" 
+                                            PlaceHoder="Search Shipment No." Height="18px"></asp:TextBox>
+                                        <ajaxToolkit:AutoCompleteExtender ID="txtShiftmentNo_AutoCompleteExtender" 
+                                            runat="server" CompletionInterval="20" CompletionSetCount="30" 
+                                            EnableCaching="true" MinimumPrefixLength="2" ServiceMethod="GetShiftmentInfoWithoutRoot" 
+                                            ServicePath="~/AutoComplete.asmx" TargetControlID="txtShiftmentNo">
+                                        </ajaxToolkit:AutoCompleteExtender>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td align="left" style="width: 15%; ">
+                                        Shipment Receiver</td>
+                                    <td align="left" style="width: 32%; " valign="middle">
+                                            <asp:DropDownList ID="ddlSenderName" runat="server" AutoPostBack="True" 
+                                                Height="26px" OnSelectedIndexChanged="ddlSenderName_SelectedIndexChanged" 
+                                                Width="102%">
+                                            </asp:DropDownList>
+                                        </td>
+                                    <td style=" width:3%;">
+                                        &nbsp;</td>
+                                    <td align="left" style="width: 15%; ">
+                                        Customer/Buyer</td>
+                                    <td align="left" style="width: 30%; ">
+                                            <asp:DropDownList ID="ddlCustomer" runat="server" Height="26px" Width="95%" 
+                                            AutoPostBack="True" onselectedindexchanged="ddlCustomer_SelectedIndexChanged">
+                                            </asp:DropDownList>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td align="left" style="width: 15%; ">
+                                        Remarks</td>
+                                    <td align="left" colspan="4">
+                                        <asp:TextBox ID="txtRemarks" runat="server" AutoPostBack="False" CssClass="tbc" 
+                                            Font-Size="8pt" SkinId="tbPlain" style="text-align:left;" Width="98%"></asp:TextBox>
+                                    </td>
+                                </tr>
+                            </table>
+                        </fieldset>
+                   <%--</ContentTemplate>
+                </asp:UpdatePanel>--%>
+            </td>
+            <td align="center" style="width:10%;">
+                &nbsp;</td>
+        </tr>
+        <tr>
+            <td align="center" style="width:10%;">&nbsp;</td>
+            <td align="center"  id="tdHistory" runat="server" style="width:80%;">
+                
+                <fieldset style="vertical-align: top; border: solid 1px #8BB381; text-align:left;">
+                    <legend style="color: maroon;"><b>Items Carton History</b></legend>                 
+                    <asp:GridView runat="server" AutoGenerateColumns="False" style="text-align:center"
+                        PageSize="60" CssClass="mGrid" ID="dgHistory" 
+                        OnSelectedIndexChanged="dgHistory_SelectedIndexChanged" 
+                        onpageindexchanging="dgHistory_PageIndexChanging" 
+                        onrowdatabound="dgHistory_RowDataBound" AllowPaging="True">
+                        <Columns>
+                            <asp:CommandField ShowSelectButton="True" HeaderText="Select">
+                             <ItemStyle Font-Size="8pt" HorizontalAlign="Center" Width="10%" 
+                                Font-Bold="True" />       
+                            </asp:CommandField>
+                            <asp:BoundField DataField="ID" HeaderText="ID">
+                                 <ItemStyle Font-Size="8pt" HorizontalAlign="Center" Width="5%" />                                   
+                            </asp:BoundField>
+                            <asp:BoundField HeaderText="Carton No." DataField="CartoonNo">
+                                <ItemStyle Font-Size="8pt" HorizontalAlign="Center" Width="15%" />       
+                            </asp:BoundField>
+                            <asp:BoundField HeaderText="Shipment No." DataField="ShiftmentNO">
+                                <ItemStyle Font-Size="8pt" HorizontalAlign="Center" Width="25%" />       
+                            </asp:BoundField>
+                            <asp:BoundField HeaderText="Total Quantity" DataField="Qty">
+                            <ItemStyle Font-Size="8pt" HorizontalAlign="Center" Width="15%" />       
+                            </asp:BoundField>
+                            <asp:BoundField HeaderText="Remarks" DataField="Remarks">
+
+                            </asp:BoundField>
+                        </Columns>
+                    </asp:GridView>
+                 
+                </fieldset>
+            
+            </td>
+            <td align="center" style="width:10%;">
+                &nbsp;</td>
+        </tr>
+        <tr>
+            <td align="center" style="width:10%;">&nbsp;</td>
+            <td align="center" id="ItemsDetails" runat="server" style="width:80%;">
+                
+               <fieldset style="vertical-align: top; border: solid 1px #8BB381; text-align:left;">
+                            <legend style="color: maroon;"><b>Items Information</b></legend>
+                    <div style="text-align:center;">
+                        <asp:Label ID="lblTotQty" runat="server" Font-Bold="True" ForeColor="#CC3300"></asp:Label>
+                    </div>
+                    <asp:GridView ID="dgItem" runat="server" AlternatingRowStyle-CssClass="alt" ChildrenAsTriggers="True"
+                    AutoGenerateColumns="False" BorderColor="LightGray" CssClass="mGrid" 
+                    Font-Size="8pt" 
+                    onrowdeleting="dgItem_RowDeleting" PagerStyle-CssClass="pgr" 
+                    Width="100%" onrowdatabound="dgItem_RowDataBound">
+                    <Columns>
+                        <asp:TemplateField ItemStyle-Font-Size="8pt" ItemStyle-HorizontalAlign="Center" 
+                            ItemStyle-Width="4%">
+                            <ItemTemplate>
+                                <asp:ImageButton ID="lbDelete0" runat="server" CausesValidation="False" 
+                                    CommandName="Delete" ImageAlign="Middle" ImageUrl="~/img/delete.png" 
+                                    Text="Delete" />
+                            </ItemTemplate>
+                            <ItemStyle Font-Size="8pt" HorizontalAlign="Center" Width="4%" />
+                        </asp:TemplateField>
+                        <asp:TemplateField HeaderText="Item Name" ItemStyle-HorizontalAlign="Center"
+                            ItemStyle-Width="25%">
+                            <ItemTemplate>
+                                <asp:DropDownList ID="ddlItemCode" runat="server" AutoPostBack="true" Height="26px"  Font-Size="8pt" DataSource='<%#PopulateItem()%>' DataTextField="item_desc" DataValueField="item_code"
+                                    OnSelectedIndexChanged="ddlItemCode_SelectedIndexChanged" 
+                                   SelectedValue='<%# Eval("item_code") %>' SkinId="ddlPlain" Width="100%">
+                                </asp:DropDownList>
+                            </ItemTemplate>
+                            <ItemStyle HorizontalAlign="Center" Width="25%" />
+                        </asp:TemplateField>
+                       
+                        <asp:TemplateField HeaderText="Imag/Color" ItemStyle-HorizontalAlign="Center" 
+                            ItemStyle-Width="15%">
+                            <ItemTemplate>
+                                <asp:TextBox ID="txtColor" runat="server" CssClass="tbc"  
+                                    onFocus="this.select()" onkeypress="return isNumber(event)"
+                                    Font-Size="8pt" OnTextChanged="txtColor_TextChanged" SkinId="tbPlain" 
+                                    Text='<% # Eval("Color") %>' Width="91%" AutoPostBack="True"></asp:TextBox>
+                            </ItemTemplate>
+                            <ItemStyle HorizontalAlign="Center" Width="15%" />
+                        </asp:TemplateField>
+                         <asp:TemplateField HeaderText="Qty/Size" ItemStyle-HorizontalAlign="Center" 
+                            ItemStyle-Width="15%">
+                            <ItemTemplate>
+                                <asp:TextBox ID="txtQty" runat="server" AutoPostBack="true" CssClass="tbc" onFocus="this.select()" style="text-align:right;" PlaceHolder="0.00" onkeypress="return isNumber(event)"
+                                    Font-Size="8pt" OnTextChanged="txtQty_TextChanged" SkinId="tbPlain" 
+                                    Text='<% # Eval("qty") %>' Width="91%"></asp:TextBox>
+                            </ItemTemplate>
+                            <ItemStyle HorizontalAlign="Center" Width="15%" />
+                        </asp:TemplateField>
+                        <asp:TemplateField  HeaderText="Add" 
+                            ItemStyle-HorizontalAlign="Center" ItemStyle-Width="8%">                               
+                                <ItemTemplate>
+                                    <asp:Button ID="btnOk" runat="server" CommandName="OK" 
+                                        Text="(Color &amp; Size)" onclick="btnOk_Click1" />
+                                </ItemTemplate>
+                                <ItemStyle Font-Size="8pt" HorizontalAlign="Center" Width="8%" />
+                      </asp:TemplateField>
+                    </Columns>
+                    <RowStyle BackColor="White" />
+                    <PagerStyle BackColor="" ForeColor="White" HorizontalAlign="Center" />
+                    <HeaderStyle BackColor="" Font-Bold="True" ForeColor="White" />
+                    <AlternatingRowStyle BackColor="" />
+                </asp:GridView> </fieldset>
+               
+            </td>
+            <td align="center" style="width:10%;">
+                &nbsp;</td>
+        </tr>
+        <tr>
+            <td align="center" style="width:10%;">
+                &nbsp;</td>
+            <td align="center" style="width:80%;">             
+              
+                <asp:Panel ID="PnlQty" runat="server">
+                    <table style=" width:100%;">
+                        <tr>
+                                    <td style=" width:18%; height: 32px;" valign="bottom" align="left">
+                                            <asp:Button ID="btnProductImage" runat="server" Text="Product Image" />
+                                    </td>
+                                    <td style=" width:17%; height: 32px;" valign="bottom">
+                                            &nbsp;</td>
+                                    <td style=" width:18%; height: 32px;" valign="bottom">
+                                        <asp:Button ID="btnColorSize" runat="server" onclick="btnColorSize_Click1" 
+                                            Text="Color &amp; Size" Visible="False" />
+                                        </td>
+                                    <td style=" width:20%; height: 32px;" valign="bottom">
+                                        </td>
+                                    <td style=" width:10%; height: 32px;" valign="bottom">
+                                        </td>
+                                    <td style=" width:15%; height: 32px;" valign="bottom">
+                                        </td>
+                                </tr>
+                                <tr>
+                                    <td style=" height: 20px;" colspan="6" align="left">
+                                        <table id="tbColorSize" runat="server" style="width: 100%">
+                                            <tr>
+                                                <td style="width:50%;" align="left" valign="top">
+                                                    <fieldset style="vertical-align: top; border: solid 1px #8BB381; text-align:left;">
+                                                        <legend style="color: maroon;"><b>Color</b></legend>
+                                                        <asp:Panel ID="Pandel1"  style="text-align:left;" runat="server" Height="150px" ScrollBars="Horizontal">
+                                                            <asp:CheckBoxList ID="chkColor" runat="server">
+                                                            </asp:CheckBoxList>
+                                                        </asp:Panel>
+                                                    </fieldset></td>
+                                                <td style="width:50%;" align="left">
+                                                    <fieldset style="vertical-align: top; border: solid 1px #8BB381; text-align:left;">
+                                                        <legend style="color: maroon;"><b>Size</b></legend>
+                                                        <asp:Panel ID="Panel2" style="text-align:left;"  runat="server" Height="150px" ScrollBars="Horizontal">
+                                                            <asp:CheckBoxList ID="chkSize" runat="server">
+                                                            </asp:CheckBoxList>
+                                                        </asp:Panel>
+                                                    </fieldset></td>
+                                            </tr>
+                                            <tr>
+                                                <td style="width:50%;" align="left">
+                                                    <asp:Button ID="btnProductQuantity" runat="server" onclick="btnProductQuantity_Click" 
+                                                        Text="Product Quantity" />
+                                                </td>
+                                                <td style="width:50%;">
+                                                    &nbsp;</td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style=" height: 20px;" colspan="6">
+                                    <asp:Label ID="lblCurttonQty" runat="server" Font-Bold="True" ForeColor="Red"></asp:Label>
+                                    <div id="div1" style=" width:1000px; overflow:auto;">
+                                            <asp:GridView ID="dgQty" runat="server" AutoGenerateColumns="False" 
+                                                CssClass="mGrid" OnRowDataBound="dgQty_RowDataBound" 
+                                    Width="100%" onrowcreated="dgQty_RowCreated">
+                                            </asp:GridView></div>
+                                        <div style="width:100%;">
+                                            <table style="width: 100%">
+                                                <tr>
+                                                    <td style="width:13%;" align="left">
+                                                   <%-- <asp:UpdatePanel ID="UpdatePanel1" runat="server" UpdateMode="Conditional">
+                                                     <ContentTemplate>--%>
+                                                        <asp:Button ID="btnOk" runat="server" Height="30px" onclick="btnOk_Click" Text="OK" Width="100px" />
+                                                      <%--  </ContentTemplate>                                                      
+                                                     </asp:UpdatePanel>--%>
+                                                    </td>
+                                                    <td  style="width:20%;" align="left">
+                                                        <asp:Button ID="btnCle" runat="server" Height="30px" onclick="btnCle_Click" 
+                                                            Text="Back" Width="100px" />
+                                                    </td>
+                                                    <td>
+                                                        &nbsp;</td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                            &nbsp;
+                                            <br />
+                                    </td>
+                                </tr>
+                    </table>
+                    </asp:Panel>               
+            </td>
+            <td align="center" style="width:10%;">
+                &nbsp;</td>
+        </tr>
+        <tr>
+            <td align="center" style="width:1%;">
+                &nbsp;</td>
+            <td align="center" style="width:83%;">
+
+
+            </td>
+            <td align="center" style="width:1%;">
+                &nbsp;</td>
+        </tr>
+        <tr>
+            <td align="center" style="width:1%;">
+                &nbsp;</td>
+            <td align="center" style="width:83%;">
+                &nbsp;</td>
+            <td align="center" style="width:1%;">
+                &nbsp;</td>
+        </tr>
+    </table>
+    </div>
+    <div id="divBackground" style="position: fixed; z-index: 999; height: 100%; width: 100%;
+        top: 0; left:0; background-color: Black; filter: alpha(opacity=60); opacity: 0.6; -moz-opacity: 0.8;display:none">
+    </div>
+</asp:Content>
+

@@ -1,0 +1,314 @@
+﻿/* 
+   The below CSS file was built using samples + techniques described by Rachel Andrew in her book:
+   The CSS Anthology: 101 Essential Tips, Tricks & Hacks
+*/
+
+/* Overall Page */
+
+body {
+text-align: center;
+padding: 0px;
+margin: 0px auto;
+background: #fff url() no-repeat top center;
+margin-top:0em;
+font-family:Consals;
+}
+#container {
+margin: 0 auto !important;
+height: 100% auto;
+width: 950px;
+background: #fff url(background.jpg) no-repeat top center;
+}
+middlediv
+{
+    width:950px;
+    text-align:center;
+}
+td.button
+{
+    background-color:#002940; width:100px; color:White; cursor:hand; vertical-align:middle; height:20px;
+}
+
+input 
+{
+    font-family: Verdana, Arial, Helvetica, sans-serif;
+    font-size: 90%;
+}
+
+INPUT.tbc
+{
+ text-align:center; 
+}
+INPUT.tbr
+{
+ text-align:right;
+}
+INPUT.tbl
+{
+ text-align:left;
+}
+INPUT.textCentUpp
+{
+ text-transform:uppercase;
+ text-align:center;  
+}
+INPUT.middle
+{
+    vertical-align:middle;
+}
+
+bg
+{
+    background-image:url('img/logo.jpg');
+}
+select
+{
+    font-family: Verdana, Arial, Helvetica, sans-serif;
+    font-size: 90%;
+}
+
+
+/* Header Section */
+
+#header {
+	height: 3em;
+}
+#header .title {
+	font: 200% Calibri;
+	background-color: transparent;
+	float: left;	
+	margin-top: 0.0em;
+	
+}
+#header .breadcrumb {
+	font: 90% Calibri;
+	background-color: transparent;
+	/* float: right; 
+	margin-right: 2em; */
+	font-weight:bold;
+	color:Black;
+}
+
+#header a:link, a:visited  
+{
+    color:Blue;
+}
+
+/* Navigation */
+
+#navigation {
+	width: 200px;
+	top: 5em;
+	left: 1em;
+	width: 10em;	
+	position:absolute;
+	font-family: Verdana, Arial, Helvetica, sans-serif;
+	font-size:90%;
+}
+#vnavigation {	
+	
+	font-family: Verdana, Arial, Helvetica, sans-serif, Calibri;
+	font-size:110%;
+	background-image:url('img/background.png'); 
+    background-repeat:repeat-x;
+}
+#navigation ul {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+#vnavigation ul {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+#navigation li {
+	border-bottom: 1px solid #FFFFFF;
+}
+#vnavigation li {
+	border-bottom: 1px solid #736F6E;
+}
+#navigation li a  {
+	display: block;
+	padding: 5px 5px 5px 0.5em;
+	border-left: 12px solid #E9AB17;
+	border-right: 1px solid #E9AB17;
+	background-color: #25587E;
+	color: #FFFFFF;
+	text-decoration: none;
+}
+#vnavigation li a  {
+	display: block;
+	padding: 2px 2px 2px 0.5em;
+	border-left: 1px solid #736F6E;
+	border-right: 1px solid #736F6E;
+	border-top: 1px solid #736F6E;
+	border-bottom: 1px solid #736F6E;    
+    background-image:url('img/background.png'); 
+    background-repeat:repeat-x;
+	color: #000000;
+	text-decoration: none;
+	width:172px;
+}
+#navigation li a:hover {
+	background-color: #E9AB17;
+	color:White;
+}
+#vnavigation li a:hover {
+    background-image:url('img/mainnavselected.gif');
+	color:Black;
+}
+#navigation ul ul {
+	margin-left: 12px;
+}
+#navigation ul ul li {
+	border-bottom: 1px solid #711515;
+	margin:0;
+	background-color: #ED9F9F;
+	color: #711515;
+}
+#navigation ul ul a:link, #navigation ul ul a:visited {
+	background-color: #ED9F9F;
+	color: #711515;
+}
+#navigation ul ul a:hover {
+	background-color: #711515;
+	color: #FFFFFF;
+}
+
+/* Main Content */
+
+
+
+#progressBackgroundFilter {
+    background-color:#EEEEEE;
+	border-width:3px;
+	border-style:solid;
+	border-color:Gray;
+	font-family:Verdana;
+	font-size:medium;
+	padding:3px;
+	width:250px;
+	display:none;
+}
+
+#processMessage { 
+    position:fixed; 
+    top:30%; 
+    left:43%;
+    padding:10px; 
+    width:14%; 
+    z-index:1001; 
+    background-color:#fff;
+    border:solid 1px #000;
+}
+
+/* Data Web Control Styles */
+
+.DataWebControlStyle
+{
+    font-size: 90%;
+}
+
+.HeaderStyle
+{
+    background-color: #900;
+    color: White;
+    font-weight: bold;
+}
+
+.AlternatingRowStyle
+{
+    background-color: #fcc;
+}
+
+.RowStyle
+{
+}
+.Menu1.AspNet-Menu-Horizontal ul.AspNet-Menu li:hover
+.Menu1.AspNet-Menu-Horizontal ul.AspNet-Menu li.AspNet-Menu-Hover
+{
+  background-image: url('');
+  background-position: left top;
+  background-repeat: no-repeat;
+}
+
+.popupControl {
+	background-color:#AAD4FF;
+	position:absolute;
+	visibility:hidden;
+	border-style:solid;
+	border-color: Black;
+	border-width: 2px;
+}
+
+.modalBackground {
+	background-color:Transparent;
+	
+		
+}
+.updateProgress
+        {
+            border-width:1px; 
+            border-style:solid; 
+            background-color:#FFFFFF; 
+            position:absolute; 
+            width:150px; 
+            height:50px;    
+        }
+     
+.updateProgressMessage
+        {
+            margin:3px; 
+            font-family:Trebuchet MS; 
+            font-size:small; 
+            vertical-align: middle;
+        }  
+.modalPopup {
+	background-color:#EEEEEE;
+	border-width:3px;
+	border-style:solid;
+	border-color:Gray;
+	font-family:Verdana;
+	font-size:medium;
+	padding:3px;
+	width:250px;
+}
+
+.modalSignUp {
+	background-color:#FFFFFF;
+	border-width:3px;
+	border-style:solid;
+	border-color:Gray;
+	font-family:Verdana;
+	font-size:medium;
+	padding:3px;
+	width:250px;
+}
+.sampleStyleA {
+	background-color:#FFF;
+}
+
+.sampleStyleB {
+	background-color:#FFF;
+	font-family:monospace;
+	font-size:10pt;
+	font-weight:bold;
+}
+
+.sampleStyleC {
+	background-color:#ddffdd;
+	font-family:sans-serif;
+	font-size:10pt;
+	font-style:italic;
+}
+
+.sampleStyleD {
+	background-color:Blue;
+	color:White;
+	font-family:Arial;
+	font-size:10pt;
+}
+
+
+

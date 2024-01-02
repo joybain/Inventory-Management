@@ -1,0 +1,74 @@
+﻿<%--
+Default skin template. The following skins are provided as examples only.
+
+1. Named control skin. The SkinId should be uniquely defined because
+   duplicate SkinId's per control type are not allowed in the same theme.
+
+<asp:GridView  RowStyle-Height="25px" Font-Names="Tahoma" CssClass="mGrid" PagerStyle-CssClass="pgr"  AlternatingRowStyle-CssClass="alt" runat="server" SkinId="gridviewSkin" BackColor="White" >
+   <AlternatingRowStyle BackColor="Blue" />
+</asp:GridView>
+
+2. Default skin. The SkinId is not defined. Only one default 
+   control skin per control type is allowed in the same theme.
+
+<asp:Image runat="server" ImageUrl="images/image1.jpg" />
+--%>
+
+<asp:TextBox SkinID="tbGray"  
+  BorderColor="DarkGray"
+  Font-Names="Tahoma"
+  BackColor="White"
+  BorderWidth="1px"
+  Runat="server"
+  Font-Size="8pt"
+   />
+  <asp:TextBox SkinID="tbPlain"  
+  BorderColor="DarkGray"
+  Font-Names="Tahoma"
+  BackColor="White"
+  BorderWidth="1px"
+  Runat="server"
+  Font-Size="8pt"
+   />
+  <asp:TextBox SkinID="tbTrans"  
+  BorderColor="White"
+  Font-Names="Tahoma"
+  BackColor="White"
+  BorderWidth="0px"
+  Runat="server"
+  Font-Size="8pt"
+   />
+  <asp:DropDownList SkinID="ddlPlain" 
+  BorderColor="DarkGray"
+  BackColor="White"
+  BorderWidth="1px"
+  Height="27px"
+  Runat="server" />
+  
+  <asp:LinkButton
+  SkinID="lbPlain"
+  BorderStyle="Double"
+  Height="20px"
+  Width="100px"
+  Font-Size="11pt" 
+  ForeColor="White" 
+  BackColor="#002940"
+  Runat="server" />
+  <asp:TreeView 
+  SkinId="tvTheme"  
+     runat="server"  
+     BackColor="SteelBlue"  
+     ForeColor="AliceBlue"  
+     BorderWidth="2"  
+     BorderColor="DarkBlue"  
+     Width="275"  
+     >  
+     <RootNodeStyle Font-Bold="true" Font-Size="Large" />  
+     <ParentNodeStyle Font-Bold="true" />  
+     <LeafNodeStyle Font-Italic="true" Font-Underline="true" />  
+     <HoverNodeStyle   
+        BackColor="Crimson"   
+        ForeColor="LightGoldenrodYellow"   
+        Font-Size="X-Large"   
+        />  
+</asp:TreeView> 

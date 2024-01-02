@@ -1,0 +1,209 @@
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using System.Data;
+using Delve;
+using System.Data.SqlClient;
+using System.Drawing;
+using ClosedXML.Excel;
+
+public partial class rptReceivedAndPayment : System.Web.UI.Page
+{
+    private static string book = string.Empty;
+    private  readonly  VouchManager _aVouchManager=new VouchManager();
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        if (!IsPostBack)
+        {
+            book = Session["book"].ToString();
+            lblOrg.Text = Session["org"].ToString();
+            lblAddress1.Text = Session["add1"].ToString();
+            lblAddress2.Text = Session["add2"].ToString();
+            string RepType = Request.QueryString["reptype"].ToString();
+            string StartDt = Request.QueryString["startdt"].ToString();
+            string EndDt = Request.QueryString["enddt"].ToString();
+            string glCode = Request.QueryString["glcoa"].ToString();
+            string RepLvl = Request.QueryString["replvl"].ToString();
+            string SegLvl = Request.QueryString["seglvl"].ToString();
+            string VchType = Request.QueryString["vchtyp"].ToString();
+            string RptSysId = Request.QueryString["rptsysid"].ToString();
+            string NotesNo = Request.QueryString["notes"].ToString();
+            RepType = RepType.Substring(0, 1).Trim();
+
+            lblTitle.Text = "Receipts & Payments";
+            lblDate.Text = "For the Period " + StartDt + " TO " + EndDt;
+
+            DataTable dtVch = VouchManager.GetVouchDtlForTotal(EndDt, "A", book, Session["UserType"].ToString());
+            //string connectionString = DataManager.OraConnString();
+            //SqlConnection conn = new SqlConnection();
+            //conn.ConnectionString = connectionString;
+            //lblTranStatus.Text = "";
+            // | DataManager.DateEncode(EndDt).CompareTo(System.DateTime.Now) > 0
+            if (EndDt == "")
+            {
+                lblTranStatus.Text = "Please select the Upto Date or Upto Date cannot be greater than System Date.";
+                lblTranStatus.ForeColor = System.Drawing.Color.Red;
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Please Input End Date.!!');",
+                    true);
+            }
+
+            DataTable dtPaymentReceive = _aVouchManager.GetShowPaymentAndReceived(glCode, StartDt, EndDt, Session["UserType"].ToString());
+
+            DataTable dtPayTable = new DataTable();
+            dtPayTable.Columns.Add("SEG_COA_CODE", typeof(string));
+            dtPayTable.Columns.Add("SEG_COA_DESC", typeof(string));
+            dtPayTable.Columns.Add("AMOUNT", typeof(string));
+            dtPayTable.Columns.Add("Flag", typeof(string));
+            DataRow drRowPay =null;
+            drRowPay = dtPayTable.NewRow();
+            decimal SumOpBalCash = GlCoaManager.getCoaopeningBalanceFromExistingDataTable(dtVch, book,
+                                "1-1010000",
+                                Session["septype"].ToString(), "A", StartDt, StartDt);
+            drRowPay["SEG_COA_CODE"] = "9999999";
+            drRowPay["SEG_COA_DESC"] = "Opening Cash :";
+            drRowPay["AMOUNT"] = SumOpBalCash;
+            drRowPay["Flag"] = "11";
+            dtPayTable.Rows.Add(drRowPay);
+            drRowPay = dtPayTable.NewRow();
+            decimal SumOpBalBank = GlCoaManager.getCoaopeningBalanceFromExistingDataTable(dtVch, book,
+                                 "1-1020000",
+                                 Session["septype"].ToString(), "A", StartDt, StartDt);
+            drRowPay["SEG_COA_CODE"] = "9999999";
+            drRowPay["SEG_COA_DESC"] = "Opening Bank :";
+            drRowPay["AMOUNT"] = SumOpBalBank;
+            drRowPay["Flag"] = "11";
+            dtPayTable.Rows.Add(drRowPay);
+            drRowPay = dtPayTable.NewRow();
+            drRowPay["SEG_COA_CODE"] = "";
+            drRowPay["SEG_COA_DESC"] = "Receipts : ";
+            drRowPay["AMOUNT"] = "" ;
+            drRowPay["Flag"] = "11";
+            dtPayTable.Rows.Add(drRowPay);
+            double totReceivedAmt = 0;
+            double totPaymentAmt = 0;
+            int flagPay = 1;
+            int flag = 1;
+            foreach (DataRow drDataRow in dtPaymentReceive.Rows)
+            {
+                drRowPay = dtPayTable.NewRow();
+                if (drDataRow["Flag"].ToString().Equals("1"))
+                {
+                    totReceivedAmt += Convert.ToDouble(drDataRow["AMOUNT"]);
+                }
+                else
+                {
+                    if (flag.Equals(1))
+                    {
+                        drRowPay["SEG_COA_CODE"] = "";
+                        drRowPay["SEG_COA_DESC"] = "Net Receipts :";
+                        drRowPay["AMOUNT"] = totReceivedAmt.ToString("N2");
+                        drRowPay["Flag"] = "11";
+                        dtPayTable.Rows.Add(drRowPay);
+                        drRowPay = dtPayTable.NewRow();
+
+                        drRowPay["SEG_COA_CODE"] = "";
+                        drRowPay["SEG_COA_DESC"] = "Payments : ";
+                        drRowPay["AMOUNT"] = "";
+                        drRowPay["Flag"] = "11";
+                        dtPayTable.Rows.Add(drRowPay);
+                        drRowPay = dtPayTable.NewRow();
+
+                        flag++;
+                    }
+                    totPaymentAmt += Convert.ToDouble(drDataRow["AMOUNT"]);
+                }
+                drRowPay["SEG_COA_CODE"] = drDataRow["SEG_COA_CODE"].ToString();
+                drRowPay["SEG_COA_DESC"] = drDataRow["SEG_COA_DESC"].ToString();
+                drRowPay["AMOUNT"] = drDataRow["AMOUNT"].ToString();
+                drRowPay["Flag"] = "";
+                dtPayTable.Rows.Add(drRowPay);
+                
+                if (flagPay.Equals(dtPaymentReceive.Rows.Count))
+                {
+                    drRowPay = dtPayTable.NewRow();
+                    drRowPay["SEG_COA_CODE"] = "";
+                    drRowPay["SEG_COA_DESC"] = "Net Payments :";
+                    drRowPay["AMOUNT"] = totPaymentAmt.ToString("N2");
+                    drRowPay["Flag"] = "11";
+                    dtPayTable.Rows.Add(drRowPay);
+                }
+                flagPay++;
+            }
+            drRowPay = dtPayTable.NewRow();
+            drRowPay["SEG_COA_CODE"] = "";
+            drRowPay["SEG_COA_DESC"] = "Closing Balance :";
+            drRowPay["AMOUNT"] =(totReceivedAmt-totPaymentAmt).ToString("N2");
+            drRowPay["Flag"] = "11";
+            dtPayTable.Rows.Add(drRowPay);
+            dgLedger.DataSource = dtPayTable;
+            ViewState["dtPayRec"] = dtPayTable;
+            dgLedger.DataBind();
+        }
+    }
+    protected void lbExp_Click(object sender, EventArgs e)
+    {
+
+    }
+    protected void lbExpExcel_Click(object sender, EventArgs e)
+    {
+        DataTable ddt = (DataTable)ViewState["dtPayRec"];
+        if (ddt.Rows.Count > 0)
+        {
+            if (!ddt.Columns[0].ColumnName.Equals("Voucher No."))
+            {
+                ddt.Columns.Remove("SEG_COA_CODE");
+                //ddt.Columns.Remove("acc_type");
+                //ddt.Columns.Remove("coa_desc");
+                ddt.Columns["SEG_COA_DESC"].ColumnName = "Particulars";
+                ddt.Columns["AMOUNT"].ColumnName = "Amount";
+            }
+            using (XLWorkbook wb = new XLWorkbook())
+            {
+                wb.Worksheets.Add(ddt, "Received&Payment");
+                Response.Clear();
+                Response.Buffer = true;
+                Response.Charset = "";
+                Response.ContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+                Response.AddHeader("content-disposition",
+                    "attachment;filename=" + lblTitle.Text.Replace(" ", "") + "-LedgerStatement-(" +
+                    DateTime.Now.ToString("dd/MM/yyyy") + ").xlsx");
+
+                using (MemoryStream MyMemoryStream = new MemoryStream())
+                {
+                    wb.SaveAs(MyMemoryStream);
+                    MyMemoryStream.WriteTo(Response.OutputStream);
+                    Response.Flush();
+                    Response.End();
+                }
+            }
+        }
+    }
+    protected void dgLedger_RowDataBound(object sender, GridViewRowEventArgs e)
+    {
+        string eventHandler = "";
+        e.Row.Cells[0].Attributes.Add("style", "display:none");
+        e.Row.Cells[3].Attributes.Add("style", "display:none");
+
+        if (e.Row.RowType == DataControlRowType.DataRow)
+        {
+            if (e.Row.Cells[3].Text.Replace("&nbsp;", "").Replace(" ", "").Equals("11"))
+            {
+                e.Row.Cells[2].ForeColor = Color.Maroon;
+               // e.Row.Cells[0].ForeColor = Color.Maroon;
+                e.Row.Cells[1].ForeColor = Color.Maroon;
+               // e.Row.Cells[3].ForeColor = Color.Maroon;
+
+                //e.Row.Cells[4].ForeColor = Color.CornflowerBlue;
+
+                //e.Row.Cells[2].Attributes.Add("style", "font-size: 15px");
+                e.Row.Cells[2].Attributes.Add("style", "font-size: 15px");
+                e.Row.Cells[1].Attributes.Add("style", "font-size: 15px");
+               // e.Row.Cells[3].Attributes.Add("style", "font-size: 15px");
+            }
+        }
+    }
+}

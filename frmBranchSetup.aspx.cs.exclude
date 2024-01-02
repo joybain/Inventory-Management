@@ -1,0 +1,409 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using System.Data;
+using Delve;
+using System.Data.SqlClient;
+using System.IO;
+public partial class frmBranchSetup : System.Web.UI.Page
+{
+    private static Permis per;
+    private readonly clsBranchManager _aclsBranchManager=new clsBranchManager();
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        if (Session["user"] == null)
+        {
+            if (Session.SessionID != "" | Session.SessionID != null)
+            {
+                clsSession ses = clsSessionManager.getSession(Session.SessionID);
+                if (ses != null)
+                {
+                    Session["user"] = ses.UserId;
+                    Session["book"] = "AMB";
+                    string connectionString = DataManager.OraConnString();
+                    SqlDataReader dReader;
+                    SqlConnection conn = new SqlConnection();
+                    conn.ConnectionString = connectionString;
+                    SqlCommand cmd = new SqlCommand();
+                    cmd.Connection = conn;
+                    cmd.CommandType = CommandType.Text;
+                    cmd.CommandText =
+                        "Select user_grp,[description],UserType,case when UserType=1 then 'Bangladesh' else 'Philippine' end AS[LoginCountry] from utl_userinfo where upper(user_name)=upper('" +
+                        Session["user"].ToString().ToUpper() + "') and status='A'";
+                    conn.Open();
+                    dReader = cmd.ExecuteReader();
+                    string wnot = "", userType = "";
+                    if (dReader.HasRows == true)
+                    {
+                        while (dReader.Read())
+                        {
+                            Session["userlevel"] = int.Parse(dReader["user_grp"].ToString());
+                            //Session["dept"] = dReader["dept"].ToString();
+                            wnot = "Welcome " + dReader["description"].ToString();
+                            Session["LoginCountry"] = dReader["LoginCountry"].ToString();
+                            userType = dReader["UserType"].ToString();
+                        }
+                        Session["wnote"] = wnot;
+                        cmd = new SqlCommand();
+                        cmd.Connection = conn;
+                        cmd.CommandType = CommandType.Text;
+                        //cmd.CommandText = "Select book_desc,company_address1,company_address2,separator_type from gl_set_of_books where book_name='" + Session["book"].ToString() + "' ";
+                        if (Convert.ToInt32(userType) == 2)
+                        {
+
+                            Session["bookMAN"] = "MAN";
+                        }
+                        else
+                        {
+                            Session["bookMAN"] = Session["book"].ToString();
+                        }
+                        cmd.CommandText = "Select book_desc,company_address1,company_address2,separator_type,ShotName from gl_set_of_books where book_name='" + Session["bookMAN"] + "' ";
+
+                        if (dReader.IsClosed == false)
+                        {
+                            dReader.Close();
+                        }
+                        dReader = cmd.ExecuteReader();
+                        if (dReader.HasRows == true)
+                        {
+                            while (dReader.Read())
+                            {
+                                Session["septype"] = dReader["separator_type"].ToString();
+                                Session["org"] = dReader["book_desc"].ToString();
+                                Session["add1"] = dReader["company_address1"].ToString();
+                                Session["add2"] = dReader["company_address2"].ToString();
+                            }
+                        }
+                    }
+                    dReader.Close();
+                    conn.Close();
+                }
+            }
+        }
+        try
+        {
+            string pageName = DataManager.GetCurrentPageName();
+            string modid = PermisManager.getModuleId(pageName);
+            per = PermisManager.getUsrPermis(Session["user"].ToString().Trim().ToUpper(), modid);
+            if (per != null && per.AllowView == "Y")
+            {
+                ((Label)Page.Master.FindControl("lblLogin")).Text = Session["wnote"].ToString();
+                ((Label)Page.Master.FindControl("lblCountryName")).Text = Session["LoginCountry"].ToString();
+                ((LinkButton)Page.Master.FindControl("lbLogout")).Visible = true;
+            }
+            else
+            {
+                Response.Redirect("Home.aspx?sid=sam");
+            }
+        }
+        catch
+        {
+            Response.Redirect("Default.aspx?sid=sam");
+        }
+        if (!IsPostBack)
+        {     
+            clearFields();
+            txtBranch.Focus();
+            tabVch.ActiveTabIndex = 0;
+        }
+    }
+
+    protected void BtnSave_Click(object sender, EventArgs e)        
+    {
+        if (string.IsNullOrEmpty(txtBranch.Text))
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Input Branch.!!');", true);
+            txtBranch.Focus();
+            return;
+        }
+        if (string.IsNullOrEmpty(txtBranchKey.Text))
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Input branch Key Serially.!!');", true);
+            txtBranchKey.Focus();
+            return;
+        }  
+        clsBranchSetup cl = clsBranchManager.GetBranchInfo(lblID.Text);
+        if (cl == null)
+        {
+            int count = IdManager.GetShowSingleValueInt("Count(*)", "Flag", "BranchInfo", "1");
+            if (count > 0)
+            {
+                if (CheckBox1.Checked)
+                {
+                    ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('alrady exist main branch.!!');", true);
+                    CheckBox1.Checked = false;
+                    return;
+                }
+            }
+            cl = new clsBranchSetup();
+            cl.ComKey = txtComKey.Text;
+            cl.BranchKey = txtBranchKey.Text;
+            cl.BranchName = txtBranch.Text;
+            cl.ShortName = txtShortName.Text;
+            cl.Address1 = txtAddress1.Text;
+            cl.Phone = txtPhone.Text;
+            cl.Mobile = txtMobile.Text;
+            cl.Fax = txtFax.Text;
+            cl.EMail = txtEmail.Text;
+            cl.IssuingPlace = txtIssuingPlace.Text;
+            cl.Computerized = txtComputerized.Text;
+            cl.Status = ddlStatus.SelectedValue;
+            if (CheckBox1.Checked)
+            {
+                cl.Flag = "1";
+            }
+            //cl.BranchKey = IdManager.GetNextClientKey("BranchInfo", "BranchKey", txtBranch.Text).ToString();
+            clsBranchManager.CreateBranchInfo(cl);
+            clearFields(); 
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Record is/are saved successfully..!!');", true);
+            //dgBranch.DataSource = clsBranchManager.GetBranchInfosGrid(txtBranch.Text);
+            //dgBranch.DataBind();
+            clearFields();
+        }
+        else
+        {
+            int Check=0;
+            if (CheckBox1.Checked)
+            {
+                Check = 1;
+            }
+            int CheckMain = IdManager.GetShowSingleValueInt("COUNT(*)", "Flag", "BranchInfo", Check.ToString(), Convert.ToInt32(lblID.Text));
+            if (CheckMain > 0)
+            {
+                ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Main Branch Alrady Exist.!!');", true);
+                return;
+            }
+            cl.ID = lblID.Text;
+            cl.ComKey= txtComKey.Text;
+            cl.BranchKey = txtBranchKey.Text;
+            cl.BranchName = txtBranch.Text;
+            cl.ShortName = txtShortName.Text;
+            cl.Address1 = txtAddress1.Text;
+            cl.Phone = txtPhone.Text;
+            cl.Mobile = txtMobile.Text;
+            cl.Fax = txtFax.Text;
+            cl.EMail = txtEmail.Text;
+            cl.IssuingPlace = txtIssuingPlace.Text;
+            cl.Computerized = txtComputerized.Text;
+            cl.Status = ddlStatus.SelectedValue;
+            if (CheckBox1.Checked)
+            {
+                cl.Flag = "1";
+            }
+            clsBranchManager.UpdateBranchInfo(cl);
+            clearFields();
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Record are Update successfully!!');", true);
+            dgBranch.DataSource = clsBranchManager.GetBranchInfosGrid(txtBranch.Text);
+            dgBranch.DataBind();
+        }
+    }
+    protected void BtnFind_Click(object sender, EventArgs e)
+    {
+        DataTable dtci = clsBranchManager.GetClientInfosGridByBranchByName(txtBranchKey.Text, txtBranch.Text);
+        if (dtci.Rows.Count > 0)
+        {
+            dgBranch.DataSource = dtci;
+            dgBranch.DataBind();
+        }
+        else if (dtci.Rows.Count == 0)
+        {
+            clsBranchSetup ci = clsBranchManager.GetBranchInfo("");
+            if (ci != null)
+            {
+                txtBranch.Text = ci.BranchName;
+                txtBranchKey.Text = ci.BranchKey;
+                txtShortName.Text = ci.ShortName;
+                txtComKey.Text = ci.ComKey;
+                txtAddress1.Text = ci.Address1;
+                txtPhone.Text = ci.Phone;
+                txtMobile.Text = ci.Mobile;
+                txtFax.Text = ci.Fax;
+                txtEmail.Text = ci.EMail;
+                txtComputerized.Text = ci.Computerized;
+                txtEmail.Text = ci.EMail;
+                ddlStatus.SelectedValue= ci.Status;               
+            }
+        }
+    }
+    protected void BtnDelete_Click(object sender, EventArgs e)
+    {
+        if (txtBranchKey.Text != "")
+        {
+           clsBranchSetup ci = clsBranchManager.GetBranchInfo(lblID.Text);
+            if (ci != null)
+            {
+                clsBranchManager.DeleteBranchInfo(ci);
+                clearFields();
+                ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Deleted successfully!!');", true);
+                dgBranch.DataSource = clsBranchManager.GetBranchInfosGrid(txtBranch.Text);
+                dgBranch.DataBind();
+            }
+        }
+    }
+    private void clearFields()
+    {
+        txtBranch.Text = "";
+        txtBranchKey.Text = "";
+        txtComKey.Text = "";
+        txtShortName.Text = "";
+        txtAddress1.Text = "";
+        txtPhone.Text = "";
+        txtMobile.Text = "";
+        txtFax.Text = "";
+        txtComputerized.Text = "";
+        txtIssuingPlace.Text = "";
+        txtEmail.Text = "";
+        lblID.Text = "";
+        ddlStatus.SelectedIndex = -1;
+        CheckBox1.Checked = false;
+        DataTable dt = clsBranchManager.GetBranchInfosGrid("");
+        dgBranch.DataSource = dt;
+        Session["History"] = dt;
+        dgBranch.DataBind();
+    }
+    protected void BtnReset_Click(object sender, EventArgs e)
+    {
+        var pageName = System.IO.Path.GetFileName(Request.Url.ToString());
+        Response.Redirect(pageName);
+    }
+    protected void dgBranch_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        clsBranchSetup ci = clsBranchManager.GetBranchInfo1(dgBranch.SelectedRow.Cells[6].Text.ToString());
+        if (ci != null)
+        {
+            lblID.Text = dgBranch.SelectedRow.Cells[6].Text.ToString();
+            txtBranch.Text = ci.BranchName;
+            txtBranchKey.Text = ci.BranchKey;
+            txtShortName.Text = ci.ShortName;
+            txtComKey.Text = ci.ComKey;
+            txtAddress1.Text = ci.Address1;
+            txtPhone.Text = ci.Phone;
+            txtMobile.Text = ci.Mobile;
+            txtFax.Text = ci.Fax;
+            txtIssuingPlace.Text = ci.IssuingPlace;
+            txtEmail.Text = ci.EMail;
+            txtComputerized.Text = ci.Computerized;
+            txtEmail.Text = ci.EMail;
+            ddlStatus.SelectedValue = ci.Status;
+            if (!string.IsNullOrEmpty(ci.Flag))
+            {
+                if (ci.Flag.Equals("1"))
+                {
+                    CheckBox1.Checked = true;
+                }
+                else
+                {
+                    CheckBox1.Checked = false;
+                }
+            }
+            else
+            {
+                CheckBox1.Checked = false;
+            }
+            DataTable dtDecumentDtl = _aclsBranchManager.getShowBranchDocument(lblID.Text, "");
+            dgQuestion.DataSource = dtDecumentDtl;
+            dgQuestion.DataBind();
+        }
+    }
+    protected void dgBranch_PageIndexChanging(object sender, GridViewPageEventArgs e)
+    {
+        dgBranch.DataSource = Session["History"];
+        dgBranch.PageIndex = e.NewPageIndex;
+        dgBranch.DataBind();
+    }
+    protected void ddlBranchKey_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        dgBranch.DataSource = clsBranchManager.GetBranchInfosGrid(txtBranch.Text);
+        dgBranch.DataBind();
+    }
+    protected void dgBranch_RowDataBound(object sender, GridViewRowEventArgs e)
+    {
+        if (e.Row.RowType == DataControlRowType.DataRow | e.Row.RowType == DataControlRowType.Header | e.Row.RowType == DataControlRowType.Footer)
+        {
+            e.Row.Cells[6].Attributes.Add("style", "display:none");
+        }
+    }
+    protected void btnUploadFile_Click(object sender, EventArgs e)
+    {
+        if (string.IsNullOrEmpty(lblID.Text))
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Please save branch first then upload file.!!');", true);
+            return;
+        }
+        if (string.IsNullOrEmpty(txtFileDescription.Text))
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Input File Description..!!');", true);
+            return;
+        }
+
+        //****************** Document Upload ************//
+
+        if (fileUpload1.HasFile)
+        {
+            string extension = Path.GetExtension(fileUpload1.FileName);
+            if (!extension.ToLower().Equals(".pdf"))
+            {
+                ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Please Select PDF file only.!!');", true);
+                return;
+            }
+            string filePath = fileUpload1.PostedFile.FileName;
+            string filename1 = Path.GetFileName(filePath);
+            Stream fs = fileUpload1.PostedFile.InputStream;
+            BinaryReader br = new BinaryReader(fs); //reads the   binary files
+            Byte[] PasportFilbytes = br.ReadBytes((Int32) fs.Length);
+            _aclsBranchManager.SaveBranchDocument(txtFileDescription.Text.Replace("'", ""), PasportFilbytes, lblID.Text,
+                Session["user"].ToString());
+            DataTable dtDecumentDtl = _aclsBranchManager.getShowBranchDocument(lblID.Text, "");
+            dgQuestion.DataSource = dtDecumentDtl;
+            dgQuestion.DataBind();
+            txtFileDescription.Text = string.Empty;
+        }
+        else
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Please Select File...!!');", true);
+            return;
+        }
+
+    }
+    protected void dgQuestion_RowCommand(object sender, GridViewCommandEventArgs e)
+    {
+        if (e.CommandName.Equals("Download"))
+        {
+            GridViewRow gvr = (GridViewRow)(((LinkButton)e.CommandSource).NamingContainer);
+            DataTable dtDecumentDtl = _aclsBranchManager.getShowBranchDocument(lblID.Text, gvr.Cells[0].Text.Trim());
+            if (dtDecumentDtl .Rows.Count>0)
+            {
+                Response.Clear();
+                Response.Buffer = true;
+                Response.ContentType = "application/pdf";
+                Response.AddHeader("content-disposition",
+                    "attachment;filename=" +
+                    dtDecumentDtl.Rows[0]["FileDescription"].ToString().Replace("'", "").Replace(" ", "_"));
+                // to open file prompt Box open or Save file         
+                Response.Charset = "";
+                Response.Cache.SetCacheability(HttpCacheability.NoCache);
+                Response.BinaryWrite((byte[])dtDecumentDtl.Rows[0]["FileImage"]);
+                Response.End();
+            }
+        }
+
+    }
+    protected void dgSubject_RowDataBound(object sender, GridViewRowEventArgs e)
+    {
+        if (e.Row.RowType == DataControlRowType.DataRow | e.Row.RowType == DataControlRowType.Header | e.Row.RowType == DataControlRowType.Footer)
+        {
+            e.Row.Cells[0].Attributes.Add("style", "display:none");
+        }
+    }
+
+    protected void dgQuestion_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        _aclsBranchManager.DeleteBranchDocument(dgQuestion.SelectedRow.Cells[0].Text.Trim(), Session["user"].ToString());
+        DataTable dtDecumentDtl = _aclsBranchManager.getShowBranchDocument(lblID.Text, "");
+        dgQuestion.DataSource = dtDecumentDtl;
+        dgQuestion.DataBind();
+    }
+}

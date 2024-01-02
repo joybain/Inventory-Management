@@ -1,0 +1,330 @@
+﻿<%@ Page Title="" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true" CodeFile="ItemsCartoonOnColorAndQuantity.aspx.cs" Inherits="ItemsCartoonOnColorAndQuantity" %>
+
+<asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
+
+<script type="text/javascript">
+    function OpenWindow(Url) {
+        var popUpObj;
+        //        var testwindow = window.open(Url, '', 'width=500px,height=420,top=200,left=500,scrollbars=1');
+        //        testwindow.blur();
+
+        popUpObj = window.open(Url, "ModalPopUp", "toolbar=no," + "scrollbars=no," + "location=no," + "statusbar=no," + "menubar=no," + "resizable=0," + "width=650px," +
+
+    "height=600px," + "left = 300," + "top=150");
+        popUpObj.focus();
+        LoadModalDiv();
+    }
+
+    function LoadModalDiv() {
+
+        var bcgDiv = document.getElementById("divBackground");
+        bcgDiv.style.display = "block";
+
+    }
+    function HideModalDiv() {
+
+        var bcgDiv = document.getElementById("divBackground");
+        bcgDiv.style.display = "none";
+
+    }
+    function setClient(id) {
+        $('input:text[id$=txtMeemPrice]').val(id);
+    }
+
+    </script>
+<script language="javascript" type="text/javascript" >
+        function setDecimal(abc) {
+            var dt = document.getElementById(abc).value;
+            if (dt.length > 0) {
+                document.getElementById(abc).value = parseFloat(dt).toFixed(2);
+            }
+        }
+        function isNumber(evt) {
+            evt = (evt) ? evt : window.event;
+            var charCode = (evt.which) ? evt.which : evt.keyCode;
+            if (charCode != 46 && charCode > 31
+            && (charCode < 48 || charCode > 57)) {
+                return false;
+            }
+            return true;
+        }
+
+        onblur = function () {
+            setTimeout('self.focus()', 100);
+        }
+</script>
+
+
+    <div id="frmMainDiv" style="background-color:White; width:100%;">
+    <div>
+        
+     <table id="pageFooterWrapper">
+            <tr>
+                <td align="center">
+                    <asp:Button ID="btnDelete" runat="server" BorderStyle="Outset" Height="30px" 
+                        onclientclick="javascript:return window.confirm('are u really want to delete these data')" 
+                        Text="Delete" ToolTip="Delete" Width="110px" onclick="btnDelete_Click" />
+                </td>
+                <td align="center">
+                    &nbsp;</td>
+                <td align="center">
+                  <asp:UpdatePanel ID="UpdatePanel1" UpdateMode="Conditional" runat="server">
+                      <ContentTemplate>
+                        <asp:Button ID="btnSave" runat="server" BorderStyle="Outset" Height="30px" Text="Save" ToolTip="Save Purchase Record" 
+                         Width="110px" onclick="btnSave_Click" />
+                      </ContentTemplate>
+                    </asp:UpdatePanel>
+                </td>
+                <%--<ajaxtoolkit:TabContainer ID="tabVch" runat="server" Width="99%" ActiveTabIndex="0" 
+         Font-Size="8pt">
+ <ajaxtoolkit:TabPanel ID="tpVchDtl" runat="server" HeaderText="Items Details">
+     <ContentTemplate>--%>
+                <td align="center">
+                    <asp:Button ID="btnClear" runat="server" BorderStyle="Outset" Height="30px" 
+                        Text="Clear" ToolTip="Clear" Width="110px" onclick="btnClear_Click" />
+                </td>
+                <td align="center">
+                    <asp:Button ID="btnPrint" runat="server" BorderStyle="Outset" Height="30px" 
+                        Text="Print" ToolTip="Print PO" Width="110px" onclick="btnPrint_Click" />
+                </td>
+            </tr>
+        </table>
+        </div>
+    <table style="width: 100%">
+        <tr>
+            <td style="width:5%;">
+                &nbsp;</td>
+            <td style="width:90%;">
+                <asp:Label ID="lblMasterID" runat="server" Visible="False"></asp:Label>
+&nbsp;
+                <asp:Label ID="lblItemID" runat="server" Visible="False"></asp:Label>
+            &nbsp;
+                <asp:Label ID="lblShiftmentID" runat="server" Visible="False"></asp:Label>
+            </td>
+            <td style="width:5%;">
+                &nbsp;</td>
+        </tr>
+        <tr>
+            <td style="width:5%;">
+                &nbsp;</td>
+            <td style="width:90%;">
+             <fieldset style="vertical-align: top; border: solid 1px #8BB381; text-align:left;">
+                            <legend style="color: maroon;"><b>Search Option</b></legend>
+                <table style="width: 100%">
+                    <tr>
+                        <td style="width: 10%" align="right" valign="middle">
+                            <asp:Label ID="Label1" runat="server" Text="Cartoon No."></asp:Label>
+                        </td>
+                        <td style="width: 2%" valign="middle">
+                            &nbsp;</td>
+                        <td style="width: 15%" valign="middle">
+                            <asp:TextBox ID="txtCartoonNo" runat="server" Width="100%" 
+                                placeholder="search by cartoon No."></asp:TextBox>
+                        </td>
+                        <td style="width: 10%" align="right" valign="middle">
+                            <asp:Label ID="Label2" runat="server" Text="Shiftment No."></asp:Label>
+                        </td>
+                        <td style="width: 2%" valign="middle">
+                            &nbsp;</td>
+                        <td style="width: 15%" valign="middle">
+                            <asp:TextBox ID="txtShiftmentNo" runat="server" Width="100%" 
+                                placeholder="search by Shiftment No." AutoPostBack="True" 
+                                ontextchanged="txtShiftmentNo_TextChanged"></asp:TextBox>
+                        </td>
+                        <td td style="width: 15%" valign="middle" align="center">
+                            <asp:Button ID="BtnSearch" runat="server" Text="Search" 
+                                onclick="BtnSearch_Click" />
+                        </td>
+                    </tr>
+                </table></fieldset>
+            </td>
+            <td style="width:10%;">
+                &nbsp;</td>
+        </tr>
+        <tr>
+            <td style="width:5%;">
+                &nbsp;</td>
+            <td style="width:80%;" valign="top" >
+            <div id="tbItemsDtl" runat="server">
+             <fieldset style="vertical-align: top; border: solid 1px #8BB381; text-align:left;">
+                            <legend style="color: maroon;"><b>Items Quantity & Image Setup</b></legend>
+                            <table style="width: 100%"  >
+                                <tr>
+                                    <td style=" width:18%; height: 23px;">
+                            <asp:Label ID="Label3" runat="server" Text="Cartoon No.  :" Font-Bold="True" 
+                                            Font-Size="10pt"></asp:Label>
+                                    </td>
+                                    <td style=" width:17%; height: 23px;">
+                            <asp:Label ID="lblCartoonNo" runat="server" BackColor="#CCCCCC" style="text-align:center;" 
+                                            Height="100%" Width="100%" Font-Bold="True" Font-Size="10pt"></asp:Label>
+                                    </td>
+                                    <td style=" width:18%; height: 23px;">
+                            <asp:Label ID="Label4" runat="server" Text="Items Name  :" Font-Bold="True" 
+                                            Font-Size="10pt"></asp:Label>
+                                    </td>
+                                    <td style=" height: 23px;" colspan="3">
+                            <asp:Label ID="lblItemsName" runat="server"  BackColor="#CCCCCC" Height="100%" Width="100%" 
+                                            Font-Bold="True" Font-Size="10pt"></asp:Label>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style=" width:18%; height: 25px;">
+                            <asp:Label ID="Label5" runat="server" Text="Shiftment No.  :" Font-Bold="True" 
+                                            Font-Size="10pt"></asp:Label>
+                                    </td>
+                                    <td style=" width:17%; height: 25px;">
+                            <asp:Label ID="lblShiftmentNo" runat="server" BackColor="#CCCCCC" 
+                                            style="text-align:center;" Height="100%" 
+                                            Width="100%" Font-Bold="True" Font-Size="10pt"></asp:Label>
+                                    </td>
+                                    <td style=" width:18%; height: 25px;">
+                            <asp:Label ID="Label7" runat="server" Text="Quantity  :" Font-Bold="True" Font-Size="10pt"></asp:Label>
+                                    </td>
+                                    <td style=" width:20%; height: 25px;">
+                            <asp:Label ID="lblQuantity" style="text-align:center;" runat="server" BackColor="#CCCCCC" 
+                                            Height="100%" Width="100%" Font-Bold="True" Font-Size="10pt"></asp:Label>
+                                    </td>
+                                    <td style=" width:10%; height: 25px;">
+                            <asp:Label ID="Label9" runat="server" Text="T. Color  :" Font-Bold="True" 
+                                            Font-Size="10pt"></asp:Label>
+                                    </td>
+                                    <td style=" width:15%; height: 25px;">
+                            <asp:Label ID="lblColor" runat="server" style="text-align:center;" BackColor="#CCCCCC" 
+                                            Height="100%" Width="100%" Font-Bold="True" Font-Size="10pt"></asp:Label>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style=" width:18%; height: 32px;" valign="bottom">
+                                            <asp:Button ID="btnColorSize" runat="server" onclick="btnColorSize_Click1" 
+                                                Text="Color &amp; Size" />
+                                    </td>
+                                    <td style=" width:17%; height: 32px;" valign="bottom">
+                                            <asp:Button ID="btnProductImage" runat="server" onclick="btnProductImage_Click" 
+                                                Text="Product Image" />
+                                    </td>
+                                    <td style=" width:18%; height: 32px;" valign="bottom">
+                                        </td>
+                                    <td style=" width:20%; height: 32px;" valign="bottom">
+                                        </td>
+                                    <td style=" width:10%; height: 32px;" valign="bottom">
+                                        </td>
+                                    <td style=" width:15%; height: 32px;" valign="bottom">
+                                        </td>
+                                </tr>
+                                <tr>
+                                    <td style=" height: 20px;" colspan="6">
+                                        <table id="tbColorSize" runat="server" style="width: 100%">
+                                            <tr>
+                                                <td style="width:50%;">
+                                                    <fieldset style="vertical-align: top; border: solid 1px #8BB381; text-align:left;">
+                                                        <legend style="color: maroon;"><b>Color</b></legend>
+                                                        <asp:Panel ID="Pandel1" runat="server" Height="150px" ScrollBars="Horizontal">
+                                                            <asp:CheckBoxList ID="chkColor" runat="server">
+                                                            </asp:CheckBoxList>
+                                                        </asp:Panel>
+                                                    </fieldset></td>
+                                                <td style="width:50%;">
+                                                    <fieldset style="vertical-align: top; border: solid 1px #8BB381; text-align:left;">
+                                                        <legend style="color: maroon;"><b>Size</b></legend>
+                                                        <asp:Panel ID="Panel2" runat="server" Height="150px" ScrollBars="Horizontal">
+                                                            <asp:CheckBoxList ID="chkSize" runat="server">
+                                                            </asp:CheckBoxList>
+                                                        </asp:Panel>
+                                                    </fieldset></td>
+                                            </tr>
+                                            <tr>
+                                                <td style="width:50%;">
+                                                    <asp:Button ID="btnProductQuantity" runat="server" onclick="btnProductQuantity_Click" 
+                                                        Text="Product Quantity" />
+                                                </td>
+                                                <td style="width:50%;">
+                                                    &nbsp;</td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style=" height: 20px;" colspan="6">
+                                            <asp:GridView ID="dgQty" runat="server" AutoGenerateColumns="False" 
+                                                CssClass="mGrid" OnRowDataBound="dgQty_RowDataBound" 
+                                    Width="100%" onrowcreated="dgQty_RowCreated">
+                                            </asp:GridView>
+                                    </td>
+                                </tr>
+                            </table></fieldset></div>
+
+                            <div id="tbCartoon" runat="server">
+                            <fieldset style="vertical-align: top; border: solid 1px #8BB381; text-align:left;">
+                                                        <legend style="color: maroon;"><b>Cartoon Items</b></legend>
+                            <table style="width:100%">
+                            <tr>
+                            <td style="text-align:center;">
+                            
+                            <asp:GridView ID="dgShiftmentItems" runat="server" Width="100%" 
+                                AutoGenerateColumns="False" CssClass="mGrid" AllowPaging="True" 
+                                PageSize="50" onselectedindexchanged="dgShiftmentItems_SelectedIndexChanged" 
+                                    onrowdatabound="dgShiftmentItems_RowDataBound" 
+                                    onrowcommand="dgShiftmentItems_RowCommand" 
+                                    onpageindexchanging="dgShiftmentItems_PageIndexChanging">
+                                <Columns>
+                                    <asp:CommandField ShowSelectButton="True" HeaderText="Select" ItemStyle-Width="8%" >
+                                    <ItemStyle Font-Bold="True" />
+                                    </asp:CommandField>
+                                    <asp:BoundField HeaderText="Cartoon No." DataField="CartoonNo" >
+                                    <ItemStyle Font-Size="8pt" HorizontalAlign="Center" Width="15%" />
+                                    </asp:BoundField>
+                                    <asp:BoundField HeaderText="Shiftment No." DataField="ShiftmentNO" >
+                                    <ItemStyle Font-Size="8pt" HorizontalAlign="Center" Width="15%" />
+                                    </asp:BoundField>
+                                    <asp:BoundField HeaderText="Items Name" DataField="ItemsName" >
+                                     <ItemStyle Font-Size="8pt" HorizontalAlign="Left" Width="40%" />
+                                    </asp:BoundField>
+                                    <asp:TemplateField HeaderText="Image">
+                                    <ItemTemplate>
+                                           <asp:LinkButton ID="lblOk" runat="server" CommandName="OK" Text="( Image )" 
+                                                    Font-Bold="True"></asp:LinkButton>
+                                    </ItemTemplate>
+                                      <ItemStyle Font-Size="8pt" HorizontalAlign="Center" Width="10%" />
+                                     </asp:TemplateField>
+                                    <asp:BoundField HeaderText="Quantity" DataField="Quantity">
+                                     <ItemStyle Font-Size="8pt" HorizontalAlign="Center" Width="10%" />
+                                    </asp:BoundField>
+                                    <asp:BoundField HeaderText="Colour" DataField="Color">
+                                     <ItemStyle Font-Size="8pt" HorizontalAlign="Center" Width="10%" />
+                                    </asp:BoundField>
+                                    <asp:BoundField DataField="ItemsID" HeaderText="ItemsID" />
+                                    <asp:BoundField DataField="ID" HeaderText="ID" />
+                                </Columns>
+                            </asp:GridView>
+
+                                </td>
+                            </tr>
+                            </table></fieldset>
+                            </div>
+                        </td>
+            <td style="width:10%;">
+                &nbsp;</td>
+        </tr>
+        <tr>
+            <td style="width:5%;">
+                &nbsp;</td>
+            <td style="width:90%;">
+                            &nbsp;</td>
+            <td style="width:5%;">
+                &nbsp;</td>
+        </tr>
+        <tr>
+            <td style="width:5%;">
+                &nbsp;</td>
+            <td style="width:90%;">
+                &nbsp;</td>
+            <td style="width:5%;">
+                &nbsp;</td>
+        </tr>
+    </table>
+    </div>
+    <div id="divBackground" style="position: fixed; z-index: 999; height: 100%; width: 100%;
+        top: 0; left:0; background-color: Black; filter: alpha(opacity=60); opacity: 0.6; -moz-opacity: 0.8;display:none">
+    </div>
+</asp:Content>
+

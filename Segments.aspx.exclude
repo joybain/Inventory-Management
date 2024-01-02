@@ -1,0 +1,95 @@
+﻿<%@ Page Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true" CodeFile="Segments.aspx.cs" Inherits="Segments" Title="Untitled Page" %>
+
+<asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">  
+<table>
+<tr>
+<td style="width:113px;">
+<asp:Label ID="lblLvlCode" runat="server" Font-Size="8">Level Code</asp:Label>
+</td>
+<td> 
+<asp:TextBox ID="txtLvlCode" runat="server"  Width="150px" Font-Size="8"></asp:TextBox>
+</td>
+<td style="height: 27px" >&nbsp&nbsp</td>
+<td style="width:113px;">
+<asp:Label ID="lblLvlDesc" runat="server" Font-Size="8">Description</asp:Label>
+</td>
+<td > <asp:TextBox ID="txtLvlDesc" runat="server" Width="350px" Font-Size="8"></asp:TextBox></td>
+</tr>
+<tr>
+<td style="width:113px;">
+<asp:Label ID="lblMaxSize" runat="server" Font-Size="8">Maximum Size</asp:Label>
+</td>
+<td> 
+<asp:TextBox ID="txtMaxSize" runat="server"  Width="150px" Font-Size="8"></asp:TextBox>
+</td>
+<td style="height: 27px" >&nbsp&nbsp</td>
+<td style="width:113px;">
+<asp:Label ID="lblOrder" runat="server" Font-Size="8">Level Order</asp:Label>
+</td>
+<td> 
+<asp:TextBox ID="txtOrder" runat="server"  Width="150px" Font-Size="8"></asp:TextBox>
+</td>
+</tr>
+<tr>
+<td style="width:113px;">
+<asp:Label ID="lblSegType" runat="server" Font-Size="8">Level Type</asp:Label>
+</td>
+<td> 
+<asp:TextBox ID="txtSegType" runat="server"  Width="150px" Font-Size="8"></asp:TextBox>
+</td>
+</tr>
+</table>
+<br />
+<table style="border-color:Navy">
+   <tr>
+   
+   <td> 
+       <asp:LinkButton ID="btnClear" runat="server" text="Clear" 
+           onclick="btnClear_Click" Font-Size="10" ></asp:LinkButton>       
+           </td>
+   <td>&nbsp&nbsp</td>
+   <td> 
+       <asp:LinkButton ID="btnFind" runat="server" text="Find" 
+           onclick="btnFind_Click" Font-Size="10" ></asp:LinkButton></td>        
+   <td>&nbsp&nbsp</td>
+   <td> 
+       <asp:LinkButton ID="btnSave" runat="server" text="Save" 
+           onclick="btnSave_Click" Font-Size="10" ></asp:LinkButton></td>        
+   <td>&nbsp&nbsp</td>
+   <td> 
+       <asp:LinkButton ID="btnDelete" runat="server" text="Delete" 
+           onclick="btnDelete_Click" Font-Size="10" 
+           onclientclick="javascript:return window.confirm('are u really want to delete these data')"></asp:LinkButton></td>
+   
+   </tr>
+   </table>
+   <br />
+<asp:Label ID="lblTranStatus" runat="server" Width="500px" Text="" Visible="false" Font-Size="8"></asp:Label>
+<br />
+<div>
+
+<asp:GridView CssClass="mGrid" PagerStyle-CssClass="pgr"  AlternatingRowStyle-CssClass="alt" ID="dgLevel" runat="server" AutoGenerateColumns="false" 
+        AllowPaging="True" Width="100%" BackColor="White" BorderWidth="1px" BorderStyle="Solid"
+        CellPadding="2" CellSpacing="0" BorderColor="Salmon" Font-Size="8pt" AllowSorting="true" PageSize="5" 
+        onselectedindexchanged="dgLevel_SelectedIndexChanged" ForeColor="#333333"  >
+  <HeaderStyle Font-Size="9" Font-Names="Arial" Font-Bold="True" HorizontalAlign="center" BackColor="Silver"/>
+  <FooterStyle BackColor="Silver" Font-Bold="True" ForeColor="White" />
+  <Columns>
+  <asp:CommandField ShowSelectButton="True"  ItemStyle-Width="40px" ItemStyle-HorizontalAlign="Center" ItemStyle-ForeColor="Blue"/>
+  <asp:BoundField  HeaderText="Level Code" DataField="lvl_code" ItemStyle-Width="100px" ItemStyle-HorizontalAlign="Center"/>  
+  <asp:BoundField  HeaderText="Description" DataField="description" ItemStyle-Width="200px" ItemStyle-HorizontalAlign="Left"/>
+  <asp:BoundField  HeaderText="Level Type" DataField="lvl_seg_type" ItemStyle-Width="90px" ItemStyle-HorizontalAlign="Center"/>
+  
+  
+  </Columns>
+                        <RowStyle BackColor="White" />
+                        <EditRowStyle BackColor="#2461BF" />
+                        <SelectedRowStyle BackColor="#ADDFFF" Font-Bold="True" ForeColor="#333333" />
+                        <PagerStyle BackColor="#2461BF" ForeColor="White" HorizontalAlign="Center" />
+                        <HeaderStyle BackColor="Silver" Font-Bold="True" ForeColor="Black" />
+                        <AlternatingRowStyle BackColor="" />
+</asp:GridView>
+</div>
+
+</asp:Content>
+

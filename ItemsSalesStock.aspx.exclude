@@ -1,0 +1,489 @@
+﻿<%@ Page Title="Stock Available to Sales.-SDL" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true" CodeFile="ItemsSalesStock.aspx.cs" Inherits="ItemsSalesStock" %>
+
+<asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
+    <script language="javascript" type="text/javascript">
+    function onListPopulated() {
+        var completionList1 = $find("AutoCompleteEx1").get_completionList();
+        completionList1.style.width = 'auto';
+    }
+    //    function OpenWindow(Url) {
+    //        var testwindow = window.open(Url, '', 'width=800px,height=620px,top=150,left=300,scrollbars=1');
+
+    function OpenWindow(Url) {
+        var popUpObj;
+        //        var testwindow = window.open(Url, '', 'width=500px,height=420,top=200,left=500,scrollbars=1');
+        //        testwindow.blur();
+
+        popUpObj = window.open(Url, "ModalPopUp", "toolbar=no," + "scrollbars=no," + "location=no," + "statusbar=no," + "menubar=no," + "resizable=0," + "width=800px," +
+
+    "height=620px," + "left = 300," + "top=150");
+        popUpObj.focus();
+        LoadModalDiv();
+    }
+
+    function LoadModalDiv() {
+
+        var bcgDiv = document.getElementById("divBackground");
+        bcgDiv.style.display = "block";
+
+    }
+    function HideModalDiv() {
+
+        var bcgDiv = document.getElementById("divBackground");
+        bcgDiv.style.display = "none";
+
+    }
+    
+  </script>
+  <div id="frmMainDiv" style="background-color:White; width:100%;">
+ <div>
+            <table style="width:100%;">
+                <tr>
+            <td style="width:20%;">&nbsp;</td>
+            <td>&nbsp;</td>
+            <td style="width:20%;">&nbsp;</td>
+        </tr>
+                <tr>
+            <td style="width:20%; height: 153px;"></td>
+            <td style="height: 153px">
+                <fieldset style="vertical-align: top; border: solid 1px #8BB381;"><legend style="color: maroon;"><b>Search Option</b> </legend>
+                <table style="width: 100%">
+                    <tr>
+                        <td style="width: 14%; font-weight: 700; height: 24px;">
+                            Search Type</td>
+                        <td style="width: 3%; height: 24px; font-weight: 700;" align="center">
+                            :</td>
+                        <td style="height: 24px;" colspan="2">
+                            <asp:RadioButtonList ID="rbSearchType" runat="server" BorderStyle="Solid" 
+                                RepeatDirection="Horizontal" Width="80%" AutoPostBack="True" 
+                                onselectedindexchanged="rbSearchType_SelectedIndexChanged">
+                                <asp:ListItem Selected="True" Value="0">All</asp:ListItem>
+                                <asp:ListItem Value="1">Shipment</asp:ListItem>
+                                <asp:ListItem Value="2">Local</asp:ListItem>
+                            </asp:RadioButtonList>
+                        </td>
+                        <td style="width: 3%; height: 24px;">
+                            </td>
+                        <td style="width: 20%; height: 24px;">
+        <asp:TextBox ID="txtShiftmentNo" runat="server" CssClass="txtVisibleAlign" Font-Size="8pt" 
+            style="text-align:left" Placeholder="Search Shipment"
+            SkinId="tbPlain" TabIndex="5" Width="97%" AutoPostBack="True" 
+            ontextchanged="txtShiftmentNo_TextChanged" Height="18px"></asp:TextBox>
+             <ajaxtoolkit:AutoCompleteExtender ID="AutoCompleteExtender2"
+                                                        runat="server" 
+            CompletionInterval="20" CompletionSetCount="30"
+                                                        EnableCaching="true" MinimumPrefixLength="2"
+                                                        
+            ServiceMethod="GetShiftmentInfo" ServicePath="~/AutoComplete.asmx"
+                                                        
+            TargetControlID="txtShiftmentNo">
+                                                    </ajaxtoolkit:AutoCompleteExtender>
+                            </td>
+                    </tr>
+                    <tr>
+                        <td style="width: 14%; font-weight: 700; height: 28px;">
+                            Category</td>
+                        <td style="width: 3%; height: 28px; font-weight: 700;" align="center">
+                            :</td>
+                        <td style="width: 20%; height: 28px;">
+                            <asp:UpdatePanel runat="server" UpdateMode="Conditional" ID="UP1"><ContentTemplate>
+                            <asp:DropDownList ID="ddlCatagory" runat="server" AutoPostBack="True" CssClass="txtVisibleAlign"
+                                Height="26px" onselectedindexchanged="ddlCatagory_SelectedIndexChanged" 
+                                Width="100%">
+                            </asp:DropDownList>
+                            </ContentTemplate></asp:UpdatePanel>
+                        </td>
+                        <td style="width: 17%; font-weight: 700; height: 28px;" align="right">
+                            Sub Category</td>
+                        <td style="width: 3%; height: 28px;">
+                            </td>
+                        <td style="width: 20%; height: 28px;">
+                             <asp:UpdatePanel runat="server" UpdateMode="Conditional" ID="UP2"><ContentTemplate>
+                                <asp:DropDownList ID="ddlSubCatagory" CssClass="txtVisibleAlign" runat="server" Height="26px" Width="100%">
+                                </asp:DropDownList>
+                             </ContentTemplate></asp:UpdatePanel>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="width: 14%; font-weight: 700; height: 28px;">
+                    <asp:Label ID="Label2" runat="server" Text="Search Items"></asp:Label>
+                        </td>
+                        <td style="width: 3%; height: 28px; font-weight: 700;" align="center">
+                            :</td>
+                        <td style="height: 28px;" colspan="4">
+                            <asp:UpdatePanel runat="server" ID="UP3" UpdateMode="Conditional" ><ContentTemplate>
+                    <asp:TextBox ID="txtName" runat="server" Width="100%" style="width: 100%; text-indent:15px;display: inline-block;border: 1px solid #ccc;
+    border-radius: 4px;box-sizing: border-box;background:transparent !important;"
+                        placeholder="Search ** Items Code OR Item's Name OR Quantity" 
+                        Height="26px" AutoPostBack="True" ontextchanged="txtName_TextChanged"></asp:TextBox>
+                            <asp:HiddenField ID="hfItemsID" runat="server" />
+                        <ajaxToolkit:AutoCompleteExtender ServicePath="AutoComplete.asmx" runat="server" 
+                                     ID="autoComplete1" TargetControlID="txtName"
+           ServiceMethod="GetShowShiftmentID" MinimumPrefixLength="1" CompletionInterval="20"
+                                     CompletionSetCount="12" 
+                        Enabled="True"/>
+                        </ContentTemplate></asp:UpdatePanel>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="width: 14%; font-weight: 700; height: 28px;">
+                            <asp:Label ID="lblSearchSupplier" runat="server" Text="Search Supplier"></asp:Label>
+                        </td>
+                        <td style="width: 3%; height: 28px; font-weight: 700;" align="center">
+                            :</td>
+                        <td style="height: 28px;" colspan="4">
+                    <asp:TextBox ID="txtSupplierName" runat="server" Width="100%" style="width: 100%; text-indent:15px;display: inline-block;border: 1px solid #ccc;
+    border-radius: 4px;box-sizing: border-box;background:transparent !important;"
+                        placeholder="Search Supplier.." 
+                        Height="26px" AutoPostBack="True" ontextchanged="txtSupplierName_TextChanged"></asp:TextBox>
+                            <asp:HiddenField ID="hfSupplierID" runat="server" /><asp:HiddenField ID="hfShipmentID" runat="server" />
+                          <ajaxToolkit:AutoCompleteExtender ServicePath="AutoComplete.asmx" runat="server" 
+                                     ID="AutoCompleteExtender1" TargetControlID="txtSupplierName"
+           ServiceMethod="GetSupplier" MinimumPrefixLength="1" CompletionInterval="20"
+                                     CompletionSetCount="12" 
+                        Enabled="True"/>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="width: 14%; font-weight: 700;" align="center">
+                                            <asp:RadioButtonList ID="rbPrintType" runat="server" BorderStyle="Solid" 
+                                                RepeatDirection="Horizontal">
+                                                <asp:ListItem Selected="True" Value="P">PDF</asp:ListItem>
+                                                <asp:ListItem Value="E">Excel</asp:ListItem>
+                                            </asp:RadioButtonList>
+                                            </td>
+                        <td style="width: 3%" align="center">
+                            &nbsp;</td>
+                        <td style="width: 20%">
+                            
+                                    <asp:Button runat="server" Text="Print" Height="35px" Width="85%" 
+                                ID="btnPrint" OnClick="btnPrint_Click"></asp:Button>
+
+                        </td>
+                        <td style="width: 17%" align="right">
+                     <asp:Button ID="brnSearch" runat="server" Text="Search" Width="80%" 
+                                onclick="brnSearch_Click" Height="35px" />
+                        </td>
+                        <td style="width: 3%">
+                            &nbsp;</td>
+                        <td style="width: 20%">
+                     <asp:Button ID="btnClear" runat="server" Text="Clear" Width="80%" 
+                         onclick="btnClear_Click" Height="35px" />
+                        </td>
+                    </tr>
+                </table>
+                </fieldset>
+                    </td>
+            <td style="width:20%; height: 153px;"></td>
+        </tr>
+        <tr>
+            <td align="left" colspan="3" style="height: 8px">
+            </td>
+        </tr>
+        <tr>
+            <td align="left" colspan="3" style="height: 25px">
+                &nbsp; &nbsp;<asp:Label ID="lblBranchName" runat="server" Font-Size="10pt" ForeColor="Black" 
+                   style="font-weight: 700" Font-Underline="True"></asp:Label>
+        <asp:Label ID="lblBranchID" runat="server" Visible="False"></asp:Label>
+            </td>
+        </tr>
+        <tr>
+            <td align="left" colspan="3">
+<ajaxtoolkit:TabContainer ID="tabVch" runat="server" ActiveTabIndex="0" Width="100%">
+ <ajaxtoolkit:TabPanel ID="tpVchDtl" runat="server" HeaderText="Sales Stock">
+     <HeaderTemplate>
+        <b> Stock Available to Sales. </b>
+     </HeaderTemplate>
+       <ContentTemplate>
+           <div>
+            <table style="width:100%;">
+                <tr>
+            <td style="width:20%;"></td>
+            <td></td>
+            <td style="width:20%;"></td>
+        </tr>
+                <tr>
+                    <td align="right" colspan="3" style="font-weight: 700;">
+                        <table style="width: 100%">
+                            <tr>
+                                <td style="width: 8%" align="right">
+                                    Search Branch :</td>
+                                <td style="width: 1%">
+                                    &nbsp;</td>
+                                <td style="width: 12%">
+                                    <asp:DropDownList ID="ddlBranch" runat="server" AutoPostBack="True" CssClass="txtVisibleAlign"
+                                        Height="26px" OnSelectedIndexChanged="ddlBranch_SelectedIndexChanged" 
+                                        Width="100%">
+                                    </asp:DropDownList>
+                                </td>
+                                <td style="width: 6%" align="center">
+                                    &nbsp;</td>
+                                <td style="width: 10%" align="left">
+                                    <asp:Button ID="btnPrintAllBranch" runat="server" 
+                                        OnClick="btnPrintAllBranch_Click" Text="Print All Branch" Width="60%" 
+                                        Visible="False" Height="35px" />
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+        <tr>
+            <td align="center" colspan="3">
+                <asp:GridView ID="dgItems" runat="server" AllowPaging="True" 
+                    AutoGenerateColumns="False" CssClass="mGrid" 
+                    onpageindexchanging="dgItems_PageIndexChanging" 
+                    onrowdatabound="dgItems_RowDataBound" 
+                    onselectedindexchanged="dgItems_SelectedIndexChanged" PageSize="50" 
+                    Width="100%">
+                    <Columns>
+                        <asp:CommandField HeaderText="Image" SelectText="Image" ShowSelectButton="True">
+                        <ItemStyle HorizontalAlign="Center" Width="50px" />
+                        </asp:CommandField>
+                        <asp:BoundField DataField="Items" HeaderText="Items Code &amp; Name">
+                        <ItemStyle HorizontalAlign="Left" Width="220px" />
+                        </asp:BoundField>
+                        <asp:BoundField DataField="BrandName" HeaderText="Brand">
+                        <ItemStyle HorizontalAlign="Left" Width="100px" />
+                        </asp:BoundField>
+                         <asp:BoundField DataField="ShiftmentNO" HeaderText="Ship./Local">
+                            <ItemStyle HorizontalAlign="Left" Width="150px" />
+                        </asp:BoundField>
+                         <asp:BoundField DataField="SupplierName" HeaderText="Supplier">
+                            <ItemStyle HorizontalAlign="Left" Width="150px" />
+                        </asp:BoundField>
+                        <asp:BoundField DataField="UnitPrice" HeaderText="Unit Price">
+                        <ItemStyle HorizontalAlign="Right" Width="80px" />
+                        </asp:BoundField>
+                        <asp:BoundField DataField="Ship_Qty" DataFormatString="{0:N0}"
+                            HeaderText="Ship./Pur. Qty.">
+                        <ItemStyle HorizontalAlign="Right" Width="80px" />
+                        </asp:BoundField>
+                         <asp:BoundField DataField="PurRtnQty" HeaderText="Rtn. Qty">
+                         <ItemStyle HorizontalAlign="Right" Width="80px" />
+                        </asp:BoundField>
+                        <asp:BoundField DataField="RejectQty" DataFormatString="{0:N0}" 
+                            HeaderText="Rjt. Qty.">
+                        <ItemStyle HorizontalAlign="Right" Width="80px" />
+                        </asp:BoundField>
+                        <asp:BoundField DataField="ShortQty" DataFormatString="{0:N0}" 
+                            HeaderText="S. Qty.">
+                        <ItemStyle HorizontalAlign="Right" Width="80px" />
+                        </asp:BoundField>
+                        <asp:BoundField DataField="ExcessQty" DataFormatString="{0:N0}" 
+                            HeaderText="Ex. Qty." />
+                        <asp:BoundField DataField="transferQty" DataFormatString="{0:N0}" HeaderText="Trans Qty.">
+                        <ItemStyle HorizontalAlign="Right" Width="80px" />
+                        </asp:BoundField>
+                        <asp:BoundField DataField="TransRtnQty" HeaderText="Rtn. Qty">
+                         <ItemStyle HorizontalAlign="Right" Width="80px" />
+                        </asp:BoundField>
+                        <asp:BoundField DataField="SalesQty" DataFormatString="{0:N0}" HeaderText="Sold Qty." />
+                        <asp:BoundField DataField="RtnQty" HeaderText="Rtn. Qty" />
+                        <asp:BoundField DataField="ClosingStock" DataFormatString="{0:0}" 
+                            HeaderText="Cl. Stock">
+                        <ItemStyle HorizontalAlign="Right" Width="80px" />
+                        </asp:BoundField>
+                        <asp:BoundField DataField="ID" HeaderText="ID" />
+
+                    </Columns>
+                </asp:GridView>
+            </td>
+        </tr>
+        <tr>
+            <td style="width:20%;">&nbsp;</td>
+            <td>&nbsp;</td>
+            <td style="width:20%;">&nbsp;</td>
+        </tr>
+            </table>
+           </div>
+     </ContentTemplate>
+       </ajaxtoolkit:TabPanel>
+    <ajaxToolkit:TabPanel ID="TabPanel1" runat="server"  HeaderText="Bad Stock">
+    <HeaderTemplate>
+        <b>  Reject Qty. </b>
+     </HeaderTemplate>
+        <ContentTemplate>
+           <div>
+             <table style="width:100%;">
+        <tr>
+            <td style="width:20%;"></td>
+            <td>
+            
+                &nbsp;</td>
+            <td style="width:20%;"></td>
+        </tr>
+        <tr>
+            <td align="center" colspan="3">
+                <asp:GridView ID="dgBadStock" runat="server" CssClass="mGrid" 
+                    AutoGenerateColumns="False">
+                    <Columns>
+                        <asp:BoundField DataField="ItemsCodeWithName" 
+                            HeaderText="Items Code &amp; Name" />
+                        <asp:BoundField DataField="ShiftmentNO" HeaderText="Shipment No." />
+                        <asp:BoundField DataField="CartoonNo" HeaderText="Carton No">
+                        <ItemStyle HorizontalAlign="Center" />
+                        </asp:BoundField>
+                        <asp:BoundField DataField="TotalQuantity" DataFormatString="{0:0}" 
+                            HeaderText="Qty." >
+                        <ItemStyle HorizontalAlign="Right" />
+                        </asp:BoundField>
+                        <asp:BoundField DataField="BadQuantity" DataFormatString="{0:0}" HeaderText="Reject Qty." >
+                        <ItemStyle HorizontalAlign="Right" />
+                        </asp:BoundField>
+                    </Columns>
+                </asp:GridView>
+            </td>
+        </tr>
+                 <tr>
+                     <td style="width:20%;">
+                         &nbsp;</td>
+                     <td>
+                         &nbsp;</td>
+                     <td style="width:20%;">
+                         &nbsp;</td>
+                 </tr>
+                 <tr>
+                     <td style="width:20%;">
+                         &nbsp;</td>
+                     <td>
+                         &nbsp;</td>
+                     <td style="width:20%;">
+                         &nbsp;</td>
+                 </tr>
+            </table>
+           </div>
+        </ContentTemplate>
+    </ajaxToolkit:TabPanel>
+    <ajaxToolkit:TabPanel ID="TabPanel2" runat="server"  HeaderText="Loss Stock">
+    <HeaderTemplate>
+        <b>  Short Qty. </b>
+     </HeaderTemplate>
+        <ContentTemplate>
+           <div>
+             <table style="width:100%;">
+        <tr>
+            <td style="width:20%;"></td>
+            <td>
+            
+                &nbsp;</td>
+            <td style="width:20%;"></td>
+        </tr>
+        <tr>
+            <td align="center" colspan="3">
+                <asp:GridView ID="dgLossStock" runat="server" AutoGenerateColumns="False" 
+                    CssClass="mGrid">
+                    <Columns>
+                        <asp:BoundField DataField="ItemsCodeWithName" 
+                            HeaderText="Items Code &amp; Name" />
+                        <asp:BoundField DataField="ShiftmentNO" HeaderText="Shipment No." />
+                        <asp:BoundField DataField="CartoonNo" HeaderText="Carton No" />
+                        <asp:BoundField DataField="TotalQuantity" DataFormatString="{0:0}" 
+                            HeaderText="Qty." >
+                        <ItemStyle HorizontalAlign="Right" />
+                        </asp:BoundField>
+                        <asp:BoundField DataField="BadQuantity" DataFormatString="{0:0}" HeaderText="Short Qty." >
+                        <ItemStyle HorizontalAlign="Right" />
+                        </asp:BoundField>
+                    </Columns>
+                </asp:GridView>
+            </td>
+        </tr>
+                 <tr>
+                     <td style="width:20%;">
+                         &nbsp;</td>
+                     <td>
+                         &nbsp;</td>
+                     <td style="width:20%;">
+                         &nbsp;</td>
+                 </tr>
+                 <tr>
+                     <td style="width:20%;">
+                         &nbsp;</td>
+                     <td>
+                         &nbsp;</td>
+                     <td style="width:20%;">
+                         &nbsp;</td>
+                 </tr>
+            </table>
+           </div>
+        </ContentTemplate>
+    </ajaxToolkit:TabPanel>
+    <ajaxToolkit:TabPanel ID="TabPanel3" runat="server"  HeaderText="Access Stock">
+    <HeaderTemplate>
+        <b>  Excess Qty. </b>
+     </HeaderTemplate>
+        <ContentTemplate>
+           <div>
+             <table style="width:100%;">
+        <tr>
+            <td style="width:20%;"></td>
+            <td>
+            
+                &nbsp;</td>
+            <td style="width:20%;"></td>
+        </tr>
+        <tr>
+            <td align="center" colspan="3">
+                <asp:GridView ID="dgAccessStock" runat="server" AutoGenerateColumns="False" 
+                    CssClass="mGrid">
+                    <Columns>
+                        <asp:BoundField DataField="ItemsCodeWithName" 
+                            HeaderText="Items Code &amp; Name" />
+                        <asp:BoundField DataField="ShiftmentNO" HeaderText="Shipment No." />
+                        <asp:BoundField DataField="CartoonNo" HeaderText="Carton No." />
+                        <asp:BoundField DataField="TotalQuantity" DataFormatString="{0:0}" 
+                            HeaderText="Qty." >
+                        <ItemStyle HorizontalAlign="Right" />
+                        </asp:BoundField>
+                        <asp:BoundField DataField="BadQuantity" DataFormatString="{0:0}" HeaderText="Excess Qty." >
+                        <ItemStyle HorizontalAlign="Right" />
+                        </asp:BoundField>
+                    </Columns>
+                </asp:GridView>
+            </td>
+        </tr>
+                 <tr>
+                     <td style="width:20%;">
+                         &nbsp;</td>
+                     <td>
+                         &nbsp;</td>
+                     <td style="width:20%;">
+                         &nbsp;</td>
+                 </tr>
+                 <tr>
+                     <td style="width:20%;">
+                         &nbsp;</td>
+                     <td>
+                         &nbsp;</td>
+                     <td style="width:20%;">
+                         &nbsp;</td>
+                 </tr>
+            </table>
+           </div>
+        </ContentTemplate>
+    </ajaxToolkit:TabPanel>
+</ajaxtoolkit:TabContainer>
+            </td>
+        </tr>
+        <tr>
+            <td align="center" colspan="3">
+                &nbsp;</td>
+        </tr>
+        <tr>
+            <td align="center" colspan="3">
+                &nbsp;</td>
+        </tr>
+        <tr>
+            <td style="width:20%;">&nbsp;</td>
+            <td>&nbsp;</td>
+            <td style="width:20%;">&nbsp;</td>
+        </tr>
+            </table>
+           </div>
+           </div>
+              <div id="divBackground" style="position: fixed; z-index: 999; height: 100%; width: 100%;
+        top: 0; left:0; background-color: Black; filter: alpha(opacity=60); opacity: 0.6; -moz-opacity: 0.8;-webkit-opacity: 0.8;display:none">
+    </div>
+    
+</asp:Content>
+

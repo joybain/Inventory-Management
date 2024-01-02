@@ -1,0 +1,133 @@
+﻿<%@ Page Title="" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true" CodeFile="frmExcelUploadSalesSummery.aspx.cs" Inherits="frmExcelUploadSalesSummery" %>
+
+<asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
+    <table style="width: 100%">
+        <tr>
+            <td style="width: 16%; height: 17px;">
+                </td>
+            <td  style="width: 47%; height: 17px;">
+                </td>
+            <td  style="width: 20%; height: 17px;">
+                </td>
+        </tr>
+        <tr>
+            <td style="width: 16%">
+                &nbsp;</td>
+            <td  style="width: 47%">
+             <fieldset style="vertical-align: top; border: solid .5px #8BB381;text-align:left;line-height:2.5em;">
+                        <legend style="color: maroon;"><b>Upload Excel</b></legend>
+                <table style="width: 100%">
+                    <tr>
+                        <td style="width: 18%; font-weight: 700; height: 29px;" align="right">
+                            Branch Name</td>
+                        <td style="width: 2%; height: 29px;">
+                            </td>
+                        <td style="width: 15%; height: 29px;">
+    <asp:DropDownList SkinId="ddlPlain"  ID="ddlBranch" runat="server" Font-Size="8pt" 
+            Width="93%" Height="26px" >
+    </asp:DropDownList>
+                        </td>
+                        <td style="width: 10%; font-weight: 700; height: 29px;" align="right">
+                            Date</td>
+                        <td style="width: 2%; height: 29px;">
+                            </td>
+                        <td style="width: 10%; height: 29px;">
+    <asp:TextBox SkinId="tbPlain" ID="txtTfDate" runat="server" Width="93%" style="text-align:center;" PlaceHolder="dd/MM/yyyy"
+            CssClass="tbc"  AutoPostBack="False"  Font-Size="8pt"></asp:TextBox>
+    <ajaxtoolkit:calendarextender runat="server" ID="Calendarextender1" 
+            TargetControlID="txtTfDate" Format="dd/MM/yyyy"/>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="width: 18%; font-weight: 700; height: 33px;" align="right">
+                            Remarks</td>
+                        <td style="width: 2%; height: 33px;">
+                            </td>
+                        <td style="height: 33px;" colspan="4">
+                            <asp:TextBox ID="txtRemark" runat="server" Width="98%"></asp:TextBox>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="width: 18%; font-weight: 700; height: 42px;" align="right">
+                            Select File</td>
+                        <td style="width: 2%; height: 42px;">
+                            </td>
+                        <td colspan="4" style="height: 42px">
+                            <asp:FileUpload ID="ulBenExcel" runat="server" Font-Size="8pt" Height="25px" 
+                                onchange="javascript:SetImage();" Width="100%" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="width: 18%" align="right">
+                            &nbsp;</td>
+                        <td style="width: 2%">
+                            &nbsp;</td>
+                        <td style="width: 15%" align="center">
+                            <asp:Button ID="btnUpload" runat="server" Height="30px" 
+                                onclick="btnUpload_Click" Text="Upload Data" Width="150px" />
+                        </td>
+                        <td style="width: 10%" align="center">
+                            <asp:Button ID="btnSaveData" runat="server" Height="30px" 
+                                onclick="btnSaveData_Click" Text="Save Data" Width="150px" />
+                        </td>
+                        <td style="width: 2%" align="center">
+                            &nbsp;</td>
+                        <td style="width: 10%" align="center">
+                            <asp:Button ID="btnClear" runat="server" Height="30px" 
+                                onclick="btnClear_Click" Text="Clear" Width="150px" />
+                        </td>
+                    </tr>
+                </table></fieldset>
+            </td>
+            <td  style="width: 20%">
+                &nbsp;</td>
+        </tr>
+        <tr>
+            <td style="width: 16%">
+                &nbsp;</td>
+            <td  style="width: 47%">
+            
+               <%-- <table style="width: 100%">                
+                    <tr style="width:60%;">
+                        <td style="width:68%;">
+                            &nbsp;</td>
+                        <td style="width:40%;" align="center">
+                            &nbsp;</td>
+                        <td>
+                            &nbsp;</td>
+                    </tr>
+                    </table>--%>
+                   
+            </td>
+            <td  style="width: 20%">
+                &nbsp;</td>
+        </tr>
+        <tr>
+            <td align="center" colspan="3">
+                <asp:GridView ID="dgHistory" runat="server" CssClass="mGrid" 
+                    onrowdatabound="dgHistory_RowDataBound" Width="80%" 
+                    AutoGenerateColumns="False">
+                    <Columns>
+                        <asp:BoundField DataField="F1" HeaderText="Code" />
+                        <asp:BoundField DataField="F2" HeaderText="Name" />
+                        <asp:BoundField DataField="F3" HeaderText="UnitPrice" />
+                        <asp:BoundField DataField="F4" HeaderText="Quantity" />
+                        <asp:BoundField DataField="F5" HeaderText="TaxRate" />
+                        <asp:BoundField DataField="F6" HeaderText="DiscountAmount" />
+                        <asp:BoundField DataField="F7" HeaderText="SalePrice" />
+                        <asp:BoundField DataField="F8" HeaderText="TotalPrice" />
+                    </Columns>
+                </asp:GridView>
+            </td>
+        </tr>
+        <tr>
+            <td style="width: 16%">
+                &nbsp;</td>
+            <td  style="width: 47%">
+                &nbsp;</td>
+            <td  style="width: 20%">
+                &nbsp;</td>
+        </tr>
+    </table>
+</asp:Content>
+

@@ -1,0 +1,304 @@
+﻿<%@ Page Title="Branch Information" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true" CodeFile="frmBranchSetup.aspx.cs" Inherits="frmBranchSetup" %>
+
+<asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
+<script language="javascript" type="text/javascript">
+ function isNumber(evt) {
+            evt = (evt) ? evt : window.event;
+            var charCode = (evt.which) ? evt.which : evt.keyCode;
+            if (charCode != 46 && charCode > 31
+            && (charCode < 48 || charCode > 57)) {
+                return false;
+            }
+            return true;
+        }
+       
+</script>  
+
+<div id="frmMainDiv" style="background-color:White; width:100%;">
+
+<table  id="pageFooterWrapper">
+ <tr>
+	<td align="center">
+        <asp:Button   ID="BtnDelete" runat="server"  ToolTip="Delete Record"  
+            OnClick="BtnDelete_Click"  TabIndex="903" 
+            
+            onclientclick="javascript:return window.confirm('are u really want to delete  these data')" Text="Delete" 
+        Height="35px" Width="100px" BorderStyle="Outset"  /></td>
+	<td align="center">
+	<asp:Button  ID="BtnFind" runat="server"  ToolTip="Find" 
+            OnClick="BtnFind_Click"  TabIndex="902" Text="Find" 
+        Height="35px" Width="100px" BorderStyle="Outset" Visible="False"  />
+	</td>
+	<td align="center">
+        <asp:Button ID="BtnSave" runat="server" ToolTip="Save or Update Record" 
+            OnClick="BtnSave_Click" TabIndex="901" Text="Save" 
+        Height="35px" Width="100px" BorderStyle="Outset"  /></td>
+	<td align="center">
+        <asp:Button ID="BtnReset" runat="server" ToolTip="Clear Form" 
+            OnClick="BtnReset_Click"  TabIndex="904" Text="Clear" 
+        Height="35px" Width="100px" BorderStyle="Outset"  /></td>           
+	</tr>
+	</table>
+
+<table style="width:100%;">
+<tr>
+<td style="width:5%;">&nbsp;</td>
+<td style="width:90%;" align="center">
+    &nbsp;</td>
+<td style="width:5%;">&nbsp;</td>
+</tr>
+<tr>
+<td style="width:5%;">&nbsp;</td>
+<td style="width:90%;" align="left">
+ 
+        <ajaxtoolkit:TabContainer ID="tabVch" runat="server" Width="99%" ActiveTabIndex="0" 
+                    Font-Size="8pt">
+            <ajaxtoolkit:TabPanel ID="tpVchDtl" runat="server" 
+                HeaderText="Voucher Detail Information">
+                <HeaderTemplate>
+                    Branch Information
+                </HeaderTemplate>
+                <ContentTemplate>
+    <table style="width:100%; padding-right:10px;">
+             <tr>
+                <td style="width:20%; font-size:9pt; font-weight: 700; height: 27px;">Branch Name<asp:Label 
+                        ID="lblID" runat="server" Visible="False"></asp:Label>
+                 </td>
+                <td colspan="3" style="height: 27px">
+                   <asp:TextBox SkinID="tbGray" ID="txtBranch" runat="server" Width="100%" 
+                        CssClass="tbl" Font-Size="9pt" MaxLength="200" Height="20px"></asp:TextBox>
+                </td>
+                <td style="width:25%; height: 27px;" align="center">
+                    <asp:CheckBox ID="CheckBox1" runat="server" Text="Main Branch" />
+                </td>
+            </tr>
+             <tr>
+                <td style="width:20%; font-size:9pt; height: 29px;">Short Name</td>
+                <td style="width:25%; height: 29px;">
+                   <asp:TextBox SkinID="tbGray" ID="txtShortName" runat="server" Width="100%" 
+                        CssClass="tbc" Font-Size="9pt" MaxLength="50" Height="20px"></asp:TextBox>
+                </td>
+                <td style="width:5%; height: 29px;"></td>
+                <td style="width:20%; font-size:9pt; height: 29px;">Company</td>
+                <td style="width:25%; height: 29px;">
+                   <asp:TextBox SkinID="tbGray" ID="txtComKey" runat="server" Width="90%" 
+                        CssClass="tbc" Font-Size="9pt" MaxLength="50" Height="20px"></asp:TextBox>
+                </td>
+            </tr>
+           <tr>
+                <td style="width:20%; font-size:9pt; height: 28px; font-weight: 700;">Branch Key</td>
+                <td style="width:25%; height: 28px;">
+                   <asp:TextBox SkinID="tbGray" ID="txtBranchKey" runat="server" Width="100%" onkeypress="return isNumber(event)" 
+                        CssClass="tbc" Font-Size="9pt" MaxLength="20" Height="20px"></asp:TextBox>
+                </td>
+                <td style="width:5%; height: 28px;"></td>
+                <td style="width:20%; font-size:9pt; height: 28px;">Computerized</td>
+                <td style="width:25%; height: 28px;">
+                   <asp:TextBox SkinID="tbGray" ID="txtComputerized" runat="server" Width="90%" 
+                        CssClass="tbc" Font-Size="9pt" MaxLength="50" Height="20px"></asp:TextBox>
+                </td>
+            </tr>
+           
+            <tr>
+                <td style="width:20%; font-size:9pt; height: 27px;">Address</td>
+                <td style="width:80%; height: 27px;" colspan="4">
+                   <asp:TextBox SkinID="tbGray" ID="txtAddress1" runat="server" Width="97%" 
+                        CssClass="tbl" Font-Size="9pt" MaxLength="200" Height="20px"></asp:TextBox>
+                </td>
+            </tr>
+            <tr>
+                <td style="width:20%; font-size:9pt; height: 27px;">Phone</td>
+                <td style="width:25%; height: 27px;">
+                   <asp:TextBox SkinID="tbGray" ID="txtPhone" runat="server" Width="100%" 
+                        CssClass="tbc" Font-Size="9pt" MaxLength="20" Height="20px"></asp:TextBox>
+                </td>
+                <td style="width:5%; height: 27px;"></td>
+                <td style="width:20%; font-size:9pt; height: 27px;">Mobile</td>
+                <td style="width:25%; height: 27px;">
+                   <asp:TextBox SkinID="tbGray" ID="txtMobile" runat="server" Width="90%" 
+                        CssClass="tbc" Font-Size="9pt" MaxLength="20" Height="20px"></asp:TextBox>
+                </td>
+            </tr>
+            <tr>
+                <td style="width:20%; font-size:9pt; height: 27px;">Fax</td>
+                <td style="width:25%; height: 27px;">
+                   <asp:TextBox SkinID="tbGray" ID="txtFax" runat="server" Width="100%" 
+                        CssClass="tbc" Font-Size="9pt" MaxLength="20" Height="20px"></asp:TextBox>
+                </td>
+                <td style="width:5%; height: 27px;"></td>
+                <td style="width:20%; font-size:9pt; height: 27px;">Email</td>
+                <td style="width:25%; height: 27px;">
+                   <asp:TextBox SkinID="tbGray" ID="txtEmail" runat="server" Width="90%" 
+                        CssClass="tbc" Font-Size="9pt" MaxLength="50" Height="20px"></asp:TextBox>
+                </td>
+            </tr>
+            <tr>
+                <td style="width:20%; font-size:9pt;">Issuing Place</td>
+                <td style="width:25%;">
+                   <asp:TextBox SkinID="tbGray" ID="txtIssuingPlace" runat="server" Width="100%" 
+                        CssClass="tbc" Font-Size="9pt" MaxLength="20" Height="20px"></asp:TextBox>
+                </td>
+                <td style="width:5%"></td>
+                <td style="width:20%; font-size:9pt;">Status</td>
+                <td style="width:25%;">
+                    <asp:DropDownList ID="ddlStatus" runat="server" Height="26px" Width="90%">
+                        <asp:ListItem Value="1">Active</asp:ListItem>
+                        <asp:ListItem Value="2">In Active</asp:ListItem>
+                    </asp:DropDownList>
+                </td>
+            </tr>
+        </table>
+        <br/>
+        <asp:GridView CssClass="mGrid" ID="dgBranch" runat="server" AutoGenerateColumns="False"
+        AllowPaging="True" Width="100%" BackColor="White" BorderWidth="1px" BorderStyle="Solid"
+        CellPadding="2" CellSpaAMBg="0" BorderColor="LightGray" Font-Size="8pt" 
+        AllowSorting="True" PageSize="20" ForeColor="#333333" 
+        onselectedindexchanged="dgBranch_SelectedIndexChanged"
+        onpageindexchanging="dgBranch_PageIndexChanging" 
+        onrowdatabound="dgBranch_RowDataBound">
+  <Columns>
+  <asp:CommandField ShowSelectButton="True">
+<ItemStyle HorizontalAlign="Center" ForeColor="Blue" Height="20px" Width="7%" 
+          Font-Bold="True" Font-Size="12pt"></ItemStyle>
+      </asp:CommandField>
+  <asp:BoundField  HeaderText="Branch Key" DataField="BranchKey">
+<ItemStyle HorizontalAlign="Center" Width="10%"></ItemStyle>
+      </asp:BoundField>
+  <asp:BoundField  HeaderText="Branch Name" DataField="BranchName">  
+<ItemStyle HorizontalAlign="Left" Width="30%"></ItemStyle>
+      </asp:BoundField>
+  <asp:BoundField  HeaderText="Address" DataField="Address1">
+<ItemStyle HorizontalAlign="Left" Width="30%"></ItemStyle>
+      </asp:BoundField>
+  <asp:BoundField  HeaderText="Phone" DataField="Phone">
+<ItemStyle HorizontalAlign="Center" Width="10%"></ItemStyle>
+      </asp:BoundField>
+  <asp:BoundField  HeaderText="Mobile" DataField="Mobile">    
+<ItemStyle HorizontalAlign="Center" Width="10%"></ItemStyle>
+      </asp:BoundField>
+      <asp:BoundField DataField="ID" HeaderText="ID" />
+  </Columns>
+                        <RowStyle BackColor="White" />
+                        <PagerStyle HorizontalAlign="Center" CssClass="pgr" />
+                        <HeaderStyle BackColor="Silver" Font-Bold="True" ForeColor="Black" />
+                        <AlternatingRowStyle CssClass="alt" />
+  </asp:GridView>
+                </ContentTemplate>
+</ajaxtoolkit:TabPanel>                                            
+<ajaxtoolkit:TabPanel ID="tpVchHist" runat="server" HeaderText="Voucher History">
+    <HeaderTemplate>
+        Branch Document
+    </HeaderTemplate>
+    <ContentTemplate>
+       <div>
+            <fieldset style="vertical-align: top; border: solid .5px #8BB381;text-align:left;line-height:1.5em;"><legend style="color: maroon;">
+    <b>Upload Document</b></legend>
+                                    <table style="width: 100%">
+                            <tr>
+                                <td style="width: 15%; font-weight: 700;">
+                                    File Description</td>
+                                <td style="width: 2%; font-weight: 700;" align="center">
+                                    :</td>
+                                <td colspan="2">
+                                    <asp:TextBox ID="txtFileDescription" runat="server" CssClass="tbc" Font-Size="8pt" 
+                                        SkinID="tbPlain" Style="text-align: left;" Width="100%"></asp:TextBox>
+                                </td>
+                                <td align="center" style="width: 2%">
+                                    &nbsp;</td>
+                                <td align="center" style="width: 15%">
+                                    &nbsp;</td>
+                            </tr>
+                                         <tr>
+                                             <td style="width: 15%; font-weight: 700;">
+                                                 Select File</td>
+                                             <td align="center" style="width: 2%; font-weight: 700;">
+                                                 :</td>
+                                             <td style="width: 40%">
+                                                 <asp:FileUpload ID="fileUpload1" runat="server" Width="100%" />
+                                             </td>
+                                             <td align="right" style="width: 15%">
+                                                 <asp:Button ID="btnUploadFile" runat="server" Height="35px" 
+                                                     OnClick="btnUploadFile_Click" Text="Upload" Width="80%" />
+                                             </td>
+                                             <td align="center" style="width: 2%">
+                                                 &nbsp;</td>
+                                             <td align="center" style="width: 15%">
+                                                 &nbsp;</td>
+                                         </tr>
+                                         <tr>
+                                             <td style="width: 15%; font-weight: 700;">
+                                                 &nbsp;</td>
+                                             <td style="width: 2%">
+                                                 &nbsp;</td>
+                                             <td colspan="2">
+                                                 <asp:GridView ID="dgQuestion" runat="server" AutoGenerateColumns="False" 
+                                                     CssClass="mGrid" onrowcommand="dgQuestion_RowCommand" onrowdatabound="dgSubject_RowDataBound" 
+                                                     Width="100%" onselectedindexchanged="dgQuestion_SelectedIndexChanged">
+                                                     <HeaderStyle BackColor="#DF5015" />
+                                                     <Columns>
+                                                         <asp:BoundField DataField="ID" HeaderText="Id">
+                                                         <ItemStyle HorizontalAlign="Center" Width="8%" />
+                                                         </asp:BoundField>
+                                                         <asp:TemplateField HeaderText="SL No.">
+                                                             <ItemTemplate>
+                                                                 <%#Container.DataItemIndex+1%>
+                                                             </ItemTemplate>
+                                                             <ItemStyle HorizontalAlign="Center" Width="10%" />
+                                                         </asp:TemplateField>
+                                                         <asp:BoundField DataField="FileDescription" HeaderText="File Description">
+                                                         <ItemStyle HorizontalAlign="Left" Width="50%" />
+                                                         </asp:BoundField>
+                                                         <asp:TemplateField>
+                                                             <ItemTemplate>
+                                                                 <asp:LinkButton ID="lnkDownload" runat="server" Font-Bold="True" CommandName="Download"
+                                                                      Text="Download"></asp:LinkButton>
+                                                             </ItemTemplate>
+                                                             <ItemStyle HorizontalAlign="Center" Width="10%" /> 
+                                                         </asp:TemplateField>
+                                                          <asp:CommandField HeaderText="Delete" ShowSelectButton="True" 
+                                                             SelectText="Delete">
+                                                                    <ItemStyle HorizontalAlign="Center" Width="5%" Font-Bold="True" 
+                                                             Font-Size="10pt" />
+                                                          </asp:CommandField>
+                                                     </Columns>
+                                                 </asp:GridView>
+                                             </td>
+                                             <td align="center" style="width: 15%">
+                                                 &nbsp;</td>
+                                         </tr>
+                                         <tr>
+                                             <td style="width: 15%; font-weight: 700;">
+                                                 &nbsp;</td>
+                                             <td style="width: 2%">
+                                                 &nbsp;</td>
+                                             <td style="width: 40%">
+                                                 &nbsp;</td>
+                                             <td align="right" style="width: 15%">
+                                                 &nbsp;</td>
+                                             <td align="center" style="width: 2%">
+                                                 &nbsp;</td>
+                                             <td align="center" style="width: 15%">
+                                                 &nbsp;</td>
+                                         </tr>
+                                    </table>
+                                    </fieldset >
+       </div>
+    </ContentTemplate>
+</ajaxtoolkit:TabPanel>
+</ajaxtoolkit:TabContainer>
+
+    </td>
+<td style="width:5%;">&nbsp;</td>
+</tr>
+<tr>
+<td style="width:5%;"></td>
+<td style="width:90%;" align="center">
+
+
+    </td>
+<td style="width:5%;"></td>
+</tr>
+</table>
+</div>
+</asp:Content>
+

@@ -1,0 +1,76 @@
+﻿.simpleZoomOut
+{
+    cursor:url(zoomin.cur),pointer !important;
+}
+.simpleOIZ
+{
+	display:inline;
+}
+
+.simpleOIZ .oizZoomPanel
+{
+    position:absolute;
+    background:white;
+    border:solid 1px gray;
+}
+
+.simpleOIZ .oizLoading
+{
+    position:absolute;
+    font-family:Verdana;
+    font-size:11px;
+    background:white;
+    border:solid 1px gray;
+}
+
+.simpleOIZ .oizBigImage
+{
+	cursor:url(zoomout.cur),pointer !important;
+	border:solid 1px gray;
+}
+
+
+.simpleOIZ .oizBackground
+{
+	position:absolute;
+	direction:rtl;
+	background-color:black;
+}
+
+.simpleOIZ .oizEffectPanel
+{
+	background-color:white;
+	border:solid 1px gray;
+}
+
+.simpleOIZ .oizEffectImage
+{
+    border:solid 1px gray;
+}
+
+.simpleOIZ .oizTransparent
+{
+	filter:alpha(opacity=0);
+	-moz-opacity:0.0;
+	opacity:0.0;    
+}
+
+.simpleOIZ .oizDescription
+{
+    color:black;
+    font-family:Arial;
+    font-size:12px;
+    font-weight:bold;
+}
+
+.simpleOIZ .oizCloseButton
+{
+
+}
+
+.simpleOIZ .oizMoveButton
+{
+
+}
+
+

@@ -1,0 +1,113 @@
+body{margin:0px;padding:0px; font:11px tahoma;}
+
+p{margin:0px;padding:0px;}
+
+img{float:left; border:0;}
+
+.flt{float:left;}
+
+.fltr{float:right;}
+
+.dis{display:inline;}
+
+.main_bg	
+	{width:945px; background:url(../images/main_bg.jpg) repeat-y; padding-left:55px;}
+	
+.hd_color
+	{width:890px; background-color:#B8E0FA;}
+	
+.menu_bg{width:59px; height:18px; background:url(../images/menu_bg.gif) no-repeat; margin:20px 0px 0px 5px;
+		  padding:5px 0px 0px 5px; font-weight:bold; color:#FFF; text-decoration:none;}
+		  
+.search{color:#264F76; font-weight:bold; margin:20px 0px 0px 210px;}
+
+.tbox1{width:163px; height:14px; border:1px solid #404040; margin:19px 0px 0px 4px; font-size:8pt;}
+
+.hp_go{margin:19px 0px 0px 5px;}
+
+.hd_bg1,.hd_bg2{width:890px; height:140px; background:url(../images/hp_bg1.jpg) no-repeat left;}
+
+.hd_bg2{background:url(../images/hp_bg2.jpg) no-repeat right;}
+
+.logo{margin:35px 0px 0px 165px;}
+
+/*LEFT*/
+
+.inner_block{width:890px; float:left; background:url(../images/cp_bg1.jpg) no-repeat top; background-color:#FFF; margin-top:4px;}
+
+.left{width:242px; background:url(../images/lp_tile.jpg) repeat-y; margin:26px 0px 0px 10px;}
+
+.left1{width:233px; background:url(../images/lp_tile1.jpg) #1E70B0 repeat-x; margin-left:5px; padding-bottom:180px;}
+
+.sub_head{font-weight:bold; margin:21px 0px 0px 16px; color:#FFF; width:205px; border-bottom:1px solid #2978B4; padding-bottom:7px;}
+
+.lp_list1{width:142px;}
+
+.lp_list1 a{color:#FEFEFE; margin:8px 0px 0px 17px; background:url(../images/lp_blt.gif) no-repeat left; padding-left:15px; float:left;}
+
+
+/*CENTER*/
+
+.center{width:630px;}
+
+.cp_text1{font-weight:bold; margin:38px 0px 0px 0px;}
+
+.cp_text2{color:#939A98; margin:3px 0px 0px 0px;}
+
+.cp_blt{margin:38px 0px 0px 140px;}
+
+.date{margin:38px 0px 0px 3px; font-weight:bold; color:#587C9B;}
+
+.cp_bdr{width:575px; margin-left:15px; padding-bottom:15px; border-bottom:1px solid #D1CECC;}
+
+.cp_pic1{margin:14px 31px 0px 0px;}
+
+.cp_p1{width:347px; margin:15px 0px 0px 22px; font:11px/14px tahoma; color:#3C3C3C;}
+
+.cp_p2{width:574px; margin:12px 0px 0px 22px; font:11px/14px tahoma; color:#3C3C3C;}
+
+.cp_p3{width:347px; margin: 12px 0px 0px 5px; font:11px/14px tahoma; color:#3C3C3C;}
+
+.user1{color:#1465A4; margin:12px 0px 0px 0px;}
+
+.cp_bdr1{width:575px; margin-left:23px; padding-bottom:15px; border-bottom:1px solid #F3F3F2;}
+
+.cp_blt2{margin:17px 0px 0px 140px;}
+
+.cp_pic2{margin:13px 31px 0px 0px;}
+
+.user2{color:#1465A4; margin:12px 0px 0px 23px;}
+
+.footer{width:890px; background:url(../images/fp_tile1.jpg) #BDE2FA repeat-x; margin-top:20px;}
+
+.copyright{margin:26px 0px 0px 600px; color:#565656; padding-bottom:25px; font-size:10px;}
+
+/*INNER PAGE*/
+
+.in_bdr{width:575px; margin-left:23px; padding-bottom:15px; border-bottom:2px solid #D1CECC;}
+
+.in_p1{width:575px; margin:15px 0px 0px 23px; color:#3C3C3C; font:11px/14px tahoma;}
+
+.in_bdr1{width:575px; border-top:1px solid #F3F3F2; border-bottom:2px solid #D1CECC; margin:15px 0px 0px 22px; padding-bottom:10px;}
+
+.in_text1{font-weight:bold; margin:15px 0px 0px 0px;}
+
+.in_text2{color:#939A98; margin:3px 0px 0px 0px;}
+
+.in_blt{margin:15px 0px 0px 140px;}
+
+.in_blt1{margin:15px 0px 0px 220px;}
+
+.in_blt2{margin:15px 0px 0px 160px;}
+
+.in_date{margin:15px 0px 0px 3px; font-weight:bold; color:#587C9B;}
+
+.in_pic1{margin:10px 0px 0px 22px;}
+
+.in_p2{width:352px; margin:13px 0px 0px 23px; color:#3C3C3C; font:11px/14px tahoma;}
+
+.in_user2{color:#1465A4; margin:10px 0px 0px 0px;}
+
+
+
+		  

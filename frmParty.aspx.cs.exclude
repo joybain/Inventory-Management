@@ -1,0 +1,297 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using System.Data;
+using Delve;
+using System.Data.SqlClient;
+
+public partial class frmParty : System.Web.UI.Page
+{
+    PartyInfoManager aPartyInfoManager = new PartyInfoManager();
+    private static Permis per;
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        if (Session["user"] == null)
+        {
+            if (Session.SessionID != "" | Session.SessionID != null)
+            {
+                clsSession ses = clsSessionManager.getSession(Session.SessionID);
+                if (ses != null)
+                {
+                    Session["user"] = ses.UserId;
+                    Session["book"] = "AMB";
+                    string connectionString = DataManager.OraConnString();
+                    SqlDataReader dReader;
+                    SqlConnection conn = new SqlConnection();
+                    conn.ConnectionString = connectionString;
+                    SqlCommand cmd = new SqlCommand();
+                    cmd.Connection = conn;
+                    cmd.CommandType = CommandType.Text;
+                    cmd.CommandText =
+                        "Select user_grp,[description],UserType,case when UserType=1 then 'Bangladesh' else 'Philippine' end AS[LoginCountry] from utl_userinfo where upper(user_name)=upper('" +
+                        Session["user"].ToString().ToUpper() + "') and status='A'";
+                    conn.Open();
+                    dReader = cmd.ExecuteReader();
+                    string wnot = "";
+                    if (dReader.HasRows == true)
+                    {
+                        while (dReader.Read())
+                        {
+                            Session["userlevel"] = int.Parse(dReader["user_grp"].ToString());
+                            //Session["dept"] = dReader["dept"].ToString();
+                            wnot = "Welcome " + dReader["description"].ToString();
+                        }
+                        Session["wnote"] = wnot;
+                        Session["LoginCountry"] = dReader["LoginCountry"].ToString();
+                        cmd = new SqlCommand();
+                        cmd.Connection = conn;
+                        cmd.CommandType = CommandType.Text;
+                        //cmd.CommandText = "Select book_desc,company_address1,company_address2,separator_type from gl_set_of_books where book_name='" + Session["book"].ToString() + "' ";
+                        if (Convert.ToInt32(dReader["UserType"].ToString()) == 2)
+                        {
+
+                            Session["bookMAN"] = "MAN";
+                        }
+                        else
+                        {
+                            Session["bookMAN"] = Session["book"].ToString();
+                        }
+                        cmd.CommandText = "Select book_desc,company_address1,company_address2,separator_type,ShotName from gl_set_of_books where book_name='" + Session["bookMAN"] + "' ";
+
+                        if (dReader.IsClosed == false)
+                        {
+                            dReader.Close();
+                        }
+                        dReader = cmd.ExecuteReader();
+                        if (dReader.HasRows == true)
+                        {
+                            while (dReader.Read())
+                            {
+                                Session["septype"] = dReader["separator_type"].ToString();
+                                Session["org"] = dReader["book_desc"].ToString();
+                                Session["add1"] = dReader["company_address1"].ToString();
+                                Session["add2"] = dReader["company_address2"].ToString();
+                            }
+                        }
+                    }
+                    dReader.Close();
+                    conn.Close();
+                }
+            }
+        }
+        try
+        {
+            string pageName = DataManager.GetCurrentPageName();
+            string modid = PermisManager.getModuleId(pageName);
+            per = PermisManager.getUsrPermis(Session["user"].ToString().Trim().ToUpper(), modid);
+            if (per != null && per.AllowView == "Y")
+            {
+                ((Label)Page.Master.FindControl("lblLogin")).Text = Session["wnote"].ToString();
+                ((Label)Page.Master.FindControl("lblCountryName")).Text = Session["LoginCountry"].ToString();
+                ((LinkButton)Page.Master.FindControl("lbLogout")).Visible = true;
+            }
+            else
+            {
+                Response.Redirect("Home.aspx?sid=sam");
+            }
+        }
+        catch
+        {
+            Response.Redirect("Default.aspx?sid=sam");
+        }
+
+        if (!IsPostBack)
+        {
+            Clear();
+        }
+    }
+    private void Clear()
+    {
+        txtPartyCode.Text =txtPartyName.Text = txtAddress.Text =txtMobile.Text = txtPhone.Text = txtEmail.Text = "";
+        txtPartyCode.Text = IdManager.GetNextID("PartyInfo", "PartyCode").ToString().PadLeft(7, '0');
+        dgParty.DataSource = aPartyInfoManager.getPartyInfoDetails();
+        dgParty.DataBind();
+
+        string query3 = "select '' [COUNTRY_CODE],'' [COUNTRY_DESC]  union select [COUNTRY_CODE] ,[COUNTRY_DESC] from [COUNTRY_INFO] order by 1";
+        util.PopulationDropDownList(ddlCountry, "COUNTRY_INFO", query3, "COUNTRY_DESC", "COUNTRY_CODE");
+        ddlCountry.SelectedValue = "1";
+        txtPartyName.Focus();
+    }
+    protected void Clear_Click(object sender, EventArgs e)
+    {
+        Clear();
+    }
+    protected void btnSave_Click(object sender, EventArgs e)
+    {
+        string IdGlCoa = "";
+        string Desc = "";
+        string User = "";
+        string glCode = "";
+
+        if (ddlCountry.SelectedValue == "1")
+        {
+            Desc = "Accounts Receivable from-Party-BD-" + txtPartyName.Text;
+            User = "Ban";
+            glCode = "1046000";
+        }
+        else if (ddlCountry.SelectedValue == "2")
+        {
+            Desc = "Accounts Receivable from-Party-PH-" + txtPartyName.Text;
+            User = "Man";
+            glCode = "1046000";
+        }
+        else
+        {
+            Desc = "Accounts Receivable from-Party" + txtPartyName.Text;
+            User = "All";
+            
+        }
+        if (string.IsNullOrEmpty(ddlCountry.SelectedItem.Text))
+        {
+
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Select Country Name..!!');", true);
+            return;
+        }
+        PartyInfo aPartyInfo = new PartyInfo();
+        if (txtPartyName.Text == "")
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Enter Party Name ...!!');", true);
+            return;
+        }        
+        int Count = aPartyInfoManager.GetPartyInfoCount(lblID.Text);
+        if (Count > 0)
+        {
+            int CheckCode = IdManager.GetShowSingleValueInt("COUNT(*)", "SEG_COA_CODE", "GL_SEG_COA", txtGlCoa.Text);
+            if (CheckCode<=0)
+            {
+                 ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Rong Segment code check this code.\\n Try again ...!!');", true);
+                 return;
+            }
+            aPartyInfo.ID = lblID.Text;
+            aPartyInfo.PartyCode = txtPartyCode.Text;
+            aPartyInfo.PartyName = txtPartyName.Text;
+            aPartyInfo.Address = txtAddress.Text;
+            aPartyInfo.Mobile = txtMobile.Text;
+            aPartyInfo.Phone = txtPhone.Text;
+            aPartyInfo.Email = txtEmail.Text;
+            aPartyInfo.GlCoa = txtGlCoa.Text;
+            aPartyInfo.Country = ddlCountry.SelectedValue;
+            aPartyInfo.LoginBy = Session["user"].ToString();
+            string NM = Session["ShotName"].ToString();
+            aPartyInfo.GlCoaDesc = NM + "," + Desc;
+            aPartyInfoManager.UpadatePartyInfo(aPartyInfo);
+            Clear();
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Record(s) is/are update suceessfullly..!!');", true);
+        }
+        else
+        {
+            aPartyInfo.ID = lblID.Text;
+            aPartyInfo.PartyCode = IdManager.GetNextID("PartyInfo", "PartyCode").ToString().PadLeft(7, '0');
+            aPartyInfo.PartyName = txtPartyName.Text;
+            aPartyInfo.Address = txtAddress.Text;
+            aPartyInfo.Mobile = txtMobile.Text;
+            aPartyInfo.Phone = txtPhone.Text;
+            aPartyInfo.Email = txtEmail.Text;
+            aPartyInfo.Country = ddlCountry.SelectedValue;
+            aPartyInfo.LoginBy = Session["user"].ToString();
+            IdGlCoa = IdManager.getAutoIdWithParameter("1044", "GL_SEG_COA", "SEG_COA_CODE", glCode, "000", "3");
+            aPartyInfo.GlCoa = IdGlCoa;
+            txtGlCoa.Text = IdGlCoa;
+            aPartyInfoManager.SavePartyInfo(aPartyInfo);
+          
+            //SegCoa sg = new SegCoa();
+            //sg.GlSegCode = IdGlCoa;
+            //sg.SegCoaDesc = Desc;
+            //sg.LvlCode = "02";
+            //sg.ParentCode = glCode;
+            //sg.BudAllowed = "Y";
+            //sg.PostAllowed = "N";
+            //sg.AccType = "A";
+            //sg.OpenDate = DateTime.Now.Date.ToString("dd/MM/yyyy");
+            //sg.RootLeaf = "L";
+            //sg.Status = "A";
+            //sg.Taxable = "N";
+            //sg.BookName = "AMB";
+            //sg.EntryUser = User;
+            //sg.EntryDate = DateTime.Now.Date.ToString("dd/MM/yyyy");
+            //sg.AuthoDate = DateTime.Now.Date.ToString("dd/MM/yyyy");
+            //sg.AuthoUser = "ACC";
+            //SegCoaManager.CreateSegCoa(sg);
+            ////string dept = SegCoaManager.GetSegCoaDesc(Session["dept"].ToString());
+            //GlCoa gl = new GlCoa();
+            //gl.GlCoaCode = "1-" + IdGlCoa;
+            //gl.CoaEnabled = "Y";
+            //gl.BudAllowed = "N";
+            //gl.PostAllowed = "Y";
+            //gl.Taxable = "N";
+            //gl.AccType = "A";
+            //gl.Status = "A";
+            //gl.BookName = "AMB";
+            //string NM = Session["ShotName"].ToString();
+            //gl.CoaDesc = NM + "," + Desc;
+            //gl.CoaCurrBal = "0.00";
+            //gl.CoaNaturalCode = IdGlCoa;
+            //gl.LoginBy = User;           
+            //GlCoaManager.CreateGlCoa(gl);
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Record(s) is/are saved suceessfullly..!!');", true);
+            Clear();
+        }
+    }
+
+    protected void btnDelete_Click(object sender, EventArgs e)
+    {
+        PartyInfo aPartyInfo = new PartyInfo();
+        aPartyInfo.ID = lblID.Text;
+        aPartyInfo.PartyCode = txtPartyCode.Text;
+        aPartyInfo.PartyName = txtPartyName.Text;
+        aPartyInfo.Address = txtAddress.Text;
+        aPartyInfo.Mobile = txtMobile.Text;
+        aPartyInfo.Phone = txtPhone.Text;
+        aPartyInfo.Email = txtEmail.Text;
+        aPartyInfo.GlCoa = txtGlCoa.Text;
+        aPartyInfoManager.DeletePartyInfo(aPartyInfo);
+        Clear();
+        ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Record has been delete successfully...!!');", true);
+    }
+    protected void dgParty_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        lblID.Text = dgParty.SelectedRow.Cells[5].Text.ToString();
+        DataTable dt = aPartyInfoManager.ShowPartyInfo(lblID.Text);
+        if (dt.Rows.Count>0)
+        {
+            txtPartyCode.Text = dt.Rows[0]["PartyCode"].ToString();
+            txtPartyName.Text = dt.Rows[0]["PartyName"].ToString();
+            txtAddress.Text = dt.Rows[0]["Address"].ToString();
+            txtMobile.Text = dt.Rows[0]["Mobile"].ToString();
+            txtPhone.Text = dt.Rows[0]["Phone"].ToString();
+            txtEmail.Text = dt.Rows[0]["Email"].ToString();
+            txtGlCoa.Text = dt.Rows[0]["Gl_CoaCode"].ToString();
+            ddlCountry.SelectedValue = dt.Rows[0]["CountryID"].ToString();            
+        }
+    }
+    protected void dgParty_RowDataBound(object sender, GridViewRowEventArgs e)
+    {
+
+        try
+        {
+            if (e.Row.RowType == DataControlRowType.DataRow | e.Row.RowType == DataControlRowType.Header | e.Row.RowType == DataControlRowType.Footer)
+            {
+                e.Row.Cells[5].Attributes.Add("style", "display:none");
+            }
+        }
+        catch (FormatException fex)
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('" + fex.Message + "');", true);
+        }
+        catch (Exception ex)
+        {
+            if (ex.Message.Contains("Database"))
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Database Maintain Error. Contact to the Software Provider..!!');", true);
+            else
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('There is some problem to do the task. Try again properly.!!');", true);
+        }
+    }
+}

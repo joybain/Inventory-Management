@@ -1,0 +1,3745 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Configuration;
+using System.IO;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using System.Data;
+using iTextSharp.text;
+using iTextSharp.text.pdf;
+using Delve;
+using System.Drawing;
+using iTextSharp.text.pdf.draw;
+using System.Data.SqlClient;
+using ClosedXML.Excel;
+
+public partial class rptShiftment : System.Web.UI.Page
+{
+    ShiftmentAssignManager _aShiftmentAssignManager=new ShiftmentAssignManager();
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        if (Session["user"] == null)
+        {
+            if (Session.SessionID != "" | Session.SessionID != null)
+            {
+                clsSession ses = clsSessionManager.getSession(Session.SessionID);
+                if (ses != null)
+                {
+                    Session["user"] = ses.UserId;
+                    Session["book"] = "AMB";
+                    string connectionString = DataManager.OraConnString();
+                    SqlDataReader dReader;
+                    SqlConnection conn = new SqlConnection();
+                    conn.ConnectionString = connectionString;
+                    SqlCommand cmd = new SqlCommand();
+                    cmd.Connection = conn;
+                    cmd.CommandType = CommandType.Text;
+                    cmd.CommandText =
+                        "Select user_grp,[description],UserType,case when UserType=1 then 'Bangladesh' else 'Philippine' end AS[LoginCountry] from utl_userinfo where upper(user_name)=upper('" +
+                        Session["user"].ToString().ToUpper() + "') and status='A'";
+                    conn.Open();
+                    dReader = cmd.ExecuteReader();
+                    string wnot = "", userType = "";
+                    if (dReader.HasRows == true)
+                    {
+                        while (dReader.Read())
+                        {
+                            Session["userlevel"] = int.Parse(dReader["user_grp"].ToString());
+                            //Session["dept"] = dReader["dept"].ToString();
+                            wnot = "Welcome " + dReader["description"].ToString();
+                            Session["LoginCountry"] = dReader["LoginCountry"].ToString();
+                            userType = dReader["UserType"].ToString();
+                        }
+                        Session["wnote"] = wnot;
+                        cmd = new SqlCommand();
+                        cmd.Connection = conn;
+                        cmd.CommandType = CommandType.Text;
+                        //cmd.CommandText = "Select book_desc,company_address1,company_address2,separator_type from gl_set_of_books where book_name='" + Session["book"].ToString() + "' ";
+                        if (Convert.ToInt32(userType) == 2)
+                        {
+
+                            Session["bookMAN"] = "MAN";
+                        }
+                        else
+                        {
+                            Session["bookMAN"] = Session["book"].ToString();
+                        }
+                        cmd.CommandText = "Select book_desc,company_address1,company_address2,separator_type,ShotName from gl_set_of_books where book_name='" + Session["bookMAN"] + "' ";
+
+                        if (dReader.IsClosed == false)
+                        {
+                            dReader.Close();
+                        }
+                        dReader = cmd.ExecuteReader();
+                        if (dReader.HasRows == true)
+                        {
+                            while (dReader.Read())
+                            {
+                                Session["septype"] = dReader["separator_type"].ToString();
+                                Session["org"] = dReader["book_desc"].ToString();
+                                Session["add1"] = dReader["company_address1"].ToString();
+                                Session["add2"] = dReader["company_address2"].ToString();
+                            }
+                        }
+                    }
+                    dReader.Close();
+                    conn.Close();
+                }
+            }
+        }
+        if (!IsPostBack)
+        {
+            Session.Remove("ShipmentID");
+            Session.Remove("CartonNo");
+            Session.Remove("ShipmentName");
+            Session.Remove("SupplierID"); 
+            Session.Remove("SupplierName"); 
+            Session.Remove("ItemSearchID"); 
+            Session.Remove("ItemID"); 
+            Session.Remove("ItemName"); 
+            Session.Remove("CartonNo1"); 
+            Session.Remove("CartonNo2");
+            chkIsNameChange.Visible = false;
+            ddlReportType.SelectedIndex = -1; txtShiftmentNo.Text = "";
+            VisibleTrueOrFalse();
+        }
+    }
+    protected void txtShiftmentNo_TextChanged(object sender, EventArgs e)
+    {
+         DataTable dt = ShiftmentAssignManager.GetShowShiftmentAssignOnSearch(txtShiftmentNo.Text);
+         if (dt.Rows.Count > 0)
+         {             
+             lblShiftmentID.Text = dt.Rows[0]["ID"].ToString();
+             Session["ShipmentID"] = dt.Rows[0]["ID"].ToString();
+             Session["ShipmentName"] = dt.Rows[0]["ShiftmentNO"].ToString();
+             txtShiftmentNo.Text = dt.Rows[0]["ShiftmentNO"].ToString();
+
+             DataTable dtShipSenderInfo = _aShiftmentAssignManager.GetShipmentSenderInfo(lblShiftmentID.Text, "", "", "2");
+             if (dtShipSenderInfo.Rows.Count > 0)
+             {
+                 ddlSenderName.DataSource = dtShipSenderInfo;
+                 ddlSenderName.DataTextField = "Search";
+                 ddlSenderName.DataValueField = "SenderID";
+                 ddlSenderName.DataBind();
+                 ddlSenderName.Items.Insert(0, "");
+             }
+
+         }
+    }
+    protected void txtClear_Click(object sender, EventArgs e)
+    {
+        ddlReportType.SelectedIndex = -1;
+        hfItemID.Value = null;
+        VisibleTrueOrFalse();
+        txtCart1.Text = txtCart2.Text =lblShiftmentID.Text=txtShiftmentNo.Text= string.Empty;
+        ddlSenderName.Items.Clear();
+        ddlCustomer.Items.Clear();
+        ddlSenderName.SelectedIndex = -1;
+        ddlCustomer.SelectedIndex = -1;
+    }
+
+    private void VisibleTrueOrFalse()
+    {
+        txtShiftmentNo.Text = lblName.Text = lblPartyID.Text =
+            txtItemsName.Text = lblItemsID.Text = txtParty.Text = lblShiftmentID.Text = "";
+        ddlSenderName.Items.Clear();
+        ddlCustomer.Items.Clear();
+        ddlSenderName.SelectedIndex = -1;
+        ddlCustomer.SelectedIndex = -1;
+        lblName.Visible = txtName.Visible = lblShiftmentNo.Visible = txtShiftmentNo.Visible =
+            txtParty.Visible = txtItemsName.Visible = tab1.Visible = tab2.Visible = false;
+    }
+    protected void ddlReportType_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        chkIsNameChange.Visible = false;
+        if (ddlReportType.SelectedValue == "SWR")
+        {
+            VisibleTrueOrFalse();
+            lblName.Visible = txtName.Visible = lblShiftmentNo.Visible = txtShiftmentNo.Visible = true;
+            lblName.Text = "Carton No : ";
+            tab1.Visible = true;
+        }
+        else if (ddlReportType.SelectedValue == "PSWR")
+        {
+           
+            VisibleTrueOrFalse();
+            lblName.Visible = lblShiftmentNo.Visible = txtShiftmentNo.Visible =txtParty.Visible= true;
+            lblName.Text = "Supplier Name : ";
+            tab1.Visible = true;
+        }
+        else if (ddlReportType.SelectedValue == "PLR")
+        {
+
+            VisibleTrueOrFalse();
+            lblName.Visible = lblShiftmentNo.Visible = txtShiftmentNo.Visible = txtParty.Visible = true;
+            lblName.Text = "Supplier Name : ";
+            chkIsNameChange.Visible = true;
+            tab1.Visible = true;
+        }
+        else if (ddlReportType.SelectedValue == "PLRWS")
+        {
+
+            VisibleTrueOrFalse();
+            lblShiftmentNo.Visible = txtShiftmentNo.Visible =true;
+            lblName.Visible = txtParty.Visible = false;
+            lblName.Text = "Supplier Name : ";
+            chkIsNameChange.Visible = true;
+            tab1.Visible = true;
+        }
+        else if (ddlReportType.SelectedValue == "SWRC")
+        {
+            VisibleTrueOrFalse();
+            lblName.Visible = lblShiftmentNo.Visible = txtShiftmentNo.Visible = txtItemsName.Visible = true;
+            lblName.Text = "Items Name : ";
+            tab1.Visible = true;
+        }
+        else if (ddlReportType.SelectedValue == "SBR")
+        {
+            VisibleTrueOrFalse();
+            lblShiftmentNo.Visible = txtShiftmentNo.Visible = tab1.Visible = tab2.Visible = true;
+        }
+        else if (ddlReportType.SelectedValue == "SBRI")
+        {
+            VisibleTrueOrFalse();
+            lblShiftmentNo.Visible = txtShiftmentNo.Visible = tab1.Visible = tab2.Visible = true;
+        }
+        //***************** Send Cartoon List || Cartoon Received List **************//
+        else if (ddlReportType.SelectedValue == "SCL" || ddlReportType.SelectedValue == "SRL" || ddlReportType.SelectedValue == "SRLT")
+        {
+            
+            VisibleTrueOrFalse();
+            lblShiftmentNo.Visible = txtShiftmentNo.Visible = tab1.Visible = tab2.Visible = true;
+        }
+            //*************** Shiftment Wise All Items Details *****//
+        else if (ddlReportType.SelectedValue == "ALD")
+        {
+
+            VisibleTrueOrFalse();
+            lblShiftmentNo.Visible = txtShiftmentNo.Visible = true;
+            // lblName.Text = "Party Name : ";TIS
+            tab1.Visible = true;
+        }
+
+         //*************** Total Items Stock  *****//
+        else if (ddlReportType.SelectedValue == "TIS")
+        {
+
+            VisibleTrueOrFalse();
+           // lblShiftmentNo.Visible = txtShiftmentNo.Visible = true;
+            // lblName.Text = "Party Name : ";TIS
+           // tab1.Visible = true;
+        }
+    }
+    protected void txtPrint_Click(object sender, EventArgs e)
+    {
+        if (ddlReportType.SelectedItem.Text == "")
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Enter Report Type ..!!');", true);
+            return;
+        }      
+        if (ddlReportType.SelectedValue == "SWR")
+        {
+            if (txtShiftmentNo.Text == "")
+            {
+                ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Enter Shiftment No ..!!');", true);
+                return;
+            }
+            getShiftmentQtyPrint();
+        }
+        //***** Party & Style Wise Report *************//
+        else if (ddlReportType.SelectedValue == "PSWR")
+        {
+            if (txtShiftmentNo.Text == "")
+            {
+                ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Enter Shiftment No ..!!');", true);
+                return;
+            }
+            StyleAndPartyWise();
+        }
+        else if (ddlReportType.SelectedValue == "SWRC")
+        {
+            if (txtShiftmentNo.Text == "")
+            {
+                ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Enter Shiftment No ..!!');", true);
+                return;
+            }
+            Style_Wise_Report();
+        }
+        else if (ddlReportType.SelectedValue == "SBR" || ddlReportType.SelectedValue == "SBRI")
+        {
+            if (string.IsNullOrEmpty(txtShiftmentNo.Text))
+            { ScriptManager.RegisterClientScriptBlock((sender as Control), this.GetType(), "alert", "alert('Input Shiftment No.!!!');", true); txtShiftmentNo.Text = ""; txtShiftmentNo.Focus(); return; }
+            if (string.IsNullOrEmpty(txtCart1.Text))
+            { ScriptManager.RegisterClientScriptBlock((sender as Control), this.GetType(), "alert", "alert('Input CTN No1.!!!');", true); txtCart1.Text = ""; txtCart1.Focus(); return; }
+            if (string.IsNullOrEmpty(txtCart2.Text))
+            { ScriptManager.RegisterClientScriptBlock((sender as Control), this.GetType(), "alert", "alert('Input CTN No2.!!!');", true); txtCart2.Text = ""; txtCart2.Focus(); return; }
+            getShiftmentQtyPrint_Bercode();
+        }
+        else if (ddlReportType.SelectedValue == "PLR")
+        {
+            StyleAndPartyWisePackingList();
+        }
+       
+        else if (ddlReportType.SelectedValue == "PLRWS")
+        {
+            StyleAndPartyWisePackingListWithoutSupplier();
+        }
+        //***************** Send Cartoon List **************//
+
+        else if (ddlReportType.SelectedValue == "SCL" || ddlReportType.SelectedValue == "SRL" || ddlReportType.SelectedValue == "SRLT")
+        {
+            if (string.IsNullOrEmpty(txtShiftmentNo.Text))
+            {
+                ScriptManager.RegisterClientScriptBlock((sender as Control), this.GetType(), "alert", "alert('Select Shipment No.!!');", true);
+                return;
+            }
+            if (!rbPdf.SelectedValue.Equals("EXCEL"))
+            {
+                CartoonSendAndReceiveList();
+            }
+            else
+            {
+                DataTable dtCartoon = ShiftmentItemsCartoonManager.GetShowSendAnReceiveItemsList(lblShiftmentID.Text, txtCart1.Text, txtCart2.Text, "0");
+                if (dtCartoon.Rows.Count > 0)
+                {
+                    dtCartoon.Columns.Add("Reject Qty.", typeof(string));
+                    dtCartoon.Columns.Add("Short Qty.", typeof(string));
+                    dtCartoon.Columns.Add("Excess Qty.", typeof(string));
+                    dtCartoon.Columns.Add("Receive Qty.", typeof(string));
+                    dtCartoon.Columns.Remove("Remarks");
+                    dtCartoon.Columns.Remove("Flag");
+                    dtCartoon.Columns.Remove("ShiftmentID");
+                    dtCartoon.Columns["ID"].ColumnName = "Barcode";
+                    dtCartoon.Columns["AddDate"].ColumnName = "Shipment Date";
+                    dtCartoon.Columns["CartoonNo"].ColumnName = "CTN No.";
+                    dtCartoon.Columns["ShiftmentNO"].ColumnName = "Shipment No";
+                    dtCartoon.Columns["tot_Qty"].ColumnName = "Send Qty.";
+
+                    string filename = "Goods_Received_Check_List-(" + DateTime.Now.ToString("dd-MM-yyyy");
+                    using (XLWorkbook wb = new XLWorkbook())
+                    {
+                        wb.Worksheets.Add(dtCartoon, "CheckList");
+                        Response.Clear();
+                        Response.Buffer = true;
+                        Response.Charset = "";
+                        Response.ContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+                        Response.AddHeader("content-disposition", "attachment;filename=" + filename + ".xlsx");
+
+                        using (MemoryStream MyMemoryStream = new MemoryStream())
+                        {
+                            wb.SaveAs(MyMemoryStream);
+                            MyMemoryStream.WriteTo(Response.OutputStream);
+                            Response.Flush();
+                            Response.End();
+                        }
+                    }
+                }
+            }
+        }
+          //*************** Shiftment Wise All Items Details *****//
+        else if (ddlReportType.SelectedValue == "ALD")
+        {
+            All_Shipment_Details();
+        }
+        else if (ddlReportType.SelectedValue == "TIS")
+        {
+            Total_Items_Stock();
+        }
+    }
+
+    //***************************** Total_Items_Stock *****************//
+    private void Total_Items_Stock()
+    {
+        DataTable dt = ShiftmentItemsCartoonManager.GetShowAllItemsStock("");
+        if (dt.Rows.Count > 0)
+        {
+            string filename = "TotalItemsStock-" + DateTime.Now.ToString("dd/MM/yyyy");
+            Response.Clear();
+            Response.ContentType = "application/pdf";
+            Response.AddHeader("content-disposition", "attachment; filename=" + filename + ".pdf");
+            Document document = new Document(PageSize.A4.Rotate(), 10f, 10f, 10f, 10f);
+            PdfWriter writer = PdfWriter.GetInstance(document, Response.OutputStream);
+            document.Open();
+            iTextSharp.text.Rectangle page = document.PageSize;
+            PdfPTable head = new PdfPTable(1);
+            head.TotalWidth = page.Width - 50;
+
+            PdfPCell cell;
+            byte[] logo = GlBookManager.GetGlLogo(Session["book"].ToString());
+            iTextSharp.text.Image gif = iTextSharp.text.Image.GetInstance(logo);
+            gif.Alignment = iTextSharp.text.Image.MIDDLE_ALIGN;
+            gif.ScalePercent(8f);
+
+            float[] titwidth = new float[3] { 15, 40, 10 };
+            PdfPTable dth = new PdfPTable(titwidth);
+            dth.WidthPercentage = 100;
+
+            cell = new PdfPCell(gif);
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.VerticalAlignment = Element.ALIGN_TOP;
+            cell.HorizontalAlignment = Element.ALIGN_TOP;
+            cell.Rowspan = 4;
+            cell.BorderWidth = 0f;
+            dth.AddCell(cell);
+
+            cell = new PdfPCell(new Phrase(Session["org"].ToString(), FontFactory.GetFont(FontFactory.TIMES_ROMAN, 12, iTextSharp.text.Font.BOLD)));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.BorderWidth = 0f;
+            // cell.FixedHeight = 20f;
+            dth.AddCell(cell);
+
+            cell = new PdfPCell(new Phrase("", FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD)));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.VerticalAlignment = Element.ALIGN_MIDDLE;
+            cell.HorizontalAlignment = Element.ALIGN_MIDDLE;
+            cell.Rowspan = 4;
+            cell.BorderWidth = 0f;
+            dth.AddCell(cell);
+
+            cell = new PdfPCell(new Phrase(Session["add1"].ToString(), FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD)));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.BorderWidth = 0f;
+            // cell.FixedHeight = 20f;
+            dth.AddCell(cell);
+            cell = new PdfPCell(new Phrase(Session["add2"].ToString(), FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD)));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.BorderWidth = 0f;
+            //cell.FixedHeight = 20f;
+            dth.AddCell(cell);
+
+            cell = new PdfPCell(new Phrase("Total Items Stock.\n BD,PH,In-Tran.", FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD)));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.BorderWidth = 0f;
+            //cell.FixedHeight = 30f;
+            dth.AddCell(cell);
+            document.Add(dth);
+
+            LineSeparator line = new LineSeparator(0f, 100, null, Element.ALIGN_CENTER, -2);
+            document.Add(line);
+
+            PdfPTable dtempty = new PdfPTable(1);
+            cell = new PdfPCell(FormatHeaderPhrase(""));
+            cell.BorderWidth = 0f;
+            cell.FixedHeight = 10f;
+            dtempty.AddCell(cell);
+            document.Add(dtempty);
+
+
+            float[] widthdtl = new float[6] { 8, 14, 30, 15, 15, 15 };
+            PdfPTable pdtdtl = new PdfPTable(widthdtl);
+            pdtdtl.WidthPercentage = 100;
+            pdtdtl.HeaderRows = 1;
+            cell = new PdfPCell(FormatHeaderPhrase("SL No."));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            pdtdtl.AddCell(cell);
+            cell = new PdfPCell(FormatHeaderPhrase("Items Code"));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            pdtdtl.AddCell(cell);
+            cell = new PdfPCell(FormatHeaderPhrase("Items Name"));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            pdtdtl.AddCell(cell);
+            cell = new PdfPCell(FormatHeaderPhrase("BD-Stock"));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            pdtdtl.AddCell(cell);
+            cell = new PdfPCell(FormatHeaderPhrase("In Transit"));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            pdtdtl.AddCell(cell);
+            cell = new PdfPCell(FormatHeaderPhrase("PH-Stock"));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            pdtdtl.AddCell(cell);
+
+            int serial1 = 1;
+            double totBD = 0, totPH = 0, totTr = 0;
+
+            foreach (DataRow drr in dt.Rows)
+            {
+                cell = new PdfPCell(FormatFontPhrase(serial1.ToString()));
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                pdtdtl.AddCell(cell);
+                cell = new PdfPCell(FormatFontPhrase(drr["Code"].ToString()));
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                pdtdtl.AddCell(cell);
+                cell = new PdfPCell(FormatFontPhrase(drr["Name"].ToString()));
+                cell.HorizontalAlignment = 0;
+                cell.VerticalAlignment = 1;
+                pdtdtl.AddCell(cell);
+                cell = new PdfPCell(FormatFontPhrase(drr["BD_Stock"].ToString()));
+                cell.HorizontalAlignment = 2;
+                cell.VerticalAlignment = 1;
+                pdtdtl.AddCell(cell);
+                cell = new PdfPCell(FormatFontPhrase(drr["In_Tr"].ToString()));
+                cell.HorizontalAlignment = 2;
+                cell.VerticalAlignment = 1;
+                pdtdtl.AddCell(cell);
+                cell = new PdfPCell(FormatFontPhrase(drr["PH_Stock"].ToString()));
+                cell.HorizontalAlignment = 2;
+                cell.VerticalAlignment = 1;
+                pdtdtl.AddCell(cell);
+
+                if (!string.IsNullOrEmpty(drr["BD_Stock"].ToString()))
+                    totBD += Convert.ToDouble(drr["BD_Stock"]);
+                if (!string.IsNullOrEmpty(drr["PH_Stock"].ToString()))
+                    totPH += Convert.ToDouble(drr["PH_Stock"]);
+                if (!string.IsNullOrEmpty(drr["In_Tr"].ToString()))
+                    totTr += Convert.ToDouble(drr["In_Tr"]);
+
+                serial1++;
+            }
+            cell = new PdfPCell(FormatHeaderPhrase("Total"));
+            cell.HorizontalAlignment = 2;
+            cell.VerticalAlignment = 1;
+            cell.Colspan = 3;
+            pdtdtl.AddCell(cell);
+            cell = new PdfPCell(FormatFontPhrase(totBD.ToString("N0")));
+            cell.HorizontalAlignment = 2;
+            cell.VerticalAlignment = 1;
+            pdtdtl.AddCell(cell);
+            cell = new PdfPCell(FormatFontPhrase(totTr.ToString("N0")));
+            cell.HorizontalAlignment = 2;
+            cell.VerticalAlignment = 1;
+            pdtdtl.AddCell(cell);
+            cell = new PdfPCell(FormatFontPhrase(totPH.ToString("N0")));
+            cell.HorizontalAlignment = 2;
+            cell.VerticalAlignment = 1;
+            pdtdtl.AddCell(cell);
+
+            document.Add(pdtdtl);
+            document.Close();
+            Response.Flush();
+            Response.End();
+        }
+    }
+    private void CartoonSendAndReceiveList()
+    {
+        string Flag = "";
+        string filename = "";
+        if (ddlReportType.SelectedValue == "SCL")
+        { Flag = "0"; filename = "GoodsReceivedCheckList-" + DateTime.Now.ToString("dd/MM/yyyy"); }
+        else if (ddlReportType.SelectedValue == "SRL")
+        { Flag = "1"; filename = "GoodsReceivedCheckList-" + DateTime.Now.ToString("dd/MM/yyyy"); }
+        else
+        {
+            Flag = "0"; filename = "GoodsRecevedReport(Cartonwise)-" + DateTime.Now.ToString("dd/MM/yyyy"); 
+        }
+        //string dateFormat = "";
+        //if (Session["bookMAN"].ToString().ToUpper().Equals("BAN"))
+        //{
+        //    dateFormat = "dd/MM/yyyy";
+        //}
+
+        Response.Clear();
+        Response.ContentType = "application/pdf";
+        Response.AddHeader("content-disposition", "attachment; filename=" + filename + ".pdf");
+        Document document = new Document(PageSize.A4, 10f, 10f, 30f, 50f);
+        PdfWriter writer = PdfWriter.GetInstance(document, Response.OutputStream);
+        pdfPage page1 = new pdfPage();
+        writer.PageEvent = page1;
+        document.Open();
+        iTextSharp.text.Rectangle page = document.PageSize;
+        PdfPTable head = new PdfPTable(1);
+        head.TotalWidth = page.Width - 50;
+
+        PdfPCell cell;
+
+        byte[] logo = GlBookManager.GetGlLogo(Session["bookMAN"].ToString());
+        iTextSharp.text.Image gif = iTextSharp.text.Image.GetInstance(logo);
+        gif.Alignment = iTextSharp.text.Image.MIDDLE_ALIGN;
+        gif.ScalePercent(8f);
+
+        float[] titwidth = new float[3] { 15, 40, 10 };
+        PdfPTable dth = new PdfPTable(titwidth);
+        dth.WidthPercentage = 100;
+
+        cell = new PdfPCell(gif);
+        cell.HorizontalAlignment = 1;
+        cell.VerticalAlignment = 1;
+        cell.VerticalAlignment = Element.ALIGN_TOP;
+        cell.HorizontalAlignment = Element.ALIGN_TOP;
+        cell.Rowspan = 4;
+        cell.BorderWidth = 0f;
+        dth.AddCell(cell);
+
+        cell = new PdfPCell(new Phrase(Session["org"].ToString(), FontFactory.GetFont(FontFactory.TIMES_ROMAN, 12, iTextSharp.text.Font.BOLD)));
+        cell.HorizontalAlignment = 1;
+        cell.VerticalAlignment = 1;
+        cell.BorderWidth = 0f;
+        // cell.FixedHeight = 20f;
+        dth.AddCell(cell);
+
+        cell = new PdfPCell(new Phrase("", FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD)));
+        cell.HorizontalAlignment = 1;
+        cell.VerticalAlignment = 1;
+        cell.VerticalAlignment = Element.ALIGN_MIDDLE;
+        cell.HorizontalAlignment = Element.ALIGN_MIDDLE;
+        cell.Rowspan = 4;
+        cell.BorderWidth = 0f;
+        dth.AddCell(cell);
+
+        cell = new PdfPCell(new Phrase(Session["add1"].ToString(), FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD)));
+        cell.HorizontalAlignment = 1;
+        cell.VerticalAlignment = 1;
+        cell.BorderWidth = 0f;
+        // cell.FixedHeight = 20f;
+        dth.AddCell(cell);
+        cell = new PdfPCell(new Phrase(Session["add2"].ToString(), FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD)));
+        cell.HorizontalAlignment = 1;
+        cell.VerticalAlignment = 1;
+        cell.BorderWidth = 0f;
+        //cell.FixedHeight = 20f;
+        dth.AddCell(cell);
+
+        cell = new PdfPCell(new Phrase(ddlReportType.SelectedItem.Text, FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD)));
+        cell.HorizontalAlignment = 1;
+        cell.VerticalAlignment = 1;
+        cell.BorderWidth = 0f;
+        //cell.FixedHeight = 30f;
+        dth.AddCell(cell);
+        document.Add(dth);
+
+        LineSeparator line = new LineSeparator(0f, 100, null, Element.ALIGN_CENTER, -2);
+        document.Add(line);
+
+        PdfPTable dtempty = new PdfPTable(1);
+        cell = new PdfPCell(FormatHeaderPhrase(""));
+        cell.BorderWidth = 0f;
+        cell.FixedHeight = 10f;
+        dtempty.AddCell(cell);
+        document.Add(dtempty);
+
+        int serial = 1;
+        float[] widthdtl;
+        if (ddlReportType.SelectedValue.Equals("SRLT"))
+        {
+            widthdtl = new float[10] { 8, 14, 9, 12, 22, 11, 10, 10, 10, 10 };
+        }
+        else
+        {
+            widthdtl=new float[6] { 8, 14, 15, 20, 15, 15 };
+        }
+        
+        PdfPTable pdtdtl = new PdfPTable(widthdtl);
+        pdtdtl.WidthPercentage = 100;
+        pdtdtl.HeaderRows = 1;
+        cell = new PdfPCell(FormatHeaderPhrase("SL No."));
+        cell.HorizontalAlignment = 1;
+        cell.VerticalAlignment = 1;
+        //cell.Colspan = 6;
+        //cell.FixedHeight = 20f;
+        //cell.BorderWidth = 0f;
+        pdtdtl.AddCell(cell);
+
+        cell = new PdfPCell(FormatHeaderPhrase("Shipment Date"));
+        cell.HorizontalAlignment = 1;
+        cell.VerticalAlignment = 1;
+        //cell.BorderWidth = 0f;
+        //cell.FixedHeight = 20f;
+        // cell.Colspan = 2;
+        pdtdtl.AddCell(cell);
+        if (ddlReportType.SelectedValue.Equals("SRLT"))
+        {
+            cell = new PdfPCell(FormatHeaderPhrase("Barcode"));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            //cell.Colspan = 6;
+            //cell.FixedHeight = 20f;
+            //cell.BorderWidth = 0f;
+            pdtdtl.AddCell(cell);
+        }
+        cell = new PdfPCell(FormatHeaderPhrase("CTN No."));
+        cell.HorizontalAlignment = 1;
+        cell.VerticalAlignment = 1;
+        //cell.Colspan = 6;
+        //cell.FixedHeight = 20f;
+        //cell.BorderWidth = 0f;
+        pdtdtl.AddCell(cell);
+
+        cell = new PdfPCell(FormatHeaderPhrase("Shipment No"));
+        cell.HorizontalAlignment = 1;
+        cell.VerticalAlignment = 1;
+        // cell.BorderWidth = 0f;
+        //cell.FixedHeight = 20f;
+        //cell.Colspan = 2;
+        pdtdtl.AddCell(cell);
+        cell = new PdfPCell(FormatHeaderPhrase("Send Qty."));
+        cell.HorizontalAlignment = 1;
+        cell.VerticalAlignment = 1;
+        // cell.BorderWidth = 0f;
+        // cell.FixedHeight = 30f;
+        //cell.Colspan = 2;
+        pdtdtl.AddCell(cell);
+        if (ddlReportType.SelectedValue.Equals("SRLT"))
+        {
+            cell = new PdfPCell(FormatHeaderPhrase("Reject Qty"));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            // cell.BorderWidth = 0f;
+            // cell.FixedHeight = 30f;
+            //cell.Colspan = 2;
+            pdtdtl.AddCell(cell);
+            cell = new PdfPCell(FormatHeaderPhrase("Short Qty."));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            // cell.BorderWidth = 0f;
+            // cell.FixedHeight = 30f;
+            //cell.Colspan = 2;
+            pdtdtl.AddCell(cell);
+
+            cell = new PdfPCell(FormatHeaderPhrase("Excess Qty."));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            // cell.BorderWidth = 0f;
+            // cell.FixedHeight = 30f;
+            //cell.Colspan = 2;
+            pdtdtl.AddCell(cell);
+
+            cell = new PdfPCell(FormatHeaderPhrase("Receive Qty"));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            // cell.BorderWidth = 0f;
+            // cell.FixedHeight = 30f;
+            //cell.Colspan = 2;
+            pdtdtl.AddCell(cell);
+        }
+        else
+        {
+            cell = new PdfPCell(FormatHeaderPhrase("Remark's"));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            // cell.BorderWidth = 0f;
+            // cell.FixedHeight = 30f;
+            //cell.Colspan = 2;
+            pdtdtl.AddCell(cell);
+        }
+        DataTable dtCartoon = ShiftmentItemsCartoonManager.GetShowSendAnReceiveItemsList(lblShiftmentID.Text, txtCart1.Text, txtCart2.Text, Flag);
+        decimal tot = decimal.Zero;
+        foreach (DataRow drtt in dtCartoon.Rows)
+        {
+
+            cell = new PdfPCell(FormatFontPhrase(serial.ToString()));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            //cell.BorderWidth = 0f;
+            // cell.Colspan = 2;
+            pdtdtl.AddCell(cell);
+
+            cell = new PdfPCell(FormatFontPhrase((DataManager.DateEncode( drtt["AddDate"].ToString())).ToString(IdManager.DateFormat())));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            //cell.BorderWidth = 0f;
+            // cell.Colspan = 2;
+            pdtdtl.AddCell(cell);
+            if (ddlReportType.SelectedValue.Equals("SRLT"))
+            {
+                cell = new PdfPCell(FormatHeaderPhrase(drtt["ID"].ToString()));
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                //cell.Colspan = 6;
+                //cell.FixedHeight = 20f;
+                //cell.BorderWidth = 0f;
+                pdtdtl.AddCell(cell);
+            }
+            cell = new PdfPCell(FormatFontPhrase(drtt["CartoonNo"].ToString()));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            //cell.BorderWidth = 0f;
+            //cell.FixedHeight = 20f;
+            //cell.Colspan = 2;
+            pdtdtl.AddCell(cell);
+            cell = new PdfPCell(FormatFontPhrase(drtt["ShiftmentNO"].ToString()));
+            cell.HorizontalAlignment = 0;
+            cell.VerticalAlignment = 1;
+            //cell.BorderWidth = 0f;
+            //cell.FixedHeight = 20f;
+            //cell.Colspan = 2;
+            pdtdtl.AddCell(cell);
+            cell = new PdfPCell(FormatFontPhrase(drtt["tot_Qty"].ToString()));
+            cell.HorizontalAlignment = 2;
+            cell.VerticalAlignment = 1;
+            //cell.BorderWidth = 0f;
+            // cell.Colspan = 2;
+            pdtdtl.AddCell(cell);
+            if (ddlReportType.SelectedValue.Equals("SRLT"))
+            {
+                cell = new PdfPCell(FormatHeaderPhrase(""));
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                // cell.BorderWidth = 0f;
+                // cell.FixedHeight = 30f;
+                //cell.Colspan = 2;
+                pdtdtl.AddCell(cell);
+                cell = new PdfPCell(FormatHeaderPhrase(""));
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                // cell.BorderWidth = 0f;
+                // cell.FixedHeight = 30f;
+                //cell.Colspan = 2;
+                pdtdtl.AddCell(cell);
+
+                cell = new PdfPCell(FormatHeaderPhrase(""));
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                // cell.BorderWidth = 0f;
+                // cell.FixedHeight = 30f;
+                //cell.Colspan = 2;
+                pdtdtl.AddCell(cell);
+            }
+            cell = new PdfPCell(FormatFontPhrase(""));
+            cell.HorizontalAlignment = 0;
+            cell.VerticalAlignment = 1;
+            //cell.BorderWidth = 0f;
+            // cell.Colspan = 2;
+            pdtdtl.AddCell(cell);
+            tot += Convert.ToDecimal(drtt["tot_Qty"].ToString());
+            serial++;
+        }
+
+        cell = new PdfPCell(FormatHeaderPhrase("Total "));
+        cell.HorizontalAlignment = 2;
+        cell.VerticalAlignment = 1;
+        cell.Colspan = 4;
+        pdtdtl.AddCell(cell);
+
+        cell = new PdfPCell(FormatHeaderPhrase(tot.ToString("N3")));
+        cell.HorizontalAlignment = 2;
+        cell.VerticalAlignment = 1;
+        //cell.Colspan = 2;
+        pdtdtl.AddCell(cell);
+        cell = new PdfPCell(FormatHeaderPhrase(""));
+        cell.HorizontalAlignment = 2;
+        cell.VerticalAlignment = 1;
+        //cell.Colspan = 2;
+        pdtdtl.AddCell(cell);
+        document.Add(pdtdtl);
+
+        if (ddlReportType.SelectedValue.Equals("SRLT"))
+        {
+            float[] widtl = new float[5] {20, 20, 20, 20, 20};
+            PdfPTable pdtsig = new PdfPTable(widtl);
+            pdtsig.WidthPercentage = 100;
+
+            cell = new PdfPCell(FormatPhrase(""));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.Border = 0;
+            cell.Colspan = 5;
+            cell.FixedHeight = 40f;
+            pdtsig.AddCell(cell);
+            cell = new PdfPCell(FormatPhrase(""));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.Border = 0;
+            cell.FixedHeight = 20f;
+            pdtsig.AddCell(cell);
+
+            cell = new PdfPCell(FormatPhrase(""));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.Border = 0;
+            cell.FixedHeight = 20f;
+            pdtsig.AddCell(cell);
+            cell = new PdfPCell(FormatPhrase("Approved by"));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.Border = 1;
+            cell.FixedHeight = 20f;
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtsig.AddCell(cell);
+
+            cell = new PdfPCell(FormatPhrase(""));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.Border = 0;
+            cell.FixedHeight = 20f;
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtsig.AddCell(cell);
+            cell = new PdfPCell(FormatPhrase("Checked by"));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.Border = 1;
+            cell.FixedHeight = 20f;
+            cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtsig.AddCell(cell);
+
+            cell = new PdfPCell(FormatPhrase(""));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.Border = 0;
+            cell.Colspan = 5;
+            //cell.FixedHeight = 40f;
+            //cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtsig.AddCell(cell);
+            cell = new PdfPCell(FormatPhrase(""));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.Border = 0;
+            //cell.FixedHeight = 20f;
+            //cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtsig.AddCell(cell);
+
+            cell = new PdfPCell(FormatPhrase(""));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.Border = 0;
+            // cell.FixedHeight = 20f;
+            //cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtsig.AddCell(cell);
+            cell = new PdfPCell(FormatPhrase("Name :"));
+            cell.HorizontalAlignment = 0;
+            cell.VerticalAlignment = 1;
+            cell.Border = 0;
+            // cell.FixedHeight = 20f;
+            //cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtsig.AddCell(cell);
+
+            cell = new PdfPCell(FormatPhrase(""));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.Border = 0;
+            //cell.FixedHeight = 20f;
+            //cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtsig.AddCell(cell);
+            cell = new PdfPCell(FormatPhrase("Name :"));
+            cell.HorizontalAlignment = 0;
+            cell.VerticalAlignment = 1;
+            cell.Border = 0;
+            //cell.FixedHeight = 20f;
+            //cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtsig.AddCell(cell);
+            cell = new PdfPCell(FormatPhrase(""));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.Border = 0;
+            cell.Colspan = 5;
+            // cell.FixedHeight = 40f;
+            // cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtsig.AddCell(cell);
+            cell = new PdfPCell(FormatPhrase(""));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.Border = 0;
+            // cell.FixedHeight = 20f;
+            // cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtsig.AddCell(cell);
+
+            cell = new PdfPCell(FormatPhrase(""));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.Border = 0;
+            //cell.FixedHeight = 20f;
+            //cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtsig.AddCell(cell);
+            cell = new PdfPCell(FormatPhrase("Date :"));
+            cell.HorizontalAlignment = 0;
+            cell.VerticalAlignment = 1;
+            cell.Border = 0;
+//cell.FixedHeight = 20f;
+            //cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtsig.AddCell(cell);
+
+            cell = new PdfPCell(FormatPhrase(""));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.Border = 0;
+            //cell.FixedHeight = 20f;
+            //cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtsig.AddCell(cell);
+            cell = new PdfPCell(FormatPhrase("Date :"));
+            cell.HorizontalAlignment = 0;
+            cell.VerticalAlignment = 1;
+            cell.Border = 0;
+            // cell.FixedHeight = 20f;
+            //cell.BorderColor = BaseColor.LIGHT_GRAY;
+            pdtsig.AddCell(cell);
+            document.Add(pdtsig);
+        }
+        document.Close();
+        Response.Flush();
+        Response.End();
+    }
+    //***************************** All Shipment Details *****************//
+    private void All_Shipment_Details()
+    {
+        string ShipNo = "";
+        if (!string.IsNullOrEmpty(txtShiftmentNo.Text))
+        {
+            ShipNo = "where ID='" + lblShiftmentID.Text + "'";
+        }
+        string SelectShiftment = @"Select ID,ShiftmentNO,CONVERT(NVARCHAR,ShiftmentDate,103)ShiftmentDate from ShiftmentAssigen " + ShipNo;
+        DataTable dtShift = DataManager.ExecuteQuery(DataManager.OraConnString(), SelectShiftment, "ShiftmentAssigen");
+        if (dtShift.Rows.Count > 0)
+        {
+            double allTot = 0;
+            decimal totAmt = 0;
+            string parameter = "";
+            string filename = "Days Duration In Transit-" + DateTime.Now.ToString("dd/MM/yyyy");
+            Response.Clear();
+            Response.ContentType = "application/pdf";
+            Response.AddHeader("content-disposition", "attachment; filename=" + filename + ".pdf");
+            Document document = new Document(PageSize.A4.Rotate(), 10f, 10f, 10f, 10f);
+            PdfWriter writer = PdfWriter.GetInstance(document, Response.OutputStream);
+            document.Open();
+            iTextSharp.text.Rectangle page = document.PageSize;
+            PdfPTable head = new PdfPTable(1);
+            head.TotalWidth = page.Width - 50;
+
+            PdfPCell cell;
+            byte[] logo = GlBookManager.GetGlLogo(Session["book"].ToString());
+            iTextSharp.text.Image gif = iTextSharp.text.Image.GetInstance(logo);
+            gif.Alignment = iTextSharp.text.Image.MIDDLE_ALIGN;
+            gif.ScalePercent(8f);
+
+            float[] titwidth = new float[3] { 15, 40, 10 };
+            PdfPTable dth = new PdfPTable(titwidth);
+            dth.WidthPercentage = 100;
+
+            cell = new PdfPCell(gif);
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.VerticalAlignment = Element.ALIGN_TOP;
+            cell.HorizontalAlignment = Element.ALIGN_TOP;
+            cell.Rowspan = 4;
+            cell.BorderWidth = 0f;
+            dth.AddCell(cell);
+
+            cell = new PdfPCell(new Phrase(Session["org"].ToString(), FontFactory.GetFont(FontFactory.TIMES_ROMAN, 12, iTextSharp.text.Font.BOLD)));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.BorderWidth = 0f;
+            // cell.FixedHeight = 20f;
+            dth.AddCell(cell);
+
+            cell = new PdfPCell(new Phrase("", FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD)));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.VerticalAlignment = Element.ALIGN_MIDDLE;
+            cell.HorizontalAlignment = Element.ALIGN_MIDDLE;
+            cell.Rowspan = 4;
+            cell.BorderWidth = 0f;
+            dth.AddCell(cell);
+
+            cell = new PdfPCell(new Phrase(Session["add1"].ToString(), FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD)));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.BorderWidth = 0f;
+            // cell.FixedHeight = 20f;
+            dth.AddCell(cell);
+            cell = new PdfPCell(new Phrase(Session["add2"].ToString(), FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD)));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.BorderWidth = 0f;
+            //cell.FixedHeight = 20f;
+            dth.AddCell(cell);
+
+            cell = new PdfPCell(new Phrase("Days Duration In Transit", FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD)));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.BorderWidth = 0f;
+            //cell.FixedHeight = 30f;
+            dth.AddCell(cell);
+            document.Add(dth);
+
+            LineSeparator line = new LineSeparator(0f, 100, null, Element.ALIGN_CENTER, -2);
+            document.Add(line);
+
+            PdfPTable dtempty = new PdfPTable(1);
+            cell = new PdfPCell(FormatHeaderPhrase(""));
+            cell.BorderWidth = 0f;
+            cell.FixedHeight = 10f;
+            dtempty.AddCell(cell);
+            document.Add(dtempty);
+
+            int serial = 1;
+            float[] widthdtl = new float[7] { 8, 14, 20, 15, 15, 15, 10 };
+            PdfPTable pdtdtl = new PdfPTable(widthdtl);
+            pdtdtl.WidthPercentage = 100;
+
+            cell = new PdfPCell(FormatHeaderPhrase("SL No."));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            //cell.Colspan = 6;
+            //cell.FixedHeight = 20f;
+            //cell.BorderWidth = 0f;
+            pdtdtl.AddCell(cell);
+
+            cell = new PdfPCell(FormatHeaderPhrase("DELIVERY DATE"));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            //cell.Colspan = 6;
+            //cell.FixedHeight = 20f;
+            //cell.BorderWidth = 0f;
+            pdtdtl.AddCell(cell);
+
+            cell = new PdfPCell(FormatHeaderPhrase("SHIPMENT NO."));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            //cell.Colspan = 6;
+            //cell.FixedHeight = 20f;
+            //cell.BorderWidth = 0f;
+            pdtdtl.AddCell(cell);
+
+            cell = new PdfPCell(FormatHeaderPhrase("TOTAL CTN NO"));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            //cell.BorderWidth = 0f;
+            //cell.FixedHeight = 20f;
+            // cell.Colspan = 2;
+            pdtdtl.AddCell(cell);
+            cell = new PdfPCell(FormatHeaderPhrase("TOTAL PCS"));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            // cell.BorderWidth = 0f;
+            //cell.FixedHeight = 20f;
+            //cell.Colspan = 2;
+            pdtdtl.AddCell(cell);
+            cell = new PdfPCell(FormatHeaderPhrase("RECEIVED DATE"));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            // cell.BorderWidth = 0f;
+            // cell.FixedHeight = 30f;
+            //cell.Colspan = 2;
+            pdtdtl.AddCell(cell);
+
+            cell = new PdfPCell(FormatHeaderPhrase("DAYS DURATION"));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            // cell.BorderWidth = 0f;
+            // cell.FixedHeight = 30f;
+            //cell.Colspan = 2;
+            pdtdtl.AddCell(cell);
+
+            //cell = new PdfPCell(FormatHeaderPhrase("TIL NOW TIME"));
+            //cell.HorizontalAlignment = 1;
+            //cell.VerticalAlignment = 1;
+            //// cell.BorderWidth = 0f;
+            //// cell.FixedHeight = 30f;
+            ////cell.Colspan = 2;
+            //pdtdtl.AddCell(cell);
+
+            //cell = new PdfPCell(FormatHeaderPhrase("REMARK'S"));
+            //cell.HorizontalAlignment = 1;
+            //cell.VerticalAlignment = 1;
+            //// cell.BorderWidth = 0f;
+            //// cell.FixedHeight = 30f;
+            ////cell.Colspan = 2;
+            //pdtdtl.AddCell(cell);            
+            int serial1 = 1;
+            double atTot = 0;
+            double rcvTotal = 0;
+
+            foreach (DataRow drr in dtShift.Rows)
+            {               
+                allTot = 0;
+                string SelectQuery = @"SELECT t1.[ID],t1.[ShiftmentID],t2.Name,t3.ShiftmentNO,t1.PartyRate,t1.Quantity,(t1.PartyRate*t1.Quantity) as totAmount,t1.Label,t4.Name as supplier FROM ShiftmentItems t1 inner join Item t2 on t2.ID=t1.ItemsID inner join ShiftmentAssigen t3 on t3.ID=t1.ShiftmentID inner join Supplier t4 on t4.ID=t1.SupplierID WHERE t1.ShiftmentID='" + drr["ID"].ToString() + "' order by t1.PartyID  ";
+                DataTable dtCartoon = DataManager.ExecuteQuery(DataManager.OraConnString(), SelectQuery, "Temp_ShiftmentItemsColorSize");
+                if (dtCartoon.Rows.Count > 0)
+                {
+                    foreach (DataRow drtt in dtCartoon.Rows)
+                    {                       
+                        double tot = ItemsTotal(allTot, drtt);
+                        allTot += tot;
+                        atTot += tot;
+                    }
+                }
+                cell = new PdfPCell(FormatFontPhrase(serial1.ToString()));
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                //cell.BorderWidth = 0f;
+                // cell.Colspan = 2;
+                pdtdtl.AddCell(cell);
+                cell = new PdfPCell(FormatFontPhrase((DataManager.DateEncode(drr["ShiftmentDate"].ToString())).ToString(IdManager.DateFormat())));
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                //cell.BorderWidth = 0f;
+                //cell.FixedHeight = 20f;
+                //cell.Colspan = 2;
+                pdtdtl.AddCell(cell);
+                cell = new PdfPCell(FormatFontPhrase(drr["ShiftmentNO"].ToString()));
+                cell.HorizontalAlignment = 0;
+                cell.VerticalAlignment = 1;
+                //cell.BorderWidth = 0f;
+                //cell.FixedHeight = 20f;
+                //cell.Colspan = 2;
+                pdtdtl.AddCell(cell);
+                int CTN = IdManager.GetShowSingleValueInt("COUNT(*)", "t2.ShiftmentID", "[ShiftmentBoxingItemsDtl] t1 INNER JOIN ShiftmentBoxingMst t2 on t2.ID=t1.MasterID", drr["ID"].ToString());
+                cell = new PdfPCell(FormatFontPhrase(CTN.ToString()));
+                cell.HorizontalAlignment = 2;
+                cell.VerticalAlignment = 1;
+                //cell.BorderWidth = 0f;
+                //cell.FixedHeight = 20f;
+                //cell.Colspan = 2;
+                pdtdtl.AddCell(cell);
+                cell = new PdfPCell(FormatFontPhrase(allTot.ToString("N0")));
+                cell.HorizontalAlignment = 2;
+                cell.VerticalAlignment = 1;
+                //cell.BorderWidth = 0f;
+                //cell.FixedHeight = 20f;
+                //cell.Colspan = 2;
+                pdtdtl.AddCell(cell);
+                Double DaysNull = 0;
+                double Days =0;
+                string rcvDate = IdManager.GetShowSingleValueString("CONVERT(nvarchar,Max(ReceivedDate),103)", "t1.ReceiveFlag=1 and t1.ShiftmentID", "ShiftmentBoxingMst t1", drr["ID"].ToString());
+                string rcvDateNULL = IdManager.GetShowSingleValueString("CONVERT(nvarchar,Max(GETDATE()),103)", "t1.ShiftmentID", "ShiftmentBoxingMst t1", drr["ID"].ToString());
+                if (string.IsNullOrEmpty(rcvDate))
+                {
+                    DaysNull = (DataManager.DateEncode(rcvDateNULL) - DataManager.DateEncode(drr["ShiftmentDate"].ToString())).TotalDays;
+                    cell = new PdfPCell(FormatFontPhrase("In Transit"));
+                }
+                else
+                {
+                     Days = (DataManager.DateEncode(rcvDate) - DataManager.DateEncode(drr["ShiftmentDate"].ToString())).TotalDays;
+
+                    cell = new PdfPCell(FormatFontPhrase((DataManager.DateEncode(rcvDate)).ToString(IdManager.DateFormat())));                   
+                }               
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                //cell.BorderWidth = 0f;
+                //cell.FixedHeight = 20f;
+                //cell.Colspan = 2;
+                pdtdtl.AddCell(cell);
+                if (Days > 0)
+                {
+                    cell = new PdfPCell(FormatFontPhrase(Days.ToString("N0")));
+                }
+                else
+                {
+                    cell = new PdfPCell(FormatFontPhrase(DaysNull.ToString("N0")));
+                }
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                //cell.BorderWidth = 0f;
+                //cell.FixedHeight = 20f;
+                //cell.Colspan = 2;
+                pdtdtl.AddCell(cell);
+
+               
+
+                serial1++;
+            }
+            cell = new PdfPCell(FormatHeaderPhrase("Total"));
+            cell.HorizontalAlignment = 2;
+            cell.VerticalAlignment = 1;
+            // cell.BorderWidth = 0f;
+            // cell.FixedHeight = 30f;
+            cell.Colspan = 4;
+            pdtdtl.AddCell(cell);
+            cell = new PdfPCell(FormatFontPhrase(atTot.ToString("N0")));
+            cell.HorizontalAlignment = 2;
+            cell.VerticalAlignment = 1;
+            //cell.BorderWidth = 0f;
+            //cell.FixedHeight = 20f;
+            //cell.Colspan = 2;
+            pdtdtl.AddCell(cell);
+            cell = new PdfPCell(FormatFontPhrase(""));
+            cell.HorizontalAlignment = 2;
+            cell.VerticalAlignment = 1;
+            //cell.BorderWidth = 0f;
+            //cell.FixedHeight = 20f;
+            cell.Colspan = 2;
+            pdtdtl.AddCell(cell);
+
+            //cell = new PdfPCell(FormatFontPhrase(rcvTotal.ToString("N0")));
+            //cell.HorizontalAlignment = 2;
+            //cell.VerticalAlignment = 1;
+            ////cell.BorderWidth = 0f;
+            ////cell.FixedHeight = 20f;
+            ////cell.Colspan = 2;
+            //pdtdtl.AddCell(cell);
+            //cell = new PdfPCell(FormatFontPhrase(""));
+            //cell.HorizontalAlignment = 2;
+            //cell.VerticalAlignment = 1;
+            ////cell.BorderWidth = 0f;
+            ////cell.FixedHeight = 20f;
+            ////cell.Colspan = 2;
+            //pdtdtl.AddCell(cell);
+
+            document.Add(pdtdtl);
+            document.Close();
+            Response.Flush();
+            Response.End();
+        }
+    }
+    //************************* Packing List *********************//
+
+    private void StyleAndPartyWisePackingList()
+    {
+        double allTot =0,allTotamt= 0;
+        double totAmt = 0,totQty=0;
+        string parameter = "";
+        int check = 1;
+        //if (txtParty.Text != "")
+        //{
+        //    parameter = " AND t1.SupplierID='" + lblPartyID.Text + "'";
+        //}
+        //string SenderIDParameter = "";
+        //if (!string.IsNullOrEmpty(lblShiftmentID.Text) && string.IsNullOrEmpty(ddlSenderName.SelectedItem.Text) &&
+        //    string.IsNullOrEmpty(ddlCustomer.SelectedItem.Text))
+        //{
+        //    SenderIDParameter = " ID='" + lblShiftmentID.Text + "' ";
+        //}
+        //else if (!string.IsNullOrEmpty(lblShiftmentID.Text) && !string.IsNullOrEmpty(ddlSenderName.SelectedItem.Text) &&
+        //         string.IsNullOrEmpty(ddlCustomer.SelectedItem.Text))
+        //{
+        //    SenderIDParameter = " ID='" + lblShiftmentID.Text + "' and SenderID='" + ddlSenderName.SelectedValue + "' ";
+
+        //}
+        //else if (!string.IsNullOrEmpty(lblShiftmentID.Text) && !string.IsNullOrEmpty(ddlSenderName.SelectedItem.Text) &&
+        //         !string.IsNullOrEmpty(ddlCustomer.SelectedItem.Text))
+        //{
+        //    SenderIDParameter = " ID='" + lblShiftmentID.Text + "' and SenderID='" + ddlSenderName.SelectedValue +
+        //                        "' and CustomerID='" + ddlCustomer.SelectedValue + "' ";
+        //}
+
+        DataTable dtShipment = null;
+        //int Count = IdManager.GetShowSingleValueInt("COUNT(*)",
+        //    " ShiftmentAssigen where " + SenderIDParameter);
+        //if (Count > 0)
+        //{
+        //    string ShipmentQuery =
+        //        "SELECT [ID] ,[ShiftmentNO]  FROM [dbo].[ShiftmentAssigen] where  " + SenderIDParameter;
+        //    dtShipment = DataManager.ExecuteQuery(DataManager.OraConnString(), ShipmentQuery, "ShiftmentAssigen");
+        //}
+        //else
+        //{
+        //    string ShipmentQuery =
+        //        "SELECT [ID] ,[ShiftmentNO]  FROM [dbo].[ShiftmentAssigen] where " + SenderIDParameter;
+        //    dtShipment = DataManager.ExecuteQuery(DataManager.OraConnString(), ShipmentQuery, "ShiftmentAssigen");
+        //}
+
+        dtShipment = _aShiftmentAssignManager.GetShipmentSenderInfoSummery("", lblShiftmentID.Text,
+            ddlSenderName.SelectedValue, ddlCustomer.SelectedValue);
+        if (dtShipment.Rows.Count > 0)
+        {
+            string filename = ddlReportType.SelectedItem.Text.Trim().Replace(" ", "").Replace("  ", "") + "-" +
+                              DateTime.Now.ToString("dd-MM-yyyy");
+            Response.Clear();
+            Response.ContentType = "application/pdf";
+            Response.AddHeader("content-disposition", "attachment; filename=" + filename + ".pdf");
+            Document document = new Document(PageSize.A4.Rotate(), 10f, 10f, 10f, 20f);
+            PdfWriter writer = PdfWriter.GetInstance(document, Response.OutputStream);
+            document.Open();
+            iTextSharp.text.Rectangle page = document.PageSize;
+            PdfPTable head = new PdfPTable(1);
+            head.TotalWidth = page.Width - 50;
+
+            PdfPCell cell;
+            byte[] logo = GlBookManager.GetGlLogo(Session["book"].ToString());
+            iTextSharp.text.Image gif = iTextSharp.text.Image.GetInstance(logo);
+            gif.Alignment = iTextSharp.text.Image.MIDDLE_ALIGN;
+            gif.ScalePercent(8f);
+
+            float[] titwidth = new float[3] {15, 40, 10};
+            PdfPTable dth = new PdfPTable(titwidth);
+            dth.WidthPercentage = 100;
+
+            cell = new PdfPCell(gif);
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.VerticalAlignment = Element.ALIGN_TOP;
+            cell.HorizontalAlignment = Element.ALIGN_TOP;
+            cell.Rowspan = 4;
+            cell.BorderWidth = 0f;
+            dth.AddCell(cell);
+
+            if (chkIsNameChange.Checked)
+            {
+                cell = new PdfPCell(new Phrase("Rey De Aves",
+                    FontFactory.GetFont(FontFactory.TIMES_ROMAN, 15, iTextSharp.text.Font.BOLD)));
+            }
+            else
+            {
+
+                cell = new PdfPCell(new Phrase(Session["org"].ToString(),
+                    FontFactory.GetFont(FontFactory.TIMES_ROMAN, 12, iTextSharp.text.Font.BOLD)));
+            }
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.BorderWidth = 0f;
+            // cell.FixedHeight = 20f;
+            dth.AddCell(cell);
+
+            cell = new PdfPCell(new Phrase("",
+                FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD)));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.VerticalAlignment = Element.ALIGN_MIDDLE;
+            cell.HorizontalAlignment = Element.ALIGN_MIDDLE;
+            cell.Rowspan = 4;
+            cell.BorderWidth = 0f;
+            dth.AddCell(cell);
+
+            cell = new PdfPCell(new Phrase(Session["add1"].ToString(),
+                FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD)));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.BorderWidth = 0f;
+            // cell.FixedHeight = 20f;
+            dth.AddCell(cell);
+            cell = new PdfPCell(new Phrase(Session["add2"].ToString(),
+                FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD)));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.BorderWidth = 0f;
+            //cell.FixedHeight = 20f;
+            dth.AddCell(cell);
+
+            float[] widthdtl = new float[10] {8, 30, 10, 20, 20, 20, 10, 10, 15, 15};
+            PdfPTable pdtdtl = new PdfPTable(widthdtl);
+            pdtdtl.WidthPercentage = 100;
+
+            string Heading = "Style Wise Packing List.\n Shipment No. : " + txtShiftmentNo.Text;
+
+            cell = new PdfPCell(new Phrase(Heading,
+                FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD)));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.BorderWidth = 0f;
+            //cell.FixedHeight = 30f;
+            dth.AddCell(cell);
+            document.Add(dth);
+
+            LineSeparator line = new LineSeparator(0f, 100, null, Element.ALIGN_CENTER, -2);
+            document.Add(line);
+            PdfPTable dtempty = new PdfPTable(1);
+            cell = new PdfPCell(FormatHeaderPhrase(""));
+            cell.BorderWidth = 0f;
+            cell.FixedHeight = 10f;
+            dtempty.AddCell(cell);
+            document.Add(dtempty);
+
+            int serial = 1;
+            foreach (DataRow drMst in dtShipment.Rows)
+            {
+                totAmt = 0;totQty=0;
+                //if (Count > 0)
+                //{
+                //if (!string.IsNullOrEmpty(ddlCustomer.SelectedItem.Text))
+                //{
+                    cell = new PdfPCell(FormatHeaderPhrase12("Shipment No. & Customer : " +
+                                                             drMst["SenderSubName"].ToString() + " - " +
+                                                             drMst["CustomerName"].ToString()));
+                //}
+                //else
+                //{
+                //    cell = new PdfPCell(FormatHeaderPhrase12("Shipment No. : " +drMst["SenderSubName"].ToString() + "  "));
+                //}
+                cell.HorizontalAlignment = 0;
+                    cell.VerticalAlignment = 1;
+                    cell.Colspan = 10;
+                    cell.FixedHeight = 20f;
+                    //cell.BorderWidth = 0f;
+                    pdtdtl.AddCell(cell);
+               // }
+
+                cell = new PdfPCell(FormatHeaderPhrase("SL No."));
+                cell.HorizontalAlignment = 0;
+                cell.VerticalAlignment = 1;
+                //cell.Colspan = 6;
+                //cell.FixedHeight = 20f;
+                //cell.BorderWidth = 0f;
+                pdtdtl.AddCell(cell);
+
+                cell = new PdfPCell(FormatHeaderPhrase("CTN NO."));
+                cell.HorizontalAlignment = 0;
+                cell.VerticalAlignment = 1;
+                //cell.Colspan = 6;
+                //cell.FixedHeight = 20f;
+                //cell.BorderWidth = 0f;
+                pdtdtl.AddCell(cell);
+
+                cell = new PdfPCell(FormatHeaderPhrase("T.CTN"));
+                cell.HorizontalAlignment = 0;
+                cell.VerticalAlignment = 1;
+                //cell.Colspan = 6;
+                //cell.FixedHeight = 20f;
+                //cell.BorderWidth = 0f;
+                pdtdtl.AddCell(cell);
+
+                cell = new PdfPCell(FormatHeaderPhrase("Supplier Name"));
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                //cell.BorderWidth = 0f;
+                //cell.FixedHeight = 20f;
+                // cell.Colspan = 2;
+                pdtdtl.AddCell(cell);
+                cell = new PdfPCell(FormatHeaderPhrase("Items Name"));
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                // cell.BorderWidth = 0f;
+                //cell.FixedHeight = 20f;
+                //cell.Colspan = 2;
+                pdtdtl.AddCell(cell);
+                cell = new PdfPCell(FormatHeaderPhrase("Label"));
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                // cell.BorderWidth = 0f;
+                // cell.FixedHeight = 30f;
+                //cell.Colspan = 2;
+                pdtdtl.AddCell(cell);
+
+                cell = new PdfPCell(FormatHeaderPhrase("Rate"));
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                // cell.BorderWidth = 0f;
+                // cell.FixedHeight = 30f;
+                //cell.Colspan = 2;
+                pdtdtl.AddCell(cell);
+
+                cell = new PdfPCell(FormatHeaderPhrase("Quantity"));
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                // cell.BorderWidth = 0f;
+                // cell.FixedHeight = 30f;
+                //cell.Colspan = 2;
+                pdtdtl.AddCell(cell);
+
+                cell = new PdfPCell(FormatHeaderPhrase("Total"));
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                // cell.BorderWidth = 0f;
+                // cell.FixedHeight = 30f;
+                //cell.Colspan = 2;
+                pdtdtl.AddCell(cell);
+
+                cell = new PdfPCell(FormatHeaderPhrase("Remark's"));
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                // cell.BorderWidth = 0f;
+                // cell.FixedHeight = 30f;
+                //cell.Colspan = 2;
+                pdtdtl.AddCell(cell);
+                if (!string.IsNullOrEmpty(ddlSenderName.SelectedItem.Text) && string.IsNullOrEmpty(ddlCustomer.SelectedItem.Text))
+                {
+                    parameter = " and t1.SenderID='" + ddlSenderName.SelectedValue + "' and t1.CustomerID='" + drMst["CustomerID"].ToString() + "' ";
+                }
+                else if (!string.IsNullOrEmpty(ddlSenderName.SelectedItem.Text) && !string.IsNullOrEmpty(ddlCustomer.SelectedItem.Text))
+                {
+                    parameter = " and t1.SenderID='" + ddlSenderName.SelectedValue + "' and t1.CustomerID='" + ddlCustomer.SelectedValue + "' ";
+                }
+
+                string SelectQuery =
+                    @"SELECT t1.[ID],t1.[ShiftmentID],t2.Name,t3.ShiftmentNO,t1.PartyRate,t1.Quantity,(t1.PartyRate*t1.Quantity) as totAmount,t1.Label,t4.ContactName as supplier FROM ShiftmentItems t1 inner join Item t2 on t2.ID=t1.ItemsID inner join ShiftmentAssigen t3 on t3.ID=t1.ShiftmentID inner join Supplier t4 on t4.ID=t1.SupplierID WHERE t1.ShiftmentID='" +
+                    drMst["ShipmentID"].ToString() + "' " + parameter + " order by t1.PartyID  ";
+                DataTable dtCartoon = DataManager.ExecuteQuery(DataManager.OraConnString(), SelectQuery,
+                    "ShiftmentItems");
+
+                foreach (DataRow drtt in dtCartoon.Rows)
+                {
+                    string Cortoon = "";
+                    int tt = 0;
+                    string SelectQuery1 =
+                        @"SELECT DISTINCT t2.CartoonNo FROM [ShiftmentBoxingItemsDtl] t1 INNER JOIN ShiftmentBoxingMst t2 on t2.ID=t1.MasterID WHERE t1.ItemsID='" +
+                        drtt["ID"].ToString() + "' ";
+                    DataTable dttCartoon = DataManager.ExecuteQuery(DataManager.OraConnString(), SelectQuery1,
+                        "ShiftmentBoxingItemsDtl");
+                    foreach (DataRow drr in dttCartoon.Rows)
+                    {
+                        if (Cortoon == "")
+                        {
+                            Cortoon = drr["CartoonNo"].ToString();
+                        }
+                        else
+                        {
+                            Cortoon += " , " + drr["CartoonNo"].ToString();
+                        }
+
+                        tt++;
+                    }
+
+                    cell = new PdfPCell(FormatFontPhrase(serial.ToString()));
+                    cell.HorizontalAlignment = 1;
+                    cell.VerticalAlignment = 1;
+                    //cell.BorderWidth = 0f;
+                    // cell.Colspan = 2;
+                    pdtdtl.AddCell(cell);
+
+                    cell = new PdfPCell(FormatFontPhrase(Cortoon));
+                    cell.HorizontalAlignment = 0;
+                    cell.VerticalAlignment = 1;
+                    //cell.BorderWidth = 0f;
+                    // cell.Colspan = 2;
+                    pdtdtl.AddCell(cell);
+
+                    cell = new PdfPCell(FormatFontPhrase(tt.ToString()));
+                    cell.HorizontalAlignment = 1;
+                    cell.VerticalAlignment = 1;
+                    //cell.BorderWidth = 0f;
+                    // cell.Colspan = 2;
+                    pdtdtl.AddCell(cell);
+
+                    cell = new PdfPCell(FormatFontPhrase(drtt["supplier"].ToString()));
+                    cell.HorizontalAlignment = 0;
+                    cell.VerticalAlignment = 1;
+                    //cell.BorderWidth = 0f;
+                    //cell.FixedHeight = 20f;
+                    //cell.Colspan = 2;
+                    pdtdtl.AddCell(cell);
+                    cell = new PdfPCell(FormatFontPhrase(drtt["Name"].ToString()));
+                    cell.HorizontalAlignment = 0;
+                    cell.VerticalAlignment = 1;
+                    //cell.BorderWidth = 0f;
+                    //cell.FixedHeight = 20f;
+                    //cell.Colspan = 2;
+                    pdtdtl.AddCell(cell);
+                    cell = new PdfPCell(FormatFontPhrase(drtt["Label"].ToString()));
+                    cell.HorizontalAlignment = 0;
+                    cell.VerticalAlignment = 1;
+                    //cell.BorderWidth = 0f;
+                    // cell.Colspan = 2;
+                    pdtdtl.AddCell(cell);
+
+                    cell = new PdfPCell(FormatFontPhrase(drtt["PartyRate"].ToString()));
+                    cell.HorizontalAlignment = 2;
+                    cell.VerticalAlignment = 1;
+                    //cell.BorderWidth = 0f;
+                    // cell.Colspan = 2;
+                    pdtdtl.AddCell(cell);
+
+                    double tot = ItemsTotal(allTot, drtt);
+                    cell = new PdfPCell(FormatFontPhrase(tot.ToString("N0")));
+                    cell.HorizontalAlignment = 2;
+                    cell.VerticalAlignment = 1;
+                    //cell.BorderWidth = 0f;
+                    // cell.Colspan = 2;
+                    pdtdtl.AddCell(cell);
+                    double total = Convert.ToDouble(drtt["PartyRate"]) * tot;
+                    cell = new PdfPCell(
+                        FormatFontPhrase((Convert.ToDouble(drtt["PartyRate"]) * tot).ToString("N3")));
+                    cell.HorizontalAlignment = 2;
+                    cell.VerticalAlignment = 1;
+                    //cell.BorderWidth = 0f;
+                    // cell.Colspan = 2;
+                    pdtdtl.AddCell(cell);
+
+                    cell = new PdfPCell(FormatFontPhrase(""));
+                    cell.HorizontalAlignment = 0;
+                    cell.VerticalAlignment = 1;
+                    //cell.BorderWidth = 0f;
+                    // cell.Colspan = 2;
+                    pdtdtl.AddCell(cell);
+
+                    totAmt += total; //Convert.ToDecimal(drtt["totAmount"]);
+                    totQty += tot;
+                    allTot += tot;
+                    allTotamt += total;
+                    serial++;
+
+                }
+
+                cell = new PdfPCell(FormatHeaderPhrase("Total "));
+                cell.HorizontalAlignment = 2;
+                cell.VerticalAlignment = 1;
+                cell.Colspan = 7;
+                pdtdtl.AddCell(cell);
+
+                cell = new PdfPCell(FormatHeaderPhrase(totQty.ToString("N0")));
+                cell.HorizontalAlignment = 2;
+                cell.VerticalAlignment = 1;
+                //cell.Colspan = 2;
+                pdtdtl.AddCell(cell);
+
+                cell = new PdfPCell(FormatHeaderPhrase(totAmt.ToString("N2")));
+                cell.HorizontalAlignment = 2;
+                cell.VerticalAlignment = 1;
+                //cell.Colspan = 2;
+                pdtdtl.AddCell(cell);
+
+                cell = new PdfPCell(FormatHeaderPhrase(""));
+                cell.HorizontalAlignment = 2;
+                cell.VerticalAlignment = 1;
+                //cell.Colspan = 2;
+                pdtdtl.AddCell(cell);
+
+
+                cell = new PdfPCell(FormatHeaderPhrase(""));
+                cell.HorizontalAlignment = 2;
+                cell.VerticalAlignment = 1;
+                cell.Colspan = 10;
+               // cell.FixedHeight = 25f;
+                cell.Border = 0;
+                pdtdtl.AddCell(cell);
+
+                // check++;
+                //if (dtShipment.Rows.Count <= check)
+                //{
+                //    document.NewPage();
+                //}
+            }
+
+            if (dtShipment.Rows.Count > 1)
+            {
+                cell = new PdfPCell(FormatHeaderPhrase("All Total "));
+                cell.HorizontalAlignment = 2;
+                cell.VerticalAlignment = 1;
+                cell.Colspan = 7;
+                pdtdtl.AddCell(cell);
+
+                cell = new PdfPCell(FormatHeaderPhrase(allTot.ToString("N0")));
+                cell.HorizontalAlignment = 2;
+                cell.VerticalAlignment = 1;
+                //cell.Colspan = 2;
+                pdtdtl.AddCell(cell);
+
+                cell = new PdfPCell(FormatHeaderPhrase(allTotamt.ToString("N2")));
+                cell.HorizontalAlignment = 2;
+                cell.VerticalAlignment = 1;
+                //cell.Colspan = 2;
+                pdtdtl.AddCell(cell);
+
+                cell = new PdfPCell(FormatHeaderPhrase(""));
+                cell.HorizontalAlignment = 2;
+                cell.VerticalAlignment = 1;
+                //cell.Colspan = 2;
+                pdtdtl.AddCell(cell);
+
+
+                cell = new PdfPCell(FormatHeaderPhrase( ""));
+                cell.HorizontalAlignment = 2;
+                cell.VerticalAlignment = 1;
+                cell.Colspan = 10;
+                //  cell.FixedHeight = 25f;
+                cell.Border = 0;
+                pdtdtl.AddCell(cell);
+            }
+
+            document.Add(pdtdtl);
+            document.Close();
+            Response.Flush();
+            Response.End();
+        }
+    }
+
+    private void StyleAndPartyWisePackingListWithoutSupplier()
+    {
+        double allTot = 0;
+        double totAmt = 0;
+        double allTotAmt = 0;
+        double totQty = 0;
+        string parameter = "";
+        if (txtParty.Text != "")
+        {
+            parameter = " AND t1.SupplierID='" + lblPartyID.Text + "'";
+        }
+
+        DataTable dtShipment = null;
+
+        //int Count = IdManager.GetShowSingleValueInt("COUNT(*)",
+        //    "ShiftmentAssigen where ParentShiftmentNO='" + lblShiftmentID.Text + "' ");
+        //if (Count > 0)
+        //{
+        //    string ShipmentQuery =
+        //        "SELECT [ID] ,[ShiftmentNO]    FROM [dbo].[ShiftmentAssigen] where [ParentShiftmentNO]='" +
+        //        lblShiftmentID.Text + "' ";
+        //    dtShipment = DataManager.ExecuteQuery(DataManager.OraConnString(), ShipmentQuery, "ShiftmentAssigen");
+        //}
+        //else
+        //{
+        //    string ShipmentQuery =
+        //        "SELECT [ID] ,[ShiftmentNO]    FROM [dbo].[ShiftmentAssigen] where [ID]='" +
+        //        lblShiftmentID.Text + "' ";
+        //    dtShipment = DataManager.ExecuteQuery(DataManager.OraConnString(), ShipmentQuery, "ShiftmentAssigen");
+        //}
+
+        dtShipment = _aShiftmentAssignManager.GetShipmentSenderInfoSummery("", lblShiftmentID.Text,
+            ddlSenderName.SelectedValue, ddlCustomer.SelectedValue);
+        if (dtShipment.Rows.Count > 0)
+        {
+            string filename = ddlReportType.SelectedItem.Text.Trim().Replace(" ", "").Replace("  ", "") + "-" +
+                              DateTime.Now.ToString("dd-MM-yyyy");
+           
+            Response.Clear();
+            Response.ContentType = "application/pdf";
+            Response.AddHeader("content-disposition", "attachment; filename=" + filename + ".pdf");
+            Document document = new Document(PageSize.A4.Rotate(), 10f, 10f, 20f, 20f);
+            PdfWriter writer = PdfWriter.GetInstance(document, Response.OutputStream);
+            document.Open();
+            iTextSharp.text.Rectangle page = document.PageSize;
+            PdfPTable head = new PdfPTable(1);
+            head.TotalWidth = page.Width - 50;
+
+            PdfPCell cell;
+            byte[] logo = GlBookManager.GetGlLogo(Session["book"].ToString());
+            iTextSharp.text.Image gif = iTextSharp.text.Image.GetInstance(logo);
+            gif.Alignment = iTextSharp.text.Image.MIDDLE_ALIGN;
+            gif.ScalePercent(8f);
+
+            float[] titwidth = new float[3] { 15, 40, 10 };
+            PdfPTable dth = new PdfPTable(titwidth);
+            dth.WidthPercentage = 100;
+
+            cell = new PdfPCell(gif);
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.VerticalAlignment = Element.ALIGN_TOP;
+            cell.HorizontalAlignment = Element.ALIGN_TOP;
+            cell.Rowspan = 4;
+            cell.BorderWidth = 0f;
+            dth.AddCell(cell);
+
+            if (chkIsNameChange.Checked)
+            {
+                cell = new PdfPCell(new Phrase("Rey De Aves",
+                    FontFactory.GetFont(FontFactory.TIMES_ROMAN, 15, iTextSharp.text.Font.BOLD)));
+            }
+            else
+            {
+
+                cell = new PdfPCell(new Phrase(Session["org"].ToString(),
+                    FontFactory.GetFont(FontFactory.TIMES_ROMAN, 12, iTextSharp.text.Font.BOLD)));
+            }
+
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.BorderWidth = 0f;
+            // cell.FixedHeight = 20f;
+            dth.AddCell(cell);
+
+            cell = new PdfPCell(new Phrase("", FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD)));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.VerticalAlignment = Element.ALIGN_MIDDLE;
+            cell.HorizontalAlignment = Element.ALIGN_MIDDLE;
+            cell.Rowspan = 4;
+            cell.BorderWidth = 0f;
+            dth.AddCell(cell);
+
+            cell = new PdfPCell(new Phrase(Session["add1"].ToString(), FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD)));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.BorderWidth = 0f;
+            // cell.FixedHeight = 20f;
+            dth.AddCell(cell);
+            cell = new PdfPCell(new Phrase(Session["add2"].ToString(), FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD)));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.BorderWidth = 0f;
+            //cell.FixedHeight = 20f;
+            dth.AddCell(cell);
+
+            string Heading = "Style Wise Packing List.\n Shipment No. : " + txtShiftmentNo.Text;
+            cell = new PdfPCell(new Phrase(Heading,
+                FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD)));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.BorderWidth = 0f;
+            //cell.FixedHeight = 30f;
+            dth.AddCell(cell);
+            document.Add(dth);
+
+            LineSeparator line = new LineSeparator(0f, 100, null, Element.ALIGN_CENTER, -2);
+            document.Add(line);
+
+            PdfPTable dtempty = new PdfPTable(1);
+            cell = new PdfPCell(FormatHeaderPhrase(""));
+            cell.BorderWidth = 0f;
+            cell.FixedHeight = 10f;
+            dtempty.AddCell(cell);
+            document.Add(dtempty);
+
+            int serial = 1;
+            float[] widthdtl = new float[10] { 8,15, 20, 10,  20, 15, 10, 10,10, 15};
+            PdfPTable pdtdtl = new PdfPTable(widthdtl);
+            pdtdtl.WidthPercentage = 100;
+
+            foreach (DataRow drMst in dtShipment.Rows)
+            {
+                totQty = 0;
+                totAmt = 0;
+
+                cell = new PdfPCell(FormatHeaderPhrase12("Shipment No. & Customer : " +
+                                                         drMst["SenderSubName"].ToString() + " - " +
+                                                         drMst["CustomerName"].ToString()));
+                cell.HorizontalAlignment = 0;
+                cell.VerticalAlignment = 1;
+                cell.Colspan = 10;
+                cell.FixedHeight = 20f;
+                //cell.BorderWidth = 0f;
+                pdtdtl.AddCell(cell);
+                
+
+                cell = new PdfPCell(FormatHeaderPhrase("SL No."));
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                //cell.Colspan = 6;
+                //cell.FixedHeight = 20f;
+                //cell.BorderWidth = 0f;
+                pdtdtl.AddCell(cell);
+
+                cell = new PdfPCell(FormatHeaderPhrase("Image"));
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                //cell.Colspan = 6;
+                //cell.FixedHeight = 20f;
+                //cell.BorderWidth = 0f;
+                pdtdtl.AddCell(cell);
+
+                cell = new PdfPCell(FormatHeaderPhrase("CTN NO."));
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                //cell.Colspan = 6;
+                //cell.FixedHeight = 20f;
+                //cell.BorderWidth = 0f;
+                pdtdtl.AddCell(cell);
+
+                cell = new PdfPCell(FormatHeaderPhrase("T.CTN"));
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                //cell.Colspan = 6;
+                //cell.FixedHeight = 20f;
+                //cell.BorderWidth = 0f;
+                pdtdtl.AddCell(cell);
+
+                //cell = new PdfPCell(FormatHeaderPhrase("Supplier Name"));
+                // cell.HorizontalAlignment = 1;
+                //  cell.VerticalAlignment = 1;
+                //cell.BorderWidth = 0f;
+                //cell.FixedHeight = 20f;
+                // cell.Colspan = 2;
+                // pdtdtl.AddCell(cell);
+
+                cell = new PdfPCell(FormatHeaderPhrase("Items Name"));
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                // cell.BorderWidth = 0f;
+                //cell.FixedHeight = 20f;
+                //cell.Colspan = 2;
+                pdtdtl.AddCell(cell);
+                cell = new PdfPCell(FormatHeaderPhrase("Label"));
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                // cell.BorderWidth = 0f;
+                // cell.FixedHeight = 30f;
+                //cell.Colspan = 2;
+                pdtdtl.AddCell(cell);
+
+                cell = new PdfPCell(FormatHeaderPhrase("P.Rate(BD)"));
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                // cell.BorderWidth = 0f;
+                // cell.FixedHeight = 30f;
+                //cell.Colspan = 2;
+                pdtdtl.AddCell(cell);
+
+                cell = new PdfPCell(FormatHeaderPhrase("Sales Rate(Peso)"));
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                // cell.BorderWidth = 0f;
+                // cell.FixedHeight = 30f;
+                //cell.Colspan = 2;
+                pdtdtl.AddCell(cell);
+
+                cell = new PdfPCell(FormatHeaderPhrase("Quantity"));
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                // cell.BorderWidth = 0f;
+                // cell.FixedHeight = 30f;
+                //cell.Colspan = 2;
+                pdtdtl.AddCell(cell);
+
+                cell = new PdfPCell(FormatHeaderPhrase("Total Amount(Peso" +
+                                                       ")"));
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                // cell.BorderWidth = 0f;
+                // cell.FixedHeight = 30f;
+                //cell.Colspan = 2;
+                pdtdtl.AddCell(cell);
+
+                //cell = new PdfPCell(FormatHeaderPhrase("Remark's"));
+                //cell.HorizontalAlignment = 1;
+                //cell.VerticalAlignment = 1;
+                //// cell.BorderWidth = 0f;
+                //// cell.FixedHeight = 30f;
+                ////cell.Colspan = 2;
+                //pdtdtl.AddCell(cell);
+
+                if (!string.IsNullOrEmpty(ddlSenderName.SelectedItem.Text) && string.IsNullOrEmpty(ddlCustomer.SelectedItem.Text))
+                {
+                    parameter = " and t1.SenderID='" + ddlSenderName.SelectedValue + "' and t1.CustomerID='" + drMst["CustomerID"].ToString() + "' ";
+                }
+                else if (!string.IsNullOrEmpty(ddlSenderName.SelectedItem.Text) && !string.IsNullOrEmpty(ddlCustomer.SelectedItem.Text))
+                {
+                    parameter = " and t1.SenderID='" + ddlSenderName.SelectedValue + "' and t1.CustomerID='" + ddlCustomer.SelectedValue + "' ";
+                }
+
+                string SelectQuery =
+                    @"SELECT t1.[ID],t1.[ShiftmentID],t2.Name,t3.CustomerID,t3.ShiftmentNO,t1.PartyRate,t1.Quantity,(t1.PartyRate*t1.Quantity) as totAmount,t1.Label,t4.ContactName as supplier,t1.ItemsID FROM ShiftmentItems t1 inner join Item t2 on t2.ID=t1.ItemsID inner join ShiftmentAssigen t3 on t3.ID=t1.ShiftmentID inner join Supplier t4 on t4.ID=t1.SupplierID WHERE t1.ShiftmentID='" +
+                    drMst["ShipmentID"].ToString() + "' " + parameter + " order by t1.PartyID  ";
+                DataTable dtCartoon = DataManager.ExecuteQuery(DataManager.OraConnString(), SelectQuery,
+                    "Temp_ShiftmentItemsColorSize");
+
+                foreach (DataRow drtt in dtCartoon.Rows)
+                {
+
+                    byte[] logo1 =
+                        ShiftmentItemsCartoonManager.GetShipmentImage(lblShiftmentID.Text, drtt["ID"].ToString());
+
+                    double PesoRate = Convert.ToDouble(ConfigurationManager.AppSettings["PHRate"].ToString());
+                    if (!string.IsNullOrEmpty(drtt["CustomerID"].ToString()))
+                    {
+                        PesoRate =
+                            IdManager.GetShowSingleValueCurrency("PessoRate",
+                                "Customer where ID='" + drtt["CustomerID"].ToString() + "' ");
+                    }
+
+                    string Cortoon = "";
+                    int tt = 0;
+                    string SelectQuery1 =
+                        @"SELECT DISTINCT t2.CartoonNo FROM [ShiftmentBoxingItemsDtl] t1 INNER JOIN ShiftmentBoxingMst t2 on t2.ID=t1.MasterID WHERE t1.ItemsID='" +
+                        drtt["ID"].ToString() + "' ";
+                    DataTable dttCartoon = DataManager.ExecuteQuery(DataManager.OraConnString(), SelectQuery1,
+                        "ShiftmentBoxingItemsDtl");
+                    foreach (DataRow drr in dttCartoon.Rows)
+                    {
+                        if (Cortoon == "")
+                        {
+                            Cortoon = drr["CartoonNo"].ToString();
+                        }
+                        else
+                        {
+                            Cortoon += " , " + drr["CartoonNo"].ToString();
+                        }
+
+                        tt++;
+                    }
+
+                    cell = new PdfPCell(FormatFontPhrase(serial.ToString()));
+                    cell.HorizontalAlignment = 1;
+                    cell.VerticalAlignment = 1;
+                    //cell.BorderWidth = 0f;
+                    // cell.Colspan = 2;
+                    pdtdtl.AddCell(cell);
+
+                    if (logo1 != null)
+                    {
+                        iTextSharp.text.Image gif1 = iTextSharp.text.Image.GetInstance(logo1);
+                        gif1.Alignment = iTextSharp.text.Image.MIDDLE_ALIGN;
+                        gif1.ScalePercent(40f);
+
+                        cell = new PdfPCell(gif1);
+                    }
+                    else
+                    {
+                        cell = new PdfPCell(FormatFontPhrase(""));
+                    }
+
+                    cell.HorizontalAlignment = 1;
+                    cell.VerticalAlignment = 1;
+                    cell.VerticalAlignment = Element.ALIGN_TOP;
+                    cell.HorizontalAlignment = Element.ALIGN_CENTER;
+                    //cell.Rowspan = 4;
+                    // cell.BorderWidth = 0f;
+                    pdtdtl.AddCell(cell);
+
+                    cell = new PdfPCell(FormatFontPhrase(Cortoon));
+                    cell.HorizontalAlignment = 0;
+                    cell.VerticalAlignment = 1;
+                    //cell.BorderWidth = 0f;
+                    // cell.Colspan = 2;
+                    pdtdtl.AddCell(cell);
+
+                    cell = new PdfPCell(FormatFontPhrase(tt.ToString()));
+                    cell.HorizontalAlignment = 1;
+                    cell.VerticalAlignment = 1;
+                    //cell.BorderWidth = 0f;
+                    // cell.Colspan = 2;
+                    pdtdtl.AddCell(cell);
+
+                    //cell = new PdfPCell(FormatFontPhrase(drtt["supplier"].ToString()));
+                    //cell.HorizontalAlignment = 0;
+                    //cell.VerticalAlignment = 1;
+                    //cell.BorderWidth = 0f;
+                    //cell.FixedHeight = 20f;
+                    //cell.Colspan = 2;
+                    //pdtdtl.AddCell(cell);
+
+                    cell = new PdfPCell(FormatFontPhrase(drtt["Name"].ToString()));
+                    cell.HorizontalAlignment = 0;
+                    cell.VerticalAlignment = 1;
+                    //cell.BorderWidth = 0f;
+                    //cell.FixedHeight = 20f;
+                    //cell.Colspan = 2;
+                    pdtdtl.AddCell(cell);
+                    cell = new PdfPCell(FormatFontPhrase(drtt["Label"].ToString()));
+                    cell.HorizontalAlignment = 0;
+                    cell.VerticalAlignment = 1;
+                    //cell.BorderWidth = 0f;
+                    // cell.Colspan = 2;
+                    pdtdtl.AddCell(cell);
+
+                    cell = new PdfPCell(FormatFontPhrase(drtt["PartyRate"].ToString()));
+                    cell.HorizontalAlignment = 2;
+                    cell.VerticalAlignment = 1;
+                    //cell.BorderWidth = 0f;
+                    // cell.Colspan = 2;
+                    pdtdtl.AddCell(cell);
+                    double SaleRate = (Convert.ToDouble(drtt["PartyRate"].ToString()) * PesoRate);
+                    cell = new PdfPCell(FormatFontPhrase(SaleRate.ToString("N3")));
+                    cell.HorizontalAlignment = 2;
+                    cell.VerticalAlignment = 1;
+                    //cell.BorderWidth = 0f;
+                    // cell.Colspan = 2;
+                    pdtdtl.AddCell(cell);
+
+                    double tot = ItemsTotal(allTot, drtt);
+                    cell = new PdfPCell(FormatFontPhrase(tot.ToString("N0")));
+                    cell.HorizontalAlignment = 2;
+                    cell.VerticalAlignment = 1;
+                    //cell.BorderWidth = 0f;
+                    // cell.Colspan = 2;
+                    pdtdtl.AddCell(cell);
+
+                    cell = new PdfPCell(FormatFontPhrase((SaleRate * tot).ToString("N3")));
+                    cell.HorizontalAlignment = 2;
+                    cell.VerticalAlignment = 1;
+                    //cell.BorderWidth = 0f;
+                    // cell.Colspan = 2;
+                    pdtdtl.AddCell(cell);
+
+                    //cell = new PdfPCell(FormatFontPhrase(""));
+                    //cell.HorizontalAlignment = 0;
+                    //cell.VerticalAlignment = 1;
+                    ////cell.BorderWidth = 0f;
+                    //// cell.Colspan = 2;
+                    //pdtdtl.AddCell(cell);
+
+                    totAmt += (SaleRate * tot);
+                    totQty += tot;
+                    allTot += tot;
+                   
+                    serial++;
+                }
+                allTotAmt += totAmt;
+
+                cell = new PdfPCell(FormatHeaderPhrase("Total "));
+                cell.HorizontalAlignment = 2;
+                cell.VerticalAlignment = 1;
+                cell.Colspan = 8;
+                pdtdtl.AddCell(cell);
+
+                cell = new PdfPCell(FormatHeaderPhrase(totQty.ToString("N0")));
+                cell.HorizontalAlignment = 2;
+                cell.VerticalAlignment = 1;
+                //cell.Colspan = 2;
+                pdtdtl.AddCell(cell);
+
+                cell = new PdfPCell(FormatHeaderPhrase(totAmt.ToString("N3")));
+                cell.HorizontalAlignment = 2;
+                cell.VerticalAlignment = 1;
+                //cell.Colspan = 2;
+                pdtdtl.AddCell(cell);
+
+                cell = new PdfPCell(FormatHeaderPhrase(""));
+                cell.HorizontalAlignment = 2;
+                cell.VerticalAlignment = 1;
+                //cell.FixedHeight = 25f;
+                cell.Colspan = 10;
+                cell.Border = 0;
+                pdtdtl.AddCell(cell);
+            }
+
+            if (dtShipment.Rows.Count > 1)
+            {
+                cell = new PdfPCell(FormatHeaderPhrase("Grand Total "));
+                cell.HorizontalAlignment = 2;
+                cell.VerticalAlignment = 1;
+                cell.Colspan = 8;
+                pdtdtl.AddCell(cell);
+
+                cell = new PdfPCell(FormatHeaderPhrase(allTot.ToString("N0")));
+                cell.HorizontalAlignment = 2;
+                cell.VerticalAlignment = 1;
+                //cell.Colspan = 2;
+                pdtdtl.AddCell(cell);
+
+                cell = new PdfPCell(FormatHeaderPhrase(allTotAmt.ToString("N3")));
+                cell.HorizontalAlignment = 2;
+                cell.VerticalAlignment = 1;
+                //cell.Colspan = 2;
+                pdtdtl.AddCell(cell);
+
+                cell = new PdfPCell(FormatHeaderPhrase(""));
+                cell.HorizontalAlignment = 2;
+                cell.VerticalAlignment = 1;
+                cell.FixedHeight = 25f;
+                cell.Colspan = 10;
+                cell.Border = 0;
+                pdtdtl.AddCell(cell);
+            }
+            document.Add(pdtdtl);
+            document.Close();
+            Response.Flush();
+            Response.End();
+        }
+    }
+    //************* Check Courtoon Quantity ***************//
+    private static double ItemsTotal(double allTot, DataRow drtt)
+    {
+        
+        //double tot1 = 0;
+        double tot2 = 0;
+        DataTable dt11 = ShiftmentItemsCartoonManager.getShiftmentItemsCartoonItemsQuantity(drtt["ID"].ToString());
+        if (dt11 != null)
+        {         
+            for (int i = 0; i < dt11.Rows.Count; i++)
+            {
+                int ff = 0;
+                for (int j = 1; j < dt11.Columns.Count; j++)
+                {
+                    if (dt11.Rows[i][j].ToString() != "" && ff > 0)
+                    {
+                        //tot1 += Convert.ToDouble(dt11.Rows[i][j].ToString());
+                        tot2 += Convert.ToDouble(dt11.Rows[i][j].ToString());
+                        //allTot += Convert.ToDouble(dt11.Rows[i][j].ToString());
+                    }
+                    ff++;
+                }
+
+            }
+        }
+        return tot2;
+    }
+
+    //********************************* Barcode Print **********************//
+    public void getShiftmentQtyPrint_Bercode()
+    {
+        string filename = "CartoonNo_Barcode_RPT" + DateTime.Now.ToString("dd-MM-yyyy");
+        Response.Clear();
+        Response.ContentType = "application/pdf";
+        Response.AddHeader("content-disposition", "attachment; filename=" + filename + ".pdf");
+        Document document = new Document(PageSize.A4, 30f, 30f, 10f, 10f);
+        PdfWriter writer = PdfWriter.GetInstance(document, Response.OutputStream);
+        document.Open();
+        iTextSharp.text.Rectangle page = document.PageSize;
+        PdfPTable head = new PdfPTable(1);
+        head.TotalWidth = page.Width - 50;
+
+        barcode.Alignment = BarcodeLib.AlignmentPositions.CENTER;
+        int W = 550;
+        int H = 160;
+
+        BarcodeLib.TYPE type = BarcodeLib.TYPE.CODE128;
+        barcode.IncludeLabel = false;
+        barcode.RotateFlipType = (RotateFlipType) Enum.Parse(typeof(RotateFlipType), "RotateNoneFlipNone", true);
+        barcode.LabelPosition = BarcodeLib.LabelPositions.BOTTOMCENTER;
+
+        DataTable dtMst =
+            ShiftmentItemsManager.GetShowItemsInfo_Barcode(txtCart1.Text, txtCart2.Text, lblShiftmentID.Text);
+        if (dtMst.Rows.Count > 0)
+        {
+            int Page1 = 0;
+            foreach (DataRow row in dtMst.Rows)
+            {
+                System.Drawing.Image generatedBarcode =
+                    barcode.Encode(type, row["MasterID"].ToString(), Color.Black, Color.White, W, H);
+                System.IO.MemoryStream stream = new System.IO.MemoryStream();
+                generatedBarcode.Save(stream, System.Drawing.Imaging.ImageFormat.Png);
+
+                byte[] logo2 = stream.ToArray();
+                iTextSharp.text.Image gif2 = iTextSharp.text.Image.GetInstance(logo2);
+                gif2.Alignment = iTextSharp.text.Image.MIDDLE_ALIGN;
+                gif2.ScalePercent(12f);
+
+                PdfPCell cell;
+                byte[] logo = GlBookManager.GetGlLogo(Session["book"].ToString());
+                iTextSharp.text.Image gif = iTextSharp.text.Image.GetInstance(logo);
+                gif.Alignment = iTextSharp.text.Image.MIDDLE_ALIGN;
+                gif.ScalePercent(8f);
+
+                float[] titwidth = new float[3] {15, 40, 15};
+                PdfPTable dth = new PdfPTable(titwidth);
+                dth.WidthPercentage = 100;
+
+
+
+                cell = new PdfPCell(gif);
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                cell.VerticalAlignment = Element.ALIGN_TOP;
+                cell.HorizontalAlignment = Element.ALIGN_TOP;
+                cell.Rowspan = 4;
+                cell.BorderWidth = 0f;
+                dth.AddCell(cell);
+
+                cell = new PdfPCell(new Phrase(Session["org"].ToString(),
+                    FontFactory.GetFont(FontFactory.TIMES_ROMAN, 12, iTextSharp.text.Font.BOLD)));
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                cell.BorderWidth = 0f;
+                // cell.FixedHeight = 20f;
+                dth.AddCell(cell);
+
+                cell = new PdfPCell(new Phrase(row["MasterID"].ToString(),
+                    FontFactory.GetFont(FontFactory.TIMES_ROMAN, 12, iTextSharp.text.Font.BOLD)));
+                cell.HorizontalAlignment = 0;
+                cell.VerticalAlignment = 1;
+                cell.BorderWidth = 0f;
+                // cell.FixedHeight = 20f;
+                dth.AddCell(cell);
+
+                cell = new PdfPCell(new Phrase(Session["add1"].ToString(),
+                    FontFactory.GetFont(FontFactory.TIMES_ROMAN, 8, iTextSharp.text.Font.BOLD)));
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                cell.BorderWidth = 0f;
+                // cell.FixedHeight = 20f;
+                dth.AddCell(cell);
+
+                cell = new PdfPCell(gif2);
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                cell.VerticalAlignment = Element.ALIGN_MIDDLE;
+                cell.HorizontalAlignment = Element.ALIGN_MIDDLE;
+                cell.Rowspan = 3;
+                cell.BorderWidth = 0f;
+                dth.AddCell(cell);
+
+
+                cell = new PdfPCell(new Phrase(Session["add2"].ToString(),
+                    FontFactory.GetFont(FontFactory.TIMES_ROMAN, 8, iTextSharp.text.Font.BOLD)));
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                cell.BorderWidth = 0f;
+                //cell.FixedHeight = 20f;
+                dth.AddCell(cell);
+                cell = new PdfPCell(new Phrase("Items Image",
+                    FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD)));
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                cell.BorderWidth = 0f;
+                //cell.FixedHeight = 30f;
+                dth.AddCell(cell);
+                document.Add(dth);
+                //LineSeparator line = new LineSeparator(1, 100, null, Element.ALIGN_CENTER, -2);
+                //document.Add(line);
+
+                PdfPTable dtempty = new PdfPTable(1);
+                cell = new PdfPCell(FormatHeaderPhrase(""));
+                cell.BorderWidth = 0f;
+                cell.FixedHeight = 10f;
+                dtempty.AddCell(cell);
+                document.Add(dtempty);
+                int serial = 0;
+                //foreach (DataRow drr in dtMst.Rows)
+                //{
+                float[] MB = new float[1] {100};
+                PdfPTable pdMB = new PdfPTable(MB);
+                pdMB.WidthPercentage = 100;
+
+                float[] widthdtl = new float[6] {20, 20, 20, 20, 20, 20};
+                PdfPTable pdtdtl = new PdfPTable(widthdtl);
+                pdtdtl.WidthPercentage = 100;
+
+                if (serial == 0)
+                {
+                    cell = new PdfPCell(FormatHeaderPhrase("CTN No : " + row["CartoonNo"].ToString()));
+                }
+                else
+                {
+                    cell = new PdfPCell(FormatHeaderPhrase(""));
+                }
+
+                cell.HorizontalAlignment = 0;
+                cell.VerticalAlignment = 1;
+                cell.Colspan = 2;
+                cell.BorderWidth = 0f;
+                pdtdtl.AddCell(cell);
+
+                if (serial == 0)
+                {
+                    cell = new PdfPCell(FormatHeaderPhrase("Shipment No. : " + row["ShiftmentNO"].ToString()));
+                }
+                else
+                {
+                    cell = new PdfPCell(FormatHeaderPhrase(""));
+                }
+
+                cell.HorizontalAlignment = 0;
+                cell.VerticalAlignment = 1;
+                cell.Colspan = 2;
+                cell.BorderWidth = 0f;
+                pdtdtl.AddCell(cell);
+
+                if (serial == 0)
+                {
+                    cell = new PdfPCell(FormatHeaderPhrase(
+                        "Date : " +
+                        (DataManager.DateEncode(row["ShiftmentDate"].ToString())).ToString(IdManager.DateFormat())));
+                }
+                else
+                {
+                    cell = new PdfPCell(FormatHeaderPhrase(""));
+                }
+
+                cell.HorizontalAlignment = 0;
+                cell.VerticalAlignment = 1;
+                cell.Colspan = 2;
+                cell.BorderWidth = 0f;
+                pdtdtl.AddCell(cell);
+
+                cell = new PdfPCell(FormatHeaderPhrase(""));
+                cell.HorizontalAlignment = 0;
+                cell.VerticalAlignment = 1;
+                cell.Colspan = 6;
+                //cell.FixedHeight = 8f;
+                cell.BorderWidth = 0f;
+                pdtdtl.AddCell(cell);
+
+                //cell = new PdfPCell(FormatHeaderPhrase(""));
+                //cell.HorizontalAlignment = 1;
+                //cell.VerticalAlignment = 1;
+                ////cell.BorderWidth = 0f;
+                ////cell.FixedHeight = 20f;
+                //cell.Colspan = 2;
+                //pdtdtl.AddCell(cell);
+                cell = new PdfPCell(FormatHeaderPhrase("Items Name"));
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                // cell.BorderWidth = 0f;
+                //cell.FixedHeight = 20f;
+                cell.Colspan = 4;
+                pdtdtl.AddCell(cell);
+                cell = new PdfPCell(FormatHeaderPhrase("Label"));
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                // cell.BorderWidth = 0f;
+                // cell.FixedHeight = 30f;
+                cell.Colspan = 2;
+                pdtdtl.AddCell(cell);
+                if (dtMst.Rows.Count > 0)
+                {
+                    //cell = new PdfPCell(FormatFontPhrase(""));
+                    //cell.HorizontalAlignment = 0;
+                    //cell.VerticalAlignment = 1;
+                    ////cell.BorderWidth = 0f;
+                    ////cell.FixedHeight = 20f;
+                    //cell.Colspan = 2;
+                    //pdtdtl.AddCell(cell);
+                    cell = new PdfPCell(FormatFontPhrase(row["Name"].ToString()));
+                    cell.HorizontalAlignment = 0;
+                    cell.VerticalAlignment = 1;
+                    //cell.BorderWidth = 0f;
+                    //cell.FixedHeight = 20f;
+                    cell.Colspan = 4;
+                    pdtdtl.AddCell(cell);
+                    cell = new PdfPCell(FormatFontPhrase(row["Label"].ToString()));
+                    cell.HorizontalAlignment = 0;
+                    cell.VerticalAlignment = 1;
+                    //cell.BorderWidth = 0f;
+                    cell.Colspan = 2;
+                    pdtdtl.AddCell(cell);
+                }
+
+                cell = new PdfPCell(FormatFontPhrase(""));
+                cell.HorizontalAlignment = 0;
+                cell.VerticalAlignment = 1;
+                cell.BorderWidth = 0f;
+                //cell.FixedHeight = 8;
+                cell.Colspan = 6;
+                pdtdtl.AddCell(cell);
+                if (ddlReportType.SelectedValue.Equals("SBRI"))
+                {
+                    DataTable dt = IdManager.GetShowDataTable(
+                        "SELECT '' AS imagename,[ID] AS ImageID, [Image] AS Image from [ShiftmentBoxingItemsImage] where [BoxingItemsID] ='" +
+                        row["MasterID"].ToString() + "' and ItemsID='" + row["SHITEMSid"].ToString() + "' ");
+                    if (dt.Rows.Count > 0)
+                    {
+                        PdfPTable pdtclient = new PdfPTable(dt.Rows.Count);
+                        pdtclient.WidthPercentage = 100;
+                        decimal tt = decimal.Zero;
+                        decimal tot = (6 / dt.Rows.Count);
+                        tt = 6 * Math.Ceiling(tot);
+                        for (int i = 0; i < tt; i++)
+                        {
+                            if (dt.Rows.Count - 1 < i)
+                            {
+                                cell = new PdfPCell(FormatHeaderPhrase(""));
+                                cell.HorizontalAlignment = 1;
+                                cell.VerticalAlignment = 1;
+                                cell.BorderWidth = 0f;
+                                pdtdtl.AddCell(cell);
+                            }
+                            else
+                            {
+                                DataRow dr = dt.Rows[i];
+                                byte[] logo1 = (byte[]) dr["Image"];
+                                iTextSharp.text.Image gif1 = iTextSharp.text.Image.GetInstance(logo1);
+                                gif1.Alignment = iTextSharp.text.Image.MIDDLE_ALIGN;
+                                gif1.ScalePercent(30f);
+                                cell = new PdfPCell(gif1);
+                                cell.PaddingBottom = 10f;
+                                cell.HorizontalAlignment = 1;
+                                cell.VerticalAlignment = 1;
+                                cell.BorderWidth = 0f;
+                                pdtdtl.AddCell(cell);
+                            }
+                        }
+                    }
+                }
+
+                //DataTable dt11 = ShiftmentItemsManager.GetShiftmentItemsQuantity(txtID.Text);
+                DataTable dt11 =
+                    ShiftmentItemsCartoonManager.getShiftmentItemsCartoonItemsQuantity(row["MasterID"].ToString(),
+                        row["SHITEMSid"].ToString());
+                if (dt11 != null)
+                {
+                    float[] widthbi = new float[dt11.Columns.Count];
+                    for (int i = 0; i < dt11.Columns.Count; i++)
+                    {
+                        widthbi[i] = 100 / dt11.Columns.Count;
+                    }
+                    PdfPTable with1 = new PdfPTable(widthbi);
+                    with1.WidthPercentage = 100;
+
+                    //cell = new PdfPCell(FormatHeaderPhrase("Color name"));
+                    //cell.HorizontalAlignment = 1;
+                    //cell.VerticalAlignment = 1;
+                    //with1.AddCell(cell);
+
+                    for (int i = 1; i < dt11.Columns.Count; i++)
+                    {
+                        cell = new PdfPCell(FormatHeaderPhrase(dt11.Columns[i].ColumnName));
+                        cell.HorizontalAlignment = 1;
+                        cell.VerticalAlignment = 1;
+                        with1.AddCell(cell);
+                    }
+                    cell = new PdfPCell(FormatHeaderPhrase("Total"));
+                    cell.HorizontalAlignment = 1;
+                    cell.VerticalAlignment = 1;
+                    with1.AddCell(cell);
+                    int ff = 0;
+                    double tot1 = 0;
+                    double tot2 = 0;
+                    for (int i = 0; i < dt11.Rows.Count; i++)
+                    {
+                        for (int j = 1; j < dt11.Columns.Count; j++)
+                        {
+                            cell = new PdfPCell(FormatFontPhrase(dt11.Rows[i][j].ToString()));
+                            if (ff == 0)
+                            {
+                                cell.HorizontalAlignment = 0;
+                            }
+                            else
+                            {
+                                cell.HorizontalAlignment = 1;
+                            }
+                            cell.VerticalAlignment = 1;
+                            with1.AddCell(cell);
+                            if (dt11.Rows[i][j].ToString() != "" && ff > 0)
+                            {
+                                tot1 += Convert.ToDouble(dt11.Rows[i][j].ToString());
+                                tot2 += Convert.ToDouble(dt11.Rows[i][j].ToString());
+                            }
+                            ff++;
+                        }
+                        cell = new PdfPCell(FormatFontPhrase(tot1.ToString("N0")));
+                        cell.HorizontalAlignment = 2;
+                        cell.VerticalAlignment = 1;
+                        with1.AddCell(cell);
+                        ff = 0;
+                        tot1 = 0;
+                    }
+                    cell = new PdfPCell(FormatHeaderPhrase("Total"));
+                    cell.HorizontalAlignment = 2;
+                    cell.VerticalAlignment = 1;
+                    cell.Colspan = dt11.Columns.Count - 1;
+                    with1.AddCell(cell);
+                    cell = new PdfPCell(FormatHeaderPhrase(tot2.ToString("N0")));
+                    cell.HorizontalAlignment = 2;
+                    cell.VerticalAlignment = 1;
+                    cell.Colspan = dt11.Columns.Count - 1;
+                    with1.AddCell(cell);
+
+                    string Remarks = Delve.IdManager.GetShowSingleValueString("Remarks", "ID", "ShiftmentBoxingMst",
+                        row["MasterID"].ToString());
+                    cell = new PdfPCell(FormatHeaderPhrase("Remarks : " + Remarks));
+                    cell.HorizontalAlignment = 0;
+                    cell.VerticalAlignment = 1;
+                    cell.Colspan = dt11.Columns.Count - 1 + dt11.Columns.Count - 1;
+                    with1.AddCell(cell);
+
+                    cell = new PdfPCell(pdtdtl);
+                    cell.BorderWidth = 1f;
+                    pdMB.AddCell(cell);
+
+                    cell = new PdfPCell(with1);
+                    cell.BorderWidth = 1f;
+                    //cell.FixedHeight = 20;
+                    pdMB.AddCell(cell);
+                    document.Add(pdMB);
+
+                    PdfPTable dtempty1 = new PdfPTable(1);
+                    cell = new PdfPCell(FormatHeaderPhrase(""));
+                    cell.BorderWidth = 0f;
+                    cell.FixedHeight = 10f;
+                    dtempty1.AddCell(cell);
+                    document.Add(dtempty1);
+
+                    serial++;
+                }
+                //}
+
+                Page1++;
+                if (Page1 == 3)
+                {
+                    document.NewPage();
+                    Page1 = 0;
+                }
+
+            }
+
+            document.Close();
+            Response.Flush();
+            Response.End();
+        }
+    }
+    //******************** Style Wise Report ****************//
+
+    private void Style_Wise_Report()
+    {
+        //string SelectQuery = @"SELECT DISTINCT t1.ItemsID  FROM ShiftmentItems t1 inner join Item t2 on t2.ID=t1.ItemsID inner join ShiftmentAssigen t3 on t3.ID=t1.ShiftmentID inner join PartyInfo t4 on t4.ID=t1.PartyID WHERE t1.ShiftmentID='" + lblShiftmentID.Text + "' ";
+        //DataTable dtCartoon = DataManager.ExecuteQuery(DataManager.OraConnString(), SelectQuery, "Temp_ShiftmentItemsColorSize");
+        //if (dtCartoon.Rows.Count > 0)
+        //{
+            string filename = "StyleWiseReport-" + DateTime.Now.ToString("dd/MM/yyyy");
+            Response.Clear();
+            Response.ContentType = "application/pdf";
+            Response.AddHeader("content-disposition", "attachment; filename=" + filename + ".pdf");
+            Document document = new Document(PageSize.A4);
+            PdfWriter writer = PdfWriter.GetInstance(document, Response.OutputStream);
+            document.Open();
+            iTextSharp.text.Rectangle page = document.PageSize;
+            PdfPTable head = new PdfPTable(1);
+            head.TotalWidth = page.Width - 50;
+
+            PdfPCell cell;
+            byte[] logo = GlBookManager.GetGlLogo(Session["book"].ToString());
+            iTextSharp.text.Image gif = iTextSharp.text.Image.GetInstance(logo);
+            gif.Alignment = iTextSharp.text.Image.MIDDLE_ALIGN;
+            gif.ScalePercent(8f);
+
+            float[] titwidth = new float[3] { 15, 40, 15 };
+            PdfPTable dth = new PdfPTable(titwidth);
+            dth.WidthPercentage = 100;
+
+            cell = new PdfPCell(gif);
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.VerticalAlignment = Element.ALIGN_TOP;
+            cell.HorizontalAlignment = Element.ALIGN_TOP;
+            cell.Rowspan = 4;
+            cell.BorderWidth = 0f;
+            dth.AddCell(cell);
+
+            cell = new PdfPCell(new Phrase(Session["org"].ToString(), FontFactory.GetFont(FontFactory.TIMES_ROMAN, 12, iTextSharp.text.Font.BOLD)));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.BorderWidth = 0f;
+            // cell.FixedHeight = 20f;
+            dth.AddCell(cell);
+
+            cell = new PdfPCell(new Phrase("", FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD)));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.VerticalAlignment = Element.ALIGN_MIDDLE;
+            cell.HorizontalAlignment = Element.ALIGN_MIDDLE;
+            cell.Rowspan = 4;
+            cell.BorderWidth = 0f;
+            dth.AddCell(cell);
+
+            cell = new PdfPCell(new Phrase(Session["add1"].ToString(), FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD)));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.BorderWidth = 0f;
+            // cell.FixedHeight = 20f;
+            dth.AddCell(cell);
+            cell = new PdfPCell(new Phrase(Session["add2"].ToString(), FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD)));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.BorderWidth = 0f;
+            //cell.FixedHeight = 20f;
+            dth.AddCell(cell);
+
+            cell = new PdfPCell(new Phrase("Shipment No. :  " + txtShiftmentNo.Text + "  - Style Wise Items List.", FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD)));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.BorderWidth = 0f;
+            //cell.FixedHeight = 30f;
+            dth.AddCell(cell);
+            document.Add(dth);
+
+            PdfPTable dtempty = new PdfPTable(1);
+            cell = new PdfPCell(FormatHeaderPhrase(""));
+            cell.BorderWidth = 0f;
+            cell.FixedHeight = 10f;
+            dtempty.AddCell(cell);
+            document.Add(dtempty);
+
+            int serial = 0;
+            //foreach (DataRow drtt in dtCartoon.Rows)
+            //{
+
+                //DataTable dtMst = ShiftmentItemsManager.GetShowItemsInfo(drtt["ID"].ToString());
+                //foreach (DataRow drr in dtMst.Rows)
+                //{
+                float[] MB = new float[1] { 100 };
+                PdfPTable pdMB = new PdfPTable(MB);
+                pdMB.WidthPercentage = 100;
+
+                float[] widthdtl = new float[6] { 20, 20, 20, 20, 20, 20 };
+                PdfPTable pdtdtl = new PdfPTable(widthdtl);
+                pdtdtl.WidthPercentage = 100;
+
+                if (serial > 0)
+                {
+                    cell = new PdfPCell(FormatHeaderPhrase(""));
+                    cell.HorizontalAlignment = 0;
+                    cell.VerticalAlignment = 1;
+                    cell.Colspan = 6;
+                    cell.BorderWidth = 0f;
+                    cell.FixedHeight = 15f;
+                    pdtdtl.AddCell(cell);
+                }
+
+                cell = new PdfPCell(FormatHeaderPhrase(""));
+                cell.HorizontalAlignment = 0;
+                cell.VerticalAlignment = 1;
+                cell.Colspan = 6;
+                cell.FixedHeight = 8f;
+                cell.BorderWidth = 0f;
+                pdtdtl.AddCell(cell);
+
+                cell = new PdfPCell(FormatHeaderPhrase("Items Name"));
+                cell.HorizontalAlignment = 0;
+                cell.VerticalAlignment = 1;              
+                pdtdtl.AddCell(cell);
+                string Name = IdManager.GetShowSingleValueString("t2.Code+' - '+t2.Name", "t2.ID", "Item t2", hfItemID.Value);
+                cell = new PdfPCell(FormatFontPhrase(Name));
+                cell.HorizontalAlignment = 0;
+                cell.VerticalAlignment = 1;                
+                cell.Colspan = 5;
+                pdtdtl.AddCell(cell);
+                
+                cell = new PdfPCell(FormatFontPhrase(""));
+                cell.HorizontalAlignment = 0;
+                cell.VerticalAlignment = 1;
+                cell.BorderWidth = 0f;
+                cell.FixedHeight = 8;
+                cell.Colspan = 6;
+                pdtdtl.AddCell(cell);
+                DataTable dt = IdManager.GetShowDataTable("SELECT DISTINCT t1.ImageName AS imagename, t1.[Image] AS Image from [ShiftmentBoxingItemsImage] t1 inner join ShiftmentItems t2 on t2.ID=t1.ItemsID WHERE t2.ItemsID = '" + lblItemsID.Text + "'" );
+                if (dt.Rows.Count > 0)
+                {
+                    PdfPTable pdtclient = new PdfPTable(dt.Rows.Count);
+                    pdtclient.WidthPercentage = 100;
+                    decimal tt = decimal.Zero;
+                    decimal tot = (6 / dt.Rows.Count);
+                    tt = 6 * Math.Ceiling(tot);
+                    for (int i = 0; i < tt; i++)
+                    {
+                        if (dt.Rows.Count - 1 < i)
+                        {
+                            cell = new PdfPCell(FormatHeaderPhrase(""));
+                            cell.HorizontalAlignment = 1;
+                            cell.VerticalAlignment = 1;
+                            cell.BorderWidth = 0f;
+                            pdtdtl.AddCell(cell);
+                        }
+                        else
+                        {
+                            DataRow dr = dt.Rows[i];
+                            byte[] logo1 = (byte[])dr["Image"];
+                            iTextSharp.text.Image gif1 = iTextSharp.text.Image.GetInstance(logo1);
+                            gif1.Alignment = iTextSharp.text.Image.MIDDLE_ALIGN;
+                            gif1.ScalePercent(30f);
+                            cell = new PdfPCell(gif1);
+                            cell.PaddingBottom = 10f;
+                            cell.HorizontalAlignment = 1;
+                            cell.VerticalAlignment = 1;
+                            cell.BorderWidth = 0f;
+                            pdtdtl.AddCell(cell);
+                        }
+                    }
+                }
+                DataTable dt11 = ShiftmentItemsCartoonManager.getShiftmentItemsCartoonStyleWise(lblItemsID.Text);
+                if (dt11 != null)
+                {
+                    float[] widthbi = new float[dt11.Columns.Count];
+                    for (int i = 0; i < dt11.Columns.Count; i++)
+                    {
+                        widthbi[i] = 100 / dt11.Columns.Count;
+                    }
+                    PdfPTable with1 = new PdfPTable(widthbi);
+                    with1.WidthPercentage = 100;
+
+                    cell = new PdfPCell(FormatHeaderPhrase("Color Name"));
+                    cell.HorizontalAlignment = 1;
+                    cell.VerticalAlignment = 1;
+                    with1.AddCell(cell);
+
+                    for (int i = 2; i < dt11.Columns.Count; i++)
+                    {
+                        cell = new PdfPCell(FormatHeaderPhrase(dt11.Columns[i].ColumnName));
+                        cell.HorizontalAlignment = 1;
+                        cell.VerticalAlignment = 1;
+                        with1.AddCell(cell);
+                    }
+                    cell = new PdfPCell(FormatHeaderPhrase("Total"));
+                    cell.HorizontalAlignment = 1;
+                    cell.VerticalAlignment = 1;
+                    with1.AddCell(cell);
+                    int ff = 0;
+                    double tot1 = 0;
+                    double tot2 = 0;
+                    for (int i = 0; i < dt11.Rows.Count; i++)
+                    {
+                        for (int j = 1; j < dt11.Columns.Count; j++)
+                        {
+                            cell = new PdfPCell(FormatFontPhrase(dt11.Rows[i][j].ToString()));
+                            if (ff == 0)
+                            { cell.HorizontalAlignment = 0; }
+                            else { cell.HorizontalAlignment = 1; }
+                            cell.VerticalAlignment = 1;
+                            with1.AddCell(cell);
+                            if (dt11.Rows[i][j].ToString() != "" && ff > 0)
+                            {
+                                tot1 += Convert.ToDouble(dt11.Rows[i][j].ToString());
+                                tot2 += Convert.ToDouble(dt11.Rows[i][j].ToString());
+                            }
+                            ff++;
+
+                        }
+                        cell = new PdfPCell(FormatFontPhrase(tot1.ToString("N0")));
+                        cell.HorizontalAlignment = 2;
+                        cell.VerticalAlignment = 1;
+                        with1.AddCell(cell);
+                        ff = 0;
+                        tot1 = 0;
+                    }
+                    cell = new PdfPCell(FormatHeaderPhrase("Total"));
+                    cell.HorizontalAlignment = 2;
+                    cell.VerticalAlignment = 1;
+                    cell.Colspan = dt11.Columns.Count - 1;
+                    with1.AddCell(cell);
+                    cell = new PdfPCell(FormatHeaderPhrase(tot2.ToString("N0")));
+                    cell.HorizontalAlignment = 2;
+                    cell.VerticalAlignment = 1;
+                    cell.Colspan = dt11.Columns.Count - 1;
+                    with1.AddCell(cell);
+
+                    cell = new PdfPCell(pdtdtl);
+                    cell.BorderWidth = 1f;
+                    pdMB.AddCell(cell);
+
+                    cell = new PdfPCell(with1);
+                    cell.BorderWidth = 1f;
+                    pdMB.AddCell(cell);
+                    document.Add(pdMB);
+                    serial++;
+                }
+                //}
+            //}
+            document.Close();
+            Response.Flush();
+            Response.End();
+        //}
+    }
+
+    //******************** Party &  Style Wise Report ****************//
+
+    private void StyleAndPartyWise()
+    {
+        double allTot = 0;
+        string parameter = "";
+        string Heading = txtShiftmentNo.Text;
+        if (!string.IsNullOrEmpty(txtParty.Text) && string.IsNullOrEmpty(ddlSenderName.SelectedValue) &&
+            string.IsNullOrEmpty(ddlCustomer.SelectedValue))
+        {
+            parameter = " AND t1.[SupplierID]='" + lblPartyID.Text + "' ";
+        }
+        else if (string.IsNullOrEmpty(txtParty.Text) && !string.IsNullOrEmpty(ddlSenderName.SelectedValue) &&
+                 string.IsNullOrEmpty(ddlCustomer.SelectedValue))
+        {
+            parameter = " AND t1.[SenderID]='" + ddlSenderName.SelectedValue + "' ";
+            Heading = ddlSenderName.SelectedItem.Text;
+        }
+        else if (!string.IsNullOrEmpty(txtParty.Text) && !string.IsNullOrEmpty(ddlSenderName.SelectedValue) &&
+                 string.IsNullOrEmpty(ddlCustomer.SelectedValue))
+        {
+            parameter = " AND t1.[SupplierID]='" + lblPartyID.Text + "' and  t1.[SenderID]='" +
+                        ddlSenderName.SelectedValue + "' ";
+            Heading = ddlSenderName.SelectedItem.Text;
+        }
+        else if (string.IsNullOrEmpty(txtParty.Text) && !string.IsNullOrEmpty(ddlSenderName.SelectedValue) &&
+                 !string.IsNullOrEmpty(ddlCustomer.SelectedValue))
+        {
+            parameter = " AND t1.[CustomerID]='" + ddlCustomer.SelectedValue + "' and  t1.[SenderID]='" +
+                        ddlSenderName.SelectedValue + "' ";
+            Heading =txtShiftmentNo.Text+" - "+ ddlCustomer.SelectedItem.Text;
+        }
+        else if (!string.IsNullOrEmpty(txtParty.Text) && !string.IsNullOrEmpty(ddlSenderName.SelectedValue) &&
+                 !string.IsNullOrEmpty(ddlCustomer.SelectedValue))
+        {
+            parameter = " AND t1.[CustomerID]='" + ddlCustomer.SelectedValue + "' and  t1.[SenderID]='" +
+                        ddlSenderName.SelectedValue + "' ";
+            Heading = txtShiftmentNo.Text + " - " + ddlCustomer.SelectedItem.Text;
+        }
+
+        string SelectQuery = @"SELECT t1.[ID],t1.[ShiftmentID],t2.Name,t3.ShiftmentNO,t1.Label,t4.ContactName AS PartyName FROM ShiftmentItems t1 inner join Item t2 on t2.ID=t1.ItemsID inner join ShiftmentAssigen t3 on t3.ID=t1.ShiftmentID inner join dbo.Supplier t4 on t4.id=t1.SupplierID WHERE t1.ShiftmentID='" + lblShiftmentID.Text + "' " + parameter + " order by t1.PartyID  ";
+        DataTable dtCartoon = DataManager.ExecuteQuery(DataManager.OraConnString(), SelectQuery, "Temp_ShiftmentItemsColorSize");
+        if (dtCartoon.Rows.Count > 0)
+        {
+            string filename = ddlReportType.SelectedItem.Text.Trim().Replace(" ", "").Replace("  ", "") + "-" +
+                              DateTime.Now.ToString("dd-MM-yyyy");
+            Response.Clear();
+            Response.ContentType = "application/pdf";
+            Response.AddHeader("content-disposition", "attachment; filename=" + filename + ".pdf");
+            Document document = new Document(PageSize.A4);
+            PdfWriter writer = PdfWriter.GetInstance(document, Response.OutputStream);
+            document.Open();
+            iTextSharp.text.Rectangle page = document.PageSize;
+            PdfPTable head = new PdfPTable(1);
+            head.TotalWidth = page.Width - 50;
+
+            PdfPCell cell;
+            byte[] logo = GlBookManager.GetGlLogo(Session["book"].ToString());
+            iTextSharp.text.Image gif = iTextSharp.text.Image.GetInstance(logo);
+            gif.Alignment = iTextSharp.text.Image.MIDDLE_ALIGN;
+            gif.ScalePercent(8f);
+
+            float[] titwidth = new float[3] { 15, 40, 15 };
+            PdfPTable dth = new PdfPTable(titwidth);
+            dth.WidthPercentage = 100;
+
+            cell = new PdfPCell(gif);
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.VerticalAlignment = Element.ALIGN_TOP;
+            cell.HorizontalAlignment = Element.ALIGN_TOP;
+            cell.Rowspan = 4;
+            cell.BorderWidth = 0f;
+            dth.AddCell(cell);
+
+            cell = new PdfPCell(new Phrase(Session["org"].ToString(), FontFactory.GetFont(FontFactory.TIMES_ROMAN, 12, iTextSharp.text.Font.BOLD)));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.BorderWidth = 0f;
+            // cell.FixedHeight = 20f;
+            dth.AddCell(cell);
+
+            cell = new PdfPCell(new Phrase("", FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD)));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.VerticalAlignment = Element.ALIGN_MIDDLE;
+            cell.HorizontalAlignment = Element.ALIGN_MIDDLE;
+            cell.Rowspan = 4;
+            cell.BorderWidth = 0f;
+            dth.AddCell(cell);
+
+            cell = new PdfPCell(new Phrase(Session["add1"].ToString(), FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD)));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.BorderWidth = 0f;
+            // cell.FixedHeight = 20f;
+            dth.AddCell(cell);
+            cell = new PdfPCell(new Phrase(Session["add2"].ToString(), FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD)));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.BorderWidth = 0f;
+            //cell.FixedHeight = 20f;
+            dth.AddCell(cell);
+
+            cell = new PdfPCell(new Phrase("Shipment No. : ( " + Heading + " ) - Supplier & Style Wise Items List.", FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD)));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.BorderWidth = 0f;
+            //cell.FixedHeight = 30f;
+            dth.AddCell(cell);
+            document.Add(dth);
+
+            LineSeparator line = new LineSeparator(0f, 100, null, Element.ALIGN_CENTER, -2);
+            document.Add(line);
+
+            PdfPTable dtempty = new PdfPTable(1);
+            cell = new PdfPCell(FormatHeaderPhrase(""));
+            cell.BorderWidth = 0f;
+            cell.FixedHeight = 10f;
+            dtempty.AddCell(cell);
+            document.Add(dtempty);
+
+            int serial = 0;
+           
+            foreach (DataRow drtt in dtCartoon.Rows)
+            {
+                string Cortoon = "";
+                //DataTable dtMst = ShiftmentItemsManager.GetShowItemsInfo(drtt["ID"].ToString());
+                //foreach (DataRow drr in dtMst.Rows)
+                //{
+                float[] MB = new float[1] { 100 };
+                PdfPTable pdMB = new PdfPTable(MB);
+                pdMB.WidthPercentage = 100;
+
+                float[] widthdtl = new float[6] { 20, 20, 20, 20, 20, 20 };
+                PdfPTable pdtdtl = new PdfPTable(widthdtl);
+                pdtdtl.WidthPercentage = 100;
+
+                if (serial > 0)
+                {
+                    cell = new PdfPCell(FormatHeaderPhrase(""));
+                    cell.HorizontalAlignment = 0;
+                    cell.VerticalAlignment = 1;
+                    cell.Colspan = 6;
+                    cell.BorderWidth = 0f;
+                    cell.FixedHeight = 15f;
+                    pdtdtl.AddCell(cell);
+                }
+                string SelectQuery1 = @"SELECT DISTINCT t2.CartoonNo FROM [ShiftmentBoxingItemsDtl] t1 INNER JOIN ShiftmentBoxingMst t2 on t2.ID=t1.MasterID WHERE t1.ItemsID='" + drtt["ID"].ToString() + "' ";
+                DataTable dttCartoon = DataManager.ExecuteQuery(DataManager.OraConnString(), SelectQuery1, "ShiftmentBoxingItemsDtl");
+                foreach (DataRow drr in dttCartoon.Rows)
+                {
+                    if (Cortoon == "")
+                    {
+                        Cortoon = drr["CartoonNo"].ToString();
+                    }
+                    else
+                    {
+                        Cortoon += " , " + drr["CartoonNo"].ToString();
+                    }
+                }
+                cell = new PdfPCell(FormatHeaderPhrase("Carton No. : " + Cortoon));
+                cell.HorizontalAlignment = 0;
+                cell.VerticalAlignment = 1;
+                cell.Colspan = 6;
+                //cell.FixedHeight = 20f;
+                cell.BorderWidth = 0f;
+                pdtdtl.AddCell(cell);
+
+                cell = new PdfPCell(FormatHeaderPhrase("Supplier Name"));
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                //cell.BorderWidth = 0f;
+                //cell.FixedHeight = 20f;
+                cell.Colspan = 2;
+                pdtdtl.AddCell(cell);
+                cell = new PdfPCell(FormatHeaderPhrase("Items Name"));
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                // cell.BorderWidth = 0f;
+                //cell.FixedHeight = 20f;
+                cell.Colspan = 2;
+                pdtdtl.AddCell(cell);
+                cell = new PdfPCell(FormatHeaderPhrase("Label"));
+                cell.HorizontalAlignment = 1;
+                cell.VerticalAlignment = 1;
+                // cell.BorderWidth = 0f;
+                // cell.FixedHeight = 30f;
+                cell.Colspan = 2;
+                pdtdtl.AddCell(cell);
+                //if (dtMst.Rows.Count > 0)
+                //{
+                cell = new PdfPCell(FormatFontPhrase(drtt["PartyName"].ToString()));
+                cell.HorizontalAlignment = 0;
+                cell.VerticalAlignment = 1;
+                //cell.BorderWidth = 0f;
+                //cell.FixedHeight = 20f;
+                cell.Colspan = 2;
+                pdtdtl.AddCell(cell);
+                cell = new PdfPCell(FormatFontPhrase(drtt["Name"].ToString()));
+                cell.HorizontalAlignment = 0;
+                cell.VerticalAlignment = 1;
+                //cell.BorderWidth = 0f;
+                //cell.FixedHeight = 20f;
+                cell.Colspan = 2;
+                pdtdtl.AddCell(cell);
+                cell = new PdfPCell(FormatFontPhrase(drtt["Label"].ToString()));
+                cell.HorizontalAlignment = 0;
+                cell.VerticalAlignment = 1;
+                //cell.BorderWidth = 0f;
+                cell.Colspan = 2;
+                pdtdtl.AddCell(cell);
+                //}
+                cell = new PdfPCell(FormatFontPhrase(""));
+                cell.HorizontalAlignment = 0;
+                cell.VerticalAlignment = 1;
+                cell.BorderWidth = 0f;
+                cell.FixedHeight = 8;
+                cell.Colspan = 6;
+                pdtdtl.AddCell(cell);
+                DataTable dt = IdManager.GetShowDataTable("SELECT DISTINCT ImageName AS imagename, [Image] AS Image from [ShiftmentBoxingItemsImage] t1 where  t1.ItemsID='" + drtt["ID"].ToString() + "'");
+                if (dt.Rows.Count > 0)
+                {
+                    PdfPTable pdtclient = new PdfPTable(dt.Rows.Count);
+                    pdtclient.WidthPercentage = 100;
+                    decimal tt = decimal.Zero;
+                    decimal tot = (6 / dt.Rows.Count);
+                    tt = 6 * Math.Ceiling(tot);
+                    for (int i = 0; i < tt; i++)
+                    {
+                        if (dt.Rows.Count - 1 < i)
+                        {
+                            cell = new PdfPCell(FormatHeaderPhrase(""));
+                            cell.HorizontalAlignment = 1;
+                            cell.VerticalAlignment = 1;
+                            cell.BorderWidth = 0f;
+                            pdtdtl.AddCell(cell);
+                        }
+                        else
+                        {
+                            DataRow dr = dt.Rows[i];
+                            byte[] logo1 = (byte[])dr["Image"];
+                            iTextSharp.text.Image gif1 = iTextSharp.text.Image.GetInstance(logo1);
+                            gif1.Alignment = iTextSharp.text.Image.MIDDLE_ALIGN;
+                            gif1.ScalePercent(30f);
+                            cell = new PdfPCell(gif1);
+                            cell.PaddingBottom = 10f;
+                            cell.HorizontalAlignment = 1;
+                            cell.VerticalAlignment = 1;
+                            cell.BorderWidth = 0f;
+                            pdtdtl.AddCell(cell);
+                        }
+                    }
+                }
+                DataTable dt11 = ShiftmentItemsCartoonManager.getShiftmentItemsCartoonItemsQuantity(drtt["ID"].ToString());
+                if (dt11 != null)
+                {
+                    float[] widthbi = new float[dt11.Columns.Count];
+                    for (int i = 0; i < dt11.Columns.Count; i++)
+                    {
+                        widthbi[i] = 100 / dt11.Columns.Count;
+                    }
+                    PdfPTable with1 = new PdfPTable(widthbi);
+                    with1.WidthPercentage = 100;
+
+                    cell = new PdfPCell(FormatHeaderPhrase("Color Name"));
+                    cell.HorizontalAlignment = 1;
+                    cell.VerticalAlignment = 1;
+                    with1.AddCell(cell);
+
+                    for (int i = 2; i < dt11.Columns.Count; i++)
+                    {
+                        cell = new PdfPCell(FormatHeaderPhrase(dt11.Columns[i].ColumnName));
+                        cell.HorizontalAlignment = 1;
+                        cell.VerticalAlignment = 1;
+                        with1.AddCell(cell);
+                    }
+                    cell = new PdfPCell(FormatHeaderPhrase("Total (Pch)"));
+                    cell.HorizontalAlignment = 1;
+                    cell.VerticalAlignment = 1;
+                    with1.AddCell(cell);
+                    int ff = 0;
+                    double tot1 = 0;
+                    double tot2 = 0;
+                    for (int i = 0; i < dt11.Rows.Count; i++)
+                    {
+                        for (int j = 1; j < dt11.Columns.Count; j++)
+                        {
+                            cell = new PdfPCell(FormatFontPhrase(dt11.Rows[i][j].ToString()));
+                            if (ff == 0)
+                            { cell.HorizontalAlignment = 0; }
+                            else { cell.HorizontalAlignment = 1; }
+                            cell.VerticalAlignment = 1;
+                            with1.AddCell(cell);
+                            if (dt11.Rows[i][j].ToString() != "" && ff > 0)
+                            {
+                                tot1 += Convert.ToDouble(dt11.Rows[i][j].ToString());
+                                tot2 += Convert.ToDouble(dt11.Rows[i][j].ToString());
+                                allTot += Convert.ToDouble(dt11.Rows[i][j].ToString());
+                            }
+                            ff++;
+
+                        }
+                        cell = new PdfPCell(FormatFontPhrase(tot1.ToString("N0")));
+                        cell.HorizontalAlignment = 2;
+                        cell.VerticalAlignment = 1;
+                        with1.AddCell(cell);
+                        ff = 0;
+                        tot1 = 0;
+                    }
+                    cell = new PdfPCell(FormatHeaderPhrase("Total"));
+                    cell.HorizontalAlignment = 2;
+                    cell.VerticalAlignment = 1;
+                    cell.Colspan = dt11.Columns.Count - 1;
+                    with1.AddCell(cell);
+                    cell = new PdfPCell(FormatHeaderPhrase(tot2.ToString("N0")));
+                    cell.HorizontalAlignment = 2;
+                    cell.VerticalAlignment = 1;
+                    cell.Colspan = dt11.Columns.Count - 1;
+                    with1.AddCell(cell);
+                   
+                    cell = new PdfPCell(pdtdtl);
+                    cell.BorderWidth = 1f;
+                    pdMB.AddCell(cell);
+
+                    cell = new PdfPCell(with1);
+                    cell.BorderWidth = 1f;
+                    pdMB.AddCell(cell);
+                    document.Add(pdMB);
+                    serial++;
+                }
+                //}
+            }
+            float[] widthtt = new float[6] { 20, 20, 20, 20, 20, 20 };
+            PdfPTable pdtdtltt = new PdfPTable(widthtt);
+            pdtdtltt.WidthPercentage = 100;
+            cell = new PdfPCell(FormatHeaderPhrase("All Total "));
+            cell.HorizontalAlignment = 2;
+            cell.VerticalAlignment = 1;
+            cell.Colspan = 5;
+            pdtdtltt.AddCell(cell);
+
+            cell = new PdfPCell(FormatHeaderPhrase(allTot.ToString("N0")));
+            cell.HorizontalAlignment = 2;
+            cell.VerticalAlignment = 1;
+            cell.Colspan = 2;
+            pdtdtltt.AddCell(cell);
+            document.Add(pdtdtltt);
+
+            document.Close();
+            Response.Flush();
+            Response.End();
+        }
+    }
+
+    //******************** Curtoon & Shiftment Report ****************//
+   
+    public void getShiftmentQtyPrint()
+    {
+        string parameter = "";
+        if (txtName.Text != "")
+        {
+            parameter = " AND CartoonNo='" + txtName.Text + "'";
+        }
+        string SelectQuery = @"SELECT [ID],[CartoonNo],[ShiftmentID] FROM [ShiftmentBoxingMst] WHERE ShiftmentID='" + lblShiftmentID.Text + "' " + parameter + " ";
+        DataTable dtCartoon = DataManager.ExecuteQuery(DataManager.OraConnString(), SelectQuery, "Temp_ShiftmentItemsColorSize");
+        if (dtCartoon.Rows.Count > 0)
+        {
+            string filename = "ShiftmentWiseCartoonReport-" + DateTime.Now.ToString("dd/MM/yyyy");
+            Response.Clear();
+            Response.ContentType = "application/pdf";
+            Response.AddHeader("content-disposition", "attachment; filename=" + filename + ".pdf");
+            Document document = new Document(PageSize.A4);
+            PdfWriter writer = PdfWriter.GetInstance(document, Response.OutputStream);
+            document.Open();
+            iTextSharp.text.Rectangle page = document.PageSize;
+            PdfPTable head = new PdfPTable(1);
+            head.TotalWidth = page.Width - 50;
+
+            PdfPCell cell;
+            byte[] logo = GlBookManager.GetGlLogo(Session["book"].ToString());
+            iTextSharp.text.Image gif = iTextSharp.text.Image.GetInstance(logo);
+            gif.Alignment = iTextSharp.text.Image.MIDDLE_ALIGN;
+            gif.ScalePercent(8f);
+
+            float[] titwidth = new float[3] { 15, 40, 15 };
+            PdfPTable dth = new PdfPTable(titwidth);
+            dth.WidthPercentage = 100;
+
+            cell = new PdfPCell(gif);
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.VerticalAlignment = Element.ALIGN_TOP;
+            cell.HorizontalAlignment = Element.ALIGN_TOP;
+            cell.Rowspan = 4;
+            cell.BorderWidth = 0f;
+            dth.AddCell(cell);
+
+            cell = new PdfPCell(new Phrase(Session["org"].ToString(), FontFactory.GetFont(FontFactory.TIMES_ROMAN, 12, iTextSharp.text.Font.BOLD)));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.BorderWidth = 0f;
+            // cell.FixedHeight = 20f;
+            dth.AddCell(cell);
+
+            cell = new PdfPCell(new Phrase("", FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD)));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.VerticalAlignment = Element.ALIGN_MIDDLE;
+            cell.HorizontalAlignment = Element.ALIGN_MIDDLE;
+            cell.Rowspan = 4;
+            cell.BorderWidth = 0f;
+            dth.AddCell(cell);
+
+            cell = new PdfPCell(new Phrase(Session["add1"].ToString(), FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD)));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.BorderWidth = 0f;
+            // cell.FixedHeight = 20f;
+            dth.AddCell(cell);
+            cell = new PdfPCell(new Phrase(Session["add2"].ToString(), FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD)));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.BorderWidth = 0f;
+            //cell.FixedHeight = 20f;
+            dth.AddCell(cell);
+            string Heading = txtShiftmentNo.Text;
+            //string ParameterP = "";
+            if (!string.IsNullOrEmpty(ddlSenderName.SelectedItem.Text) && string.IsNullOrEmpty(ddlCustomer.SelectedItem.Text))
+            {
+                Heading = ddlSenderName.SelectedItem.Text;
+            }
+            else if (!string.IsNullOrEmpty(ddlSenderName.SelectedItem.Text) && !string.IsNullOrEmpty(ddlCustomer.SelectedItem.Text))
+            {
+                Heading = ddlCustomer.SelectedItem.Text;
+            }
+
+            cell = new PdfPCell(new Phrase(" Shipment  No. : ( " + Heading + " ) No Wise Product List.",
+                FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD)));
+            cell.HorizontalAlignment = 1;
+            cell.VerticalAlignment = 1;
+            cell.BorderWidth = 0f;
+            //cell.FixedHeight = 30f;
+            dth.AddCell(cell);
+            document.Add(dth);
+
+            PdfPTable dtempty = new PdfPTable(1);
+            cell = new PdfPCell(FormatHeaderPhrase(""));
+            cell.BorderWidth = 0f;
+            cell.FixedHeight = 10f;
+            dtempty.AddCell(cell);
+            document.Add(dtempty);
+
+            foreach (DataRow drtt in dtCartoon.Rows)
+            {
+                int serial = 0;
+                DataTable dtMst = ShiftmentItemsManager.GetShowItemsInfoReport(drtt["ID"].ToString(), "",
+                    ddlSenderName.SelectedValue, ddlCustomer.SelectedValue);
+                foreach (DataRow drr in dtMst.Rows)
+                {
+                    float[] MB = new float[1] { 100 };
+                    PdfPTable pdMB = new PdfPTable(MB);
+                    pdMB.WidthPercentage = 100;
+
+                    float[] widthdtl = new float[6] { 20, 20, 20, 20, 20, 20 };
+                    PdfPTable pdtdtl = new PdfPTable(widthdtl);
+                    pdtdtl.WidthPercentage = 100;
+
+                    if (serial == 0) { cell = new PdfPCell(FormatHeaderPhrase("CTN No : " + drr["CartoonNo"].ToString())); }
+                    else { cell = new PdfPCell(FormatHeaderPhrase("")); }
+                    cell.HorizontalAlignment = 0;
+                    cell.VerticalAlignment = 1;
+                    cell.Colspan = 2;
+                    cell.BorderWidth = 0f;
+                    pdtdtl.AddCell(cell);
+
+                    if (serial == 0) { cell = new PdfPCell(FormatHeaderPhrase("")); }
+                    else { cell = new PdfPCell(FormatHeaderPhrase("")); }
+                    cell.HorizontalAlignment = 0;
+                    cell.VerticalAlignment = 1;
+                    cell.Colspan = 2;
+                    cell.BorderWidth = 0f;
+                    pdtdtl.AddCell(cell);
+
+                    if (serial == 0) { cell = new PdfPCell(FormatHeaderPhrase("")); }
+                    else { cell = new PdfPCell(FormatHeaderPhrase("")); }
+                    cell.HorizontalAlignment = 0;
+                    cell.VerticalAlignment = 1;
+                    cell.Colspan = 2;
+                    cell.BorderWidth = 0f;
+                    pdtdtl.AddCell(cell);
+
+                    cell = new PdfPCell(FormatHeaderPhrase(""));
+                    cell.HorizontalAlignment = 0;
+                    cell.VerticalAlignment = 1;
+                    cell.Colspan = 6;
+                    cell.FixedHeight = 8f;
+                    cell.BorderWidth = 0f;
+                    pdtdtl.AddCell(cell);
+
+                    cell = new PdfPCell(FormatHeaderPhrase("Customer Name"));
+                    cell.HorizontalAlignment = 1;
+                    cell.VerticalAlignment = 1;
+                    //cell.BorderWidth = 0f;
+                    //cell.FixedHeight = 20f;
+                    cell.Colspan = 2;
+                    pdtdtl.AddCell(cell);
+                    cell = new PdfPCell(FormatHeaderPhrase("Items Name"));
+                    cell.HorizontalAlignment = 1;
+                    cell.VerticalAlignment = 1;
+                    // cell.BorderWidth = 0f;
+                    //cell.FixedHeight = 20f;
+                    cell.Colspan = 2;
+                    pdtdtl.AddCell(cell);
+                    cell = new PdfPCell(FormatHeaderPhrase("Label"));
+                    cell.HorizontalAlignment = 1;
+                    cell.VerticalAlignment = 1;
+                    // cell.BorderWidth = 0f;
+                    // cell.FixedHeight = 30f;
+                    cell.Colspan = 2;
+                    pdtdtl.AddCell(cell);
+                    if (dtMst.Rows.Count > 0)
+                    {
+                        cell = new PdfPCell(FormatFontPhrase(drr["CustomerName"].ToString()));
+                        cell.HorizontalAlignment = 0;
+                        cell.VerticalAlignment = 1;
+                        //cell.BorderWidth = 0f;
+                        //cell.FixedHeight = 20f;
+                        cell.Colspan = 2;
+                        pdtdtl.AddCell(cell);
+                        cell = new PdfPCell(FormatFontPhrase(drr["Name"].ToString()));
+                        cell.HorizontalAlignment = 0;
+                        cell.VerticalAlignment = 1;
+                        //cell.BorderWidth = 0f;
+                        //cell.FixedHeight = 20f;
+                        cell.Colspan = 2;
+                        pdtdtl.AddCell(cell);
+                        cell = new PdfPCell(FormatFontPhrase(drr["Label"].ToString()));
+                        cell.HorizontalAlignment = 0;
+                        cell.VerticalAlignment = 1;
+                        //cell.BorderWidth = 0f;
+                        cell.Colspan = 2;
+                        pdtdtl.AddCell(cell);
+                    }
+                    cell = new PdfPCell(FormatFontPhrase(""));
+                    cell.HorizontalAlignment = 0;
+                    cell.VerticalAlignment = 1;
+                    cell.BorderWidth = 0f;
+                    cell.FixedHeight = 8;
+                    cell.Colspan = 6;
+                    pdtdtl.AddCell(cell);
+                    DataTable dt = IdManager.GetShowDataTable("SELECT '' AS imagename,[ID] AS ImageID, [Image] AS Image from [ShiftmentBoxingItemsImage] where [BoxingItemsID] ='" + drtt["ID"].ToString() + "' and ItemsID='" + drr["SHITEMSid"].ToString() + "' ");
+                    if (dt.Rows.Count > 0)
+                    {
+                        PdfPTable pdtclient = new PdfPTable(dt.Rows.Count);
+                        pdtclient.WidthPercentage = 100;
+                        decimal tt = decimal.Zero;
+                        decimal tot = (6 / dt.Rows.Count);
+                        tt = 6 * Math.Ceiling(tot);
+                        for (int i = 0; i < tt; i++)
+                        {
+                            if (dt.Rows.Count - 1 < i)
+                            {
+                                cell = new PdfPCell(FormatHeaderPhrase(""));
+                                cell.HorizontalAlignment = 1;
+                                cell.VerticalAlignment = 1;
+                                cell.BorderWidth = 0f;
+                                pdtdtl.AddCell(cell);
+                            }
+                            else
+                            {
+                                DataRow dr = dt.Rows[i];
+                                byte[] logo1 = (byte[])dr["Image"];
+                                iTextSharp.text.Image gif1 = iTextSharp.text.Image.GetInstance(logo1);
+                                gif1.Alignment = iTextSharp.text.Image.MIDDLE_ALIGN;
+                                gif1.ScalePercent(30f);
+                                cell = new PdfPCell(gif1);
+                                cell.PaddingBottom = 10f;
+                                cell.HorizontalAlignment = 1;
+                                cell.VerticalAlignment = 1;
+                                cell.BorderWidth = 0f;
+                                pdtdtl.AddCell(cell);
+                            }
+                        }
+                    }
+                    DataTable dt11 = ShiftmentItemsCartoonManager.getShiftmentItemsCartoonItemsQuantity(drtt["ID"].ToString(), drr["SHITEMSid"].ToString());
+                    if (dt11 != null)
+                    {
+                        float[] widthbi = new float[dt11.Columns.Count];
+                        for (int i = 0; i < dt11.Columns.Count; i++)
+                        {
+                            widthbi[i] = 100 / dt11.Columns.Count;
+                        }
+                        PdfPTable with1 = new PdfPTable(widthbi);
+                        with1.WidthPercentage = 100;
+
+                        for (int i = 1; i < dt11.Columns.Count; i++)
+                        {
+                            cell = new PdfPCell(FormatHeaderPhrase(dt11.Columns[i].ColumnName));
+                            cell.HorizontalAlignment = 1;
+                            cell.VerticalAlignment = 1;
+                            with1.AddCell(cell);
+                        }
+                        cell = new PdfPCell(FormatHeaderPhrase("Total"));
+                        cell.HorizontalAlignment = 1;
+                        cell.VerticalAlignment = 1;
+                        with1.AddCell(cell);
+                        int ff = 0;
+                        double tot1 = 0;
+                        double tot2 = 0;
+                        for (int i = 0; i < dt11.Rows.Count; i++)
+                        {
+                            for (int j = 1; j < dt11.Columns.Count; j++)
+                            {
+                                cell = new PdfPCell(FormatFontPhrase(dt11.Rows[i][j].ToString()));
+                                if (ff == 0)
+                                { cell.HorizontalAlignment = 0; }
+                                else { cell.HorizontalAlignment = 1; }
+                                cell.VerticalAlignment = 1;
+                                with1.AddCell(cell);
+                                if (dt11.Rows[i][j].ToString() != "" && ff > 0)
+                                {
+                                    tot1 += Convert.ToDouble(dt11.Rows[i][j].ToString());
+                                    tot2 += Convert.ToDouble(dt11.Rows[i][j].ToString());
+                                }
+                                ff++;
+
+                            }
+                            cell = new PdfPCell(FormatFontPhrase(tot1.ToString("N3")));
+                            cell.HorizontalAlignment = 2;
+                            cell.VerticalAlignment = 1;
+                            with1.AddCell(cell);
+                            ff = 0;
+                            tot1 = 0;
+                        }
+                        cell = new PdfPCell(FormatHeaderPhrase("Total"));
+                        cell.HorizontalAlignment = 2;
+                        cell.VerticalAlignment = 1;
+                        cell.Colspan = dt11.Columns.Count - 1;
+                        with1.AddCell(cell);
+                        cell = new PdfPCell(FormatHeaderPhrase(tot2.ToString("N3")));
+                        cell.HorizontalAlignment = 2;
+                        cell.VerticalAlignment = 1;
+                        cell.Colspan = dt11.Columns.Count - 1;
+                        with1.AddCell(cell);
+
+                        cell = new PdfPCell(pdtdtl);
+                        cell.BorderWidth = 1f;
+                        pdMB.AddCell(cell);
+
+                        cell = new PdfPCell(with1);
+                        cell.BorderWidth = 1f;
+                        pdMB.AddCell(cell);
+                        document.Add(pdMB);
+                        serial++;
+                    }
+                }
+            }
+            document.Close();
+            Response.Flush();
+            Response.End();
+        }        
+    }
+
+
+    private BarcodeLib.Barcode barcode = new BarcodeLib.Barcode();
+
+    private static PdfPCell SignatureFormat(Document document, PdfPCell cell)
+    {
+        float[] widtl = new float[5] { 20, 20, 20, 20, 20 };
+        PdfPTable pdtsig = new PdfPTable(widtl);
+        pdtsig.WidthPercentage = 100;
+        cell = new PdfPCell(FormatPhrase(""));
+        cell.HorizontalAlignment = 1;
+        cell.VerticalAlignment = 1;
+        cell.Border = 0;
+        cell.Colspan = 5;
+        cell.FixedHeight = 40f;
+        cell.BorderColor = BaseColor.LIGHT_GRAY;
+        pdtsig.AddCell(cell);
+
+
+        cell = new PdfPCell(FormatPhrase("Prepared by"));
+        cell.HorizontalAlignment = 1;
+        cell.VerticalAlignment = 1;
+        cell.Border = 1;
+        cell.FixedHeight = 20f;
+        cell.BorderColor = BaseColor.LIGHT_GRAY;
+        pdtsig.AddCell(cell);
+
+        cell = new PdfPCell(FormatPhrase(""));
+        cell.HorizontalAlignment = 1;
+        cell.VerticalAlignment = 1;
+        cell.Border = 0;
+        cell.FixedHeight = 20f;
+        cell.BorderColor = BaseColor.LIGHT_GRAY;
+        pdtsig.AddCell(cell);
+        cell = new PdfPCell(FormatPhrase("Checked by"));
+        cell.HorizontalAlignment = 1;
+        cell.VerticalAlignment = 1;
+        cell.Border = 1;
+        cell.FixedHeight = 20f;
+        cell.BorderColor = BaseColor.LIGHT_GRAY;
+        pdtsig.AddCell(cell);
+
+        cell = new PdfPCell(FormatPhrase(""));
+        cell.HorizontalAlignment = 1;
+        cell.VerticalAlignment = 1;
+        cell.Border = 0;
+        cell.FixedHeight = 20f;
+        cell.BorderColor = BaseColor.LIGHT_GRAY;
+        pdtsig.AddCell(cell);
+        cell = new PdfPCell(FormatPhrase("Authorised by"));
+        cell.HorizontalAlignment = 1;
+        cell.VerticalAlignment = 1;
+        cell.Border = 1;
+        cell.FixedHeight = 20f;
+        cell.BorderColor = BaseColor.LIGHT_GRAY;
+        pdtsig.AddCell(cell);
+        document.Add(pdtsig);
+        return cell;
+    }
+
+    private static Phrase FormatPhrase(string value)
+    {
+        return new Phrase(value, FontFactory.GetFont(FontFactory.TIMES_ROMAN, 9));
+    }
+
+    private static Phrase FormatHeaderPhrase(string value)
+    {
+        return new Phrase(value, FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.BOLD));
+    }
+    private static Phrase FormatHeaderPhrase12(string value)
+    {
+        return new Phrase(value, FontFactory.GetFont(FontFactory.TIMES_ROMAN, 12, iTextSharp.text.Font.BOLD));
+    }
+    private static Phrase FormatFontPhrase(string value)
+    {
+        return new Phrase(value, FontFactory.GetFont(FontFactory.TIMES_ROMAN, 10, iTextSharp.text.Font.NORMAL));
+    }
+   
+    protected void txtParty_TextChanged(object sender, EventArgs e)
+    {
+        DataTable dtSupplier = PurchaseVoucherManager.GetSupplierInfo(txtParty.Text);
+        if (dtSupplier.Rows.Count > 0)
+        {
+            Session["Supplier_COA"] = dtSupplier.Rows[0]["Gl_CoaCode"].ToString();
+            txtParty.Text = dtSupplier.Rows[0]["ContactName"].ToString();
+            lblPartyID.Text = dtSupplier.Rows[0]["ID"].ToString();
+        }
+        else
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Not Found Supplier.!!');", true);
+            txtParty.Text = lblPartyID.Text = "";
+            txtParty.Focus();
+        }
+    }
+    protected void txtItemsName_TextChanged(object sender, EventArgs e)
+    {
+        DataTable dt =
+            IdManager.GetShowDataTable("select * from View_ShipmentItem where upper([SearchItem])=upper('" +
+                                       txtItemsName.Text + "')");
+        if (dt.Rows.Count > 0)
+        {            
+           lblItemsID.Text = ((DataRow)dt.Rows[0])["ID"].ToString();
+           txtItemsName.Text = ((DataRow)dt.Rows[0])["ItemName"].ToString();
+           hfItemID.Value = ((DataRow)dt.Rows[0])["ItemsID"].ToString();     
+        }
+    }
+    protected void txtPreviewAll_Click(object sender, EventArgs e)
+    {
+        if (ddlReportType.SelectedItem.Text == "")
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Enter Report Type ..!!');", true);
+            return;
+        }     
+
+        string embed = "<object data=\"{0}{1}\" type=\"application/pdf\" width=\"800px\" height=\"500px\">";
+        embed += "If you are unable to view file, you can download from <a href = \"{0}{1}&download=1\">here</a>";
+        embed += " or download <a target = \"_blank\" href = \"http://get.adobe.com/reader/\">Adobe PDF Reader</a> to view the file.";
+        embed += "</object>";
+        Session["CartonNo"] = txtName.Text;
+        Session["SupplierID"] = lblPartyID.Text;
+        Session["SupplierName"] = txtParty.Text;
+        Session["ItemSearchID"] = lblItemsID.Text;
+        Session["ItemID"] = hfItemID.Value;
+        Session["ItemName"] = txtItemsName.Text;
+        Session["CartonNo1"] = txtCart1.Text;
+        Session["CartonNo2"] = txtCart2.Text;
+        if (ddlReportType.SelectedValue == "SWR")
+        {
+            if (txtShiftmentNo.Text == "")
+            {
+                ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Enter Shiftment No ..!!');", true);
+                return;
+            }
+            ltEmbed.Text = string.Format(embed, ResolveUrl("~/PrintPreview/Handler.ashx?Id="), ddlReportType.SelectedValue);
+            ModalPopupExtenderLogin.Show();
+        }
+        else if (ddlReportType.SelectedValue == "PSWR")
+        {
+            ltEmbed.Text = string.Format(embed, ResolveUrl("~/PrintPreview/Handler.ashx?Id="), ddlReportType.SelectedValue);
+            ModalPopupExtenderLogin.Show();
+           
+        }
+        else if (ddlReportType.SelectedValue == "PLR")
+        {
+            ltEmbed.Text = string.Format(embed, ResolveUrl("~/PrintPreview/Handler.ashx?Id="), ddlReportType.SelectedValue);
+            ModalPopupExtenderLogin.Show();
+            
+        }
+        else if (ddlReportType.SelectedValue == "SWRC")
+        {
+            ltEmbed.Text = string.Format(embed, ResolveUrl("~/PrintPreview/Handler.ashx?Id="), ddlReportType.SelectedValue);
+            ModalPopupExtenderLogin.Show();
+        }
+        else if (ddlReportType.SelectedValue == "SBR")
+        {
+            ltEmbed.Text = string.Format(embed, ResolveUrl("~/PrintPreview/Handler.ashx?Id="), ddlReportType.SelectedValue);
+            ModalPopupExtenderLogin.Show();
+        }
+        else if (ddlReportType.SelectedValue == "SBRI")
+        {
+            ltEmbed.Text = string.Format(embed, ResolveUrl("~/PrintPreview/Handler.ashx?Id="), ddlReportType.SelectedValue);
+            ModalPopupExtenderLogin.Show();
+        }
+        //***************** Send Cartoon List || Cartoon Received List **************//
+        else if (ddlReportType.SelectedValue == "SCL" || ddlReportType.SelectedValue == "SRL" || ddlReportType.SelectedValue == "SRLT")
+        {
+            ltEmbed.Text = string.Format(embed, ResolveUrl("~/PrintPreview/Handler.ashx?Id="), ddlReportType.SelectedValue);
+            ModalPopupExtenderLogin.Show();
+            
+        }
+        //*************** Shiftment Wise All Items Details *****//
+        else if (ddlReportType.SelectedValue == "ALD")
+        {
+
+            ltEmbed.Text = string.Format(embed, ResolveUrl("~/PrintPreview/Handler.ashx?Id="), ddlReportType.SelectedValue);
+            ModalPopupExtenderLogin.Show();
+        }
+
+         //*************** Total Items Stock  *****//
+        else if (ddlReportType.SelectedValue == "TIS")
+        {
+
+            ltEmbed.Text = string.Format(embed, ResolveUrl("~/PrintPreview/Handler.ashx?Id="), ddlReportType.SelectedValue);
+            ModalPopupExtenderLogin.Show();
+        }
+        else
+        {
+            ScriptManager.RegisterClientScriptBlock((sender as Control), this.GetType(), "alert", "alert('No Search....!!!');", true);
+        }
+    }
+    protected void ibCancel_Click(object sender, ImageClickEventArgs e)
+    {
+        ModalPopupExtenderLogin.Hide();
+    }
+    protected void ibHelp_Click(object sender, ImageClickEventArgs e)
+    {
+        string filePath = "~/Help/"+"HelpPopup.pdf";
+        string Name = "HelpPopup.pdf";
+        Response.ContentType = "doc/docx";
+        Response.AddHeader("Content-Disposition", "attachment;filename=\"" + Name + "\"");
+        Response.TransmitFile(Server.MapPath(filePath));
+        Response.End();
+        
+    }
+    protected void ddlSenderName_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        DataTable dtShipSenderInfo = _aShiftmentAssignManager.GetShipmentSenderInfo(lblShiftmentID.Text, "", ddlSenderName.SelectedValue, "3");
+        if (dtShipSenderInfo != null)
+        {
+            if (dtShipSenderInfo.Rows.Count > 0)
+            {
+                ddlCustomer.DataSource = dtShipSenderInfo;
+                ddlCustomer.DataTextField = "Search";
+                ddlCustomer.DataValueField = "ID";
+                ddlCustomer.DataBind();
+                ddlCustomer.Items.Insert(0, "");
+            }
+        }
+    }
+}

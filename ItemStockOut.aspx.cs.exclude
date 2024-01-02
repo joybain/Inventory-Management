@@ -1,0 +1,643 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using System.Data;
+using System.Data.SqlClient;
+using Delve;
+
+public partial class ItemStockOut : System.Web.UI.Page
+{
+    private  readonly ItemManager _aItemManager=new ItemManager();
+    private readonly clsItemTransferStockManager aclsItemTransferStockManager=new clsItemTransferStockManager();
+    private readonly clsItemTransferStock aclsItemTransferStock=new clsItemTransferStock();
+    public static Permis per;
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        if (Session["user"] == null)
+        {
+            if (Session.SessionID != "" | Session.SessionID != null)
+            {
+                clsSession ses = clsSessionManager.getSession(Session.SessionID);
+                if (ses != null)
+                {
+                    Session["user"] = ses.UserId;
+                    Session["book"] = "AMB";
+                    string connectionString = DataManager.OraConnString();
+                    SqlDataReader dReader;
+                    SqlConnection conn = new SqlConnection();
+                    conn.ConnectionString = connectionString;
+                    SqlCommand cmd = new SqlCommand();
+                    cmd.Connection = conn;
+                    cmd.CommandType = CommandType.Text;
+                    cmd.CommandText =
+                        "Select user_grp,[description],UserType,case when UserType=1 then 'Bangladesh' else 'Philippine' end AS[LoginCountry] from utl_userinfo where upper(user_name)=upper('" +
+                        Session["user"].ToString().ToUpper() + "') and status='A'";
+                    conn.Open();
+                    dReader = cmd.ExecuteReader();
+                    string wnot = "";
+                    if (dReader.HasRows == true)
+                    {
+                        while (dReader.Read())
+                        {
+                            Session["userlevel"] = int.Parse(dReader["user_grp"].ToString());
+                            //Session["dept"] = dReader["dept"].ToString();
+                            wnot = "Welcome " + dReader["description"].ToString();
+                        }
+                        Session["wnote"] = wnot;
+                        Session["LoginCountry"] = dReader["LoginCountry"].ToString();
+                        cmd = new SqlCommand();
+                        cmd.Connection = conn;
+                        cmd.CommandType = CommandType.Text;
+                        //cmd.CommandText = "Select book_desc,company_address1,company_address2,separator_type from gl_set_of_books where book_name='" + Session["book"].ToString() + "' ";
+                        if (Convert.ToInt32(dReader["UserType"].ToString()) == 2)
+                        {
+
+                            Session["bookMAN"] = "MAN";
+                        }
+                        else
+                        {
+                            Session["bookMAN"] = Session["book"].ToString();
+                        }
+                        cmd.CommandText = "Select book_desc,company_address1,company_address2,separator_type,ShotName from gl_set_of_books where book_name='" + Session["bookMAN"] + "' ";
+
+                        if (dReader.IsClosed == false)
+                        {
+                            dReader.Close();
+                        }
+                        dReader = cmd.ExecuteReader();
+                        if (dReader.HasRows == true)
+                        {
+                            while (dReader.Read())
+                            {
+                                Session["septype"] = dReader["separator_type"].ToString();
+                                Session["org"] = dReader["book_desc"].ToString();
+                                Session["add1"] = dReader["company_address1"].ToString();
+                                Session["add2"] = dReader["company_address2"].ToString();
+                            }
+                        }
+                    }
+                    dReader.Close();
+                    conn.Close();
+                }
+            }
+        }
+        //try
+        //{
+        //    string pageName = DataManager.GetCurrentPageName();
+        //    string modid = PermisManager.getModuleId(pageName);
+        //    per = PermisManager.getUsrPermis(Session["user"].ToString().Trim().ToUpper(), modid);
+        //    if (per != null && per.AllowView == "Y")
+        //    {
+        //        ((Label)Page.Master.FindControl("lblLogin")).Text = Session["wnote"].ToString();
+        //        ((Label)Page.Master.FindControl("lblCountryName")).Text = Session["LoginCountry"].ToString();
+        //        ((LinkButton)Page.Master.FindControl("lbLogout")).Visible = true;
+        //    }
+        //    else
+        //    {
+        //        Response.Redirect("Home.aspx?sid=sam");
+        //    }
+        //}
+        //catch
+        //{
+        //    Response.Redirect("Default.aspx?sid=sam");
+        //}
+        if (!IsPostBack)
+        {
+            ItemsDetails.Visible = pnl.Visible = true;
+            lblID.Text = txtRemark.Text = lblPrintFlag.Text = string.Empty;
+            txtTfDate.Text = DateTime.Now.ToString("dd/MM/yyyy");
+            dgPODetailsDtl.DataSource = null;
+            dgPODetailsDtl.DataBind();
+            dgTransferHistory.Visible = ItemsDetails.Visible = false;
+            BtnSave.Enabled = true;
+            DataTable dtHistory = aclsItemTransferStockManager.GetShowItemsStockOut("");
+            if(dtHistory.Rows.Count>0)
+            {
+                dgHistory.DataSource = dtHistory;
+                ViewState["History"] = dtHistory;
+                dgHistory.DataBind();
+                dgTransferHistory.Visible = true;
+            }
+
+            double CurrencyRate = BankAndCashBlanceCheck.GetCurrency(BtnSave, txtTfDate, 0);
+            ViewState["CurrencyRate"] = CurrencyRate;
+            Session["UserType"] = IdManager.GetShowSingleValueString(" t.UserType", "t.USER_NAME", "UTL_USERINFO t",
+                Session["user"].ToString());
+
+            getEmptyDtl();
+        }
+    }
+    private void getEmptyDtl()
+    {
+        dgPODetailsDtl.Visible = true;
+        DataTable dtDtlGrid = new DataTable();
+        dtDtlGrid.Columns.Add("ItemsID", typeof(string));
+        dtDtlGrid.Columns.Add("item_desc", typeof(string));
+        dtDtlGrid.Columns.Add("item_code", typeof(string));
+        dtDtlGrid.Columns.Add("Code", typeof(string));
+        dtDtlGrid.Columns.Add("StockQty", typeof(string));
+        dtDtlGrid.Columns.Add("OutQty", typeof(string));
+        dtDtlGrid.Columns.Add("Price", typeof(string));
+        dtDtlGrid.Columns.Add("Type", typeof(string));
+       // dtDtlGrid.Columns.Add("StyleNo", typeof(string));
+        DataRow dr = dtDtlGrid.NewRow();
+        dtDtlGrid.Rows.Add(dr);
+        dgPODetailsDtl.DataSource = dtDtlGrid;
+        ViewState["purdtl"] = dtDtlGrid;
+        dgPODetailsDtl.DataBind();
+    }
+    protected void btnNew_Click(object sender, EventArgs e)
+    {
+        //txtRemark.Text = lblID.Text = "";
+        lblPrintFlag.Text = "Top(1)";
+        txtTfDate.Text = DateTime.Now.ToString("dd/MM/yyyy");
+        ItemsDetails.Visible = pnl.Enabled = true;
+        txtRemark.Text = lblID.Text = "";
+        dgPODetailsDtl.DataSource = null;
+        dgPODetailsDtl.DataBind();
+        dgTransferHistory.Visible = false;
+        ItemsDetails.Visible = true;
+        ViewState["purdtl"] = null;
+        getEmptyDtl();
+        btnNew.Visible = false;
+        txtTransferCode.Text = "STO-" + DateTime.Now.ToString("yy") + DateTime.Now.ToString("MM") +
+                               DateTime.Now.ToString("dd") + "00" +
+                               IdManager.GetShowSingleValueInt("StockOutID", "ID", "FixGlCoaCode", "1").ToString();
+        getEmptyDtl();
+    }
+    protected void txtItemName_TextChanged(object sender, EventArgs e)
+    {
+        GridViewRow gvr = (GridViewRow)((TextBox)sender).NamingContainer;
+        DataTable dtdtl = (DataTable)ViewState["purdtl"];
+        DataRow dr = dtdtl.Rows[gvr.DataItemIndex];
+        DataTable dt;
+        //= ClsItemDetailsManager.GetShowItemsSalesStock(" AND upper(CASE when t.Flag=1 then IsNull(t3.Name,'')+'-'+IsNull(t1.BrandName,'')+'-'+convert(nvarchar,t3.UnitPrice)+'-'+isnull(tt.ShiftmentNO,'')+'-'+Convert(Nvarchar,t.ID) else IsNull(t3.Name,'')+'-'+IsNull(t1.BrandName,'')+'-'+convert(nvarchar,t3.UnitPrice)+'-Local-'+Convert(Nvarchar,t.ID) end )=upper('" + ((TextBox)gvr.FindControl("txtItemName")).Text + "')", "");
+        int ItemID =
+           IdManager.GetShowSingleValueInt("ID", "UPPER(ItemsName)", "View_SalesItems", ((TextBox)gvr.FindControl("txtItemName")).Text.ToUpper().ToString());
+        dt = SalesManager.GetShowItemsInformation(" where ID='" + ItemID.ToString() + "' ", Session["user"].ToString());
+        if (dt.Rows.Count > 0)
+        {
+            bool IsCheck = false;
+
+            foreach (DataRow ddr in dtdtl.Rows)
+            {
+                if (string.IsNullOrEmpty(dr["ItemsID"].ToString()))
+                {
+                    if (ddr["ItemsID"].ToString().Equals(((DataRow)dt.Rows[0])["ID"].ToString()))
+                    {
+                        IsCheck = true;
+                        break;
+                    }
+                }
+            }
+            if (IsCheck == true)
+            {
+                ScriptManager.RegisterClientScriptBlock((sender as Control), this.GetType(), "alert", "alert('This items already added...!!!');", true);
+                ((TextBox)dgPODetailsDtl.Rows[dgPODetailsDtl.Rows.Count - 1].FindControl("txtItemName")).Text = "";
+                ((TextBox)dgPODetailsDtl.Rows[dgPODetailsDtl.Rows.Count - 1].FindControl("txtItemName")).Focus();
+                return;
+            }
+            dr["ItemsID"] = ((DataRow)dt.Rows[0])["ID"].ToString();
+            dr["item_code"] = ((DataRow)dt.Rows[0])["ItemCode"].ToString();
+            dr["item_desc"] = ((DataRow)dt.Rows[0])["Name"].ToString();
+            dr["Type"] = ((DataRow)dt.Rows[0])["Type"].ToString();
+            dr["StockQty"] = ((DataRow)dt.Rows[0])["ClosingStock"].ToString();
+            dr["Price"] ="0";
+           // dr["StockQty"] = "0";
+            dr["OutQty"] = "0";
+            //dr["BranchSalesPrice"] = "0";
+            //dtdtl.Rows.Add(dr);
+            string found = "";
+            foreach (DataRow drd in dtdtl.Rows)
+            {
+                if (string.IsNullOrEmpty(drd["ItemsID"].ToString()) && string.IsNullOrEmpty(drd["item_desc"].ToString()))
+                {
+                    found = "Y";
+                }
+            }
+            if (found == "")
+            {
+                DataRow drd = dtdtl.NewRow();
+                dtdtl.Rows.Add(drd);
+            }
+            dgPODetailsDtl.DataSource = dtdtl;
+            //Session["purdtl"] = dtdtl;
+            dgPODetailsDtl.DataBind();
+            ShowFooterTotal();
+            ((TextBox)dgPODetailsDtl.Rows[dgPODetailsDtl.Rows.Count - 2].FindControl("txtTransferQuantity")).Focus();
+            Up1.Update();
+        }
+    }
+
+    private void ShowFooterTotal()
+    {
+        try
+        {
+            decimal ctot = decimal.Zero;
+            decimal totAddi = 0;
+            decimal totSalPrice = 0;
+            decimal totQty = 0;
+            decimal totItemsP = 0;
+            decimal totA = 0;
+            decimal Total = 0;
+
+            if (ViewState["purdtl"] != null)
+            {
+                DataTable dt = (DataTable)ViewState["purdtl"];
+                foreach (DataRow drp in dt.Rows)
+                {
+                    if (drp["ItemsID"].ToString() != "" && drp["Price"].ToString() != "")
+                    {
+                        totSalPrice += decimal.Parse(drp["Price"].ToString());
+                        totQty += decimal.Parse(drp["OutQty"].ToString());
+
+                        // totItemsP += decimal.Parse(drp["item_rate"].ToString()) * decimal.Parse(drp["qnty"].ToString());
+                        // totA += decimal.Parse(drp["ExpireDate"].ToString());
+
+                        //totAddi += (totItemsP * decimal.Parse(drp["Additional"].ToString())) / 100;
+                        // Total += decimal.Parse(drp["item_rate"].ToString()) * decimal.Parse(drp["qnty"].ToString()); ;
+                    }
+                }
+            }
+            GridViewRow row = new GridViewRow(0, 0, DataControlRowType.Footer, DataControlRowState.Normal);
+            TableCell cell;
+            cell = new TableCell();
+            cell.Text = "Total";
+            cell.ColumnSpan = 5;
+            cell.HorizontalAlign = HorizontalAlign.Right;
+            row.Cells.Add(cell);
+
+            cell = new TableCell();
+            cell.Text = totQty.ToString("N0");
+            cell.HorizontalAlign = HorizontalAlign.Right;
+            row.Cells.Add(cell);
+
+            row.Font.Bold = true;
+            row.BackColor = System.Drawing.Color.LightGray;
+            if (dgPODetailsDtl.Rows.Count > 0)
+            {
+                dgPODetailsDtl.Controls[0].Controls.Add(row);
+            }
+        }
+        catch (FormatException fex)
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('" + fex.Message + "');", true);
+        }
+    }
+    protected void txtTransferQuantity_TextChanged(object sender, EventArgs e)
+    {
+        GridViewRow gvr = (GridViewRow)((TextBox)sender).NamingContainer;
+        DataTable dtdtl = (DataTable)ViewState["purdtl"];
+        DataRow dr = dtdtl.Rows[gvr.DataItemIndex];
+        clsItemTransferStock aclsItemTransferStock = aclsItemTransferStockManager.GetStockTransferInfo(lblID.Text);
+        if (!string.IsNullOrEmpty(((TextBox)gvr.FindControl("txtTransferQuantity")).Text))
+        {
+            if (aclsItemTransferStock != null)
+            {
+                if ((Convert.ToDouble(dr["StockQty"]) + Convert.ToDouble(dr["OutQty"])) >= Convert.ToDouble(((TextBox)gvr.FindControl("txtTransferQuantity")).Text))
+                {
+                    dr["OutQty"] = ((TextBox)gvr.FindControl("txtTransferQuantity")).Text;
+                }
+                else
+                {
+                    ScriptManager.RegisterClientScriptBlock((sender as Control), this.GetType(), "alert", "alert('Transfer Stock Upper then Stock Quantity.!!');", true);
+                    ((TextBox)gvr.FindControl("txtTransferQuantity")).Text = dr["OutQty"].ToString();
+                    ((TextBox)dgPODetailsDtl.Rows[gvr.DataItemIndex].FindControl("txtTransferQuantity")).Focus();
+                    return;
+                }
+            }
+            else
+            {
+                if (Convert.ToDouble(dr["StockQty"]) >= Convert.ToDouble(((TextBox)gvr.FindControl("txtTransferQuantity")).Text))
+                {
+                    dr["OutQty"] = ((TextBox)gvr.FindControl("txtTransferQuantity")).Text;
+                }
+                else
+                {
+                    ScriptManager.RegisterClientScriptBlock((sender as Control), this.GetType(), "alert",
+                        "alert('Transfer Stock Upper then Stock Quantity.!!');", true);
+                    ((TextBox)gvr.FindControl("txtTransferQuantity")).Text = dr["OutQty"].ToString();
+                    //((TextBox)gvr.FindControl("txtTransferQuantity")).Focus();
+                    ((TextBox)dgPODetailsDtl.Rows[gvr.DataItemIndex].FindControl("txtTransferQuantity")).Focus();
+                    return;
+                }
+            }
+        }
+        else
+        {
+            ScriptManager.RegisterClientScriptBlock((sender as Control), this.GetType(), "alert", "alert('please input Transfer Quantity!');", true);
+            return;
+        }
+        dgPODetailsDtl.DataSource = dtdtl;
+        ViewState["purdtl"] = dtdtl;
+        dgPODetailsDtl.DataBind();
+        ShowFooterTotal();
+        if (dgPODetailsDtl.Rows.Count != gvr.DataItemIndex + 1)
+        {
+            ((TextBox)dgPODetailsDtl.Rows[gvr.DataItemIndex + 1].FindControl("txtItemName")).Focus();
+        }
+        Up1.Update();
+    }
+
+    protected void dgPurDtl_RowDeleting(object sender, GridViewDeleteEventArgs e)
+    {
+        if (ViewState["purdtl"] != null)
+        {
+            DataTable dtDtlGrid = (DataTable) ViewState["purdtl"];
+            dtDtlGrid.Rows.RemoveAt(dgPODetailsDtl.Rows[e.RowIndex].DataItemIndex);
+            if (dtDtlGrid.Rows.Count > 0)
+            {
+                string found = "";
+                foreach (DataRow drf in dtDtlGrid.Rows)
+                {
+                    if (drf["ItemsID"].ToString() == "" && drf["item_desc"].ToString() == "")
+                    {
+                        found = "Y";
+                    }
+                }
+                if (found == "")
+                {
+                    DataRow dr = dtDtlGrid.NewRow();
+                    dtDtlGrid.Rows.Add(dr);
+                }
+                dgPODetailsDtl.DataSource = dtDtlGrid;
+                dgPODetailsDtl.DataBind();
+            }
+            else
+            {
+                getEmptyDtl();
+            }
+        }
+        else
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Your session is over. Try it again!!');",
+                true);
+        }
+    }
+
+    protected void dgPurDtl_RowDataBound(object sender, GridViewRowEventArgs e)
+    {
+
+    }
+    public DataTable PopulateMeasure()
+    {
+        DataTable dtmsr = IdManager.GetShowDataTable("select '' ID,'' Name  union select CONVERT(NVARCHAR,ID) ,Name from ItemReceivedType order by 1");
+        return dtmsr;
+    }
+    protected void BtnSave_Click(object sender, EventArgs e)
+    {
+        try
+        {
+            
+            if (string.IsNullOrEmpty(txtTfDate.Text))
+            {
+                ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Input Date..!!');", true);
+                txtTfDate.Focus();
+                return;
+            }
+            if (string.IsNullOrEmpty(txtRemark.Text))
+            {
+                ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Input Remark..!!');", true);
+                txtRemark.Focus();
+                return;
+            }
+            DataTable dtItemsDtl = null;
+            if (ViewState["purdtl"] != null)
+            {
+                dtItemsDtl = (DataTable)ViewState["purdtl"];
+                if (dtItemsDtl.Rows.Count <= 0)
+                {
+                    ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('No Items in to list.!!');", true);
+                    return;
+                }
+            }
+            else
+            {
+                ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Add this transfer items in list.!!');", true);
+                return;
+            }
+            int CheckEntry = IdManager.GetShowSingleValueInt("COUNT(*)", "ID", "ItemStockOutMst", lblID.Text);
+           // clsItemTransferStock aclsItemTransferStock = aclsItemTransferStockManager.GetStockTransferInfo(lblID.Text);
+            if (CheckEntry>0)
+            {
+                //if (per.AllowEdit == "Y")
+                //{
+                    aclsItemTransferStock.ID = lblID.Text;
+                    aclsItemTransferStock.Code = txtTransferCode.Text;
+                    aclsItemTransferStock.StockType = ddlType.SelectedValue;
+                    aclsItemTransferStock.TransferDate = txtTfDate.Text;
+                    aclsItemTransferStock.LoginBy = Session["user"].ToString();
+                    aclsItemTransferStock.Remark = txtRemark.Text.Replace("'", "");
+                    string Parameter = "where [MstID]='" + lblID.Text + "' AND t1.DeleteBy IS NULL";
+                    DataTable dtOld = aclsItemTransferStockManager.GetShowItemsStockOutDetails(Parameter);
+                    //*************************** Account Entry (Update) ******************//
+                    //********* Jurnal Voucher - 1 *********//
+                    string ITSerial = IdManager.GetShowSingleValueString("VCH_SYS_NO",
+                        "t1.PAYEE='SBStk' and SUBSTRING(t1.VCH_REF_NO,1,2)='JV' and t1.SERIAL_NO", "GL_TRANS_MST t1",
+                        txtTransferCode.Text);
+                    VouchMst vmst = VouchManager.GetVouchMst(ITSerial.Trim());
+                    if (vmst != null)
+                    {
+                        vmst.FinMon = FinYearManager.getFinMonthByDate(txtTfDate.Text);
+                        vmst.ValueDate = txtTfDate.Text;
+                        vmst.VchCode = "03";
+                        // vmst.RefFileNo = "";
+                        // vmst.VolumeNo = "";
+                        //vmst.SerialNo = lblID.Text;
+                        vmst.Particulars = txtRemark.Text.Replace("'", "");
+                        vmst.ControlAmt = "0";
+                        vmst.UpdateUser = Session["user"].ToString();
+                        vmst.UpdateDate = DateTime.Parse(DateTime.Now.ToString()).ToString("dd/MM/yyyy");
+                        vmst.AuthoUserType = Session["userlevel"].ToString();
+                    }
+                    aclsItemTransferStockManager.UpdateItemnStockInfo(aclsItemTransferStock, dtItemsDtl, dtOld, vmst,
+                        ViewState["CurrencyRate"].ToString(), Session["UserType"].ToString());
+                    //Refresh();
+                    ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Record(s) is/are updated suceessfullly!!');", true);
+                    BtnSave.Enabled = false;
+                //}
+                //else
+                //{
+                //    ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('You have not enough permissoin to update this record!!');", true);
+                //}
+            }
+            else
+            {
+                //if (per.AllowAdd == "Y")
+                //{
+                    
+                    aclsItemTransferStock.TransferDate = txtTfDate.Text;
+                    aclsItemTransferStock.StockType = ddlType.SelectedValue;
+                    aclsItemTransferStock.LoginBy = Session["user"].ToString();
+                    aclsItemTransferStock.Remark = txtRemark.Text.Replace("'", "");
+                    txtTransferCode.Text = "STO-" + DateTime.Now.ToString("yy") + DateTime.Now.ToString("MM") +
+                                   DateTime.Now.ToString("dd") + "00" +
+                                   IdManager.GetShowSingleValueInt("StockOutID", "ID", "FixGlCoaCode", "1").ToString();
+                    aclsItemTransferStock.Code = txtTransferCode.Text.Replace("'", "");
+
+                    //*************************** Account Entry ******************//
+                    //********* Jurnal Voucher - 1 *********//
+                    VouchMst vmst = new VouchMst();
+                    vmst.FinMon = FinYearManager.getFinMonthByDate(txtTfDate.Text);
+                    vmst.ValueDate = txtTfDate.Text;
+                    vmst.VchCode = "03";
+                    vmst.RefFileNo = "";
+                    vmst.VolumeNo = "";
+                    vmst.SerialNo = txtTransferCode.Text.Trim();
+                    vmst.Particulars = txtRemark.Text.Replace("'", "");
+                    vmst.ControlAmt = "0";
+                    vmst.Payee = "SBStk";
+                    vmst.CheckNo = "";
+                    vmst.CheqDate = "";
+                    vmst.CheqAmnt = "0";
+                    vmst.MoneyRptNo = "";
+                    vmst.MoneyRptDate = "";
+                    vmst.TransType = "R";
+                    vmst.BookName = "AMB";
+                    vmst.EntryUser = Session["user"].ToString();
+                    vmst.EntryDate = DateTime.Parse(DateTime.Now.ToString()).ToString("dd/MM/yyyy");
+                    vmst.VchSysNo = IdManager.GetNextID("gl_trans_mst", "vch_sys_no").ToString();
+                    vmst.VchRefNo = "JV-" + vmst.VchSysNo.ToString().PadLeft(10, '0');
+                    vmst.Status = "A";
+                    vmst.AuthoUserType = Session["userlevel"].ToString();
+
+                    aclsItemTransferStockManager.SaveItemsStockOutInformation(aclsItemTransferStock, dtItemsDtl, vmst,
+                        ViewState["CurrencyRate"].ToString(), Session["UserType"].ToString());
+                    ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Record(s) is/are created suceessfullly!!');", true);
+                    BtnSave.Enabled = false;
+                //}
+                //else
+                //{
+                //    ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('You have not enough permissoin to update this record!!');", true);
+                //}
+            }
+        }
+        catch (FormatException fex)
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('" + fex.Message + "');", true);
+        }
+        catch (Exception ex)
+        {
+            if (ex.Message.Contains("Database"))
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Database Maintain Error. Contact to the Software Provider..!!');", true);
+            else
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('There is some problem to do the task. Try again properly.!!');", true);
+        }  
+    }
+    protected void BtnReset_Click(object sender, EventArgs e)
+    {
+        var pageName = System.IO.Path.GetFileName(Request.Url.ToString());
+        Response.Redirect(pageName);
+    }
+    protected void BtnDelete_Click(object sender, EventArgs e)
+    {
+        int CheckEntry = IdManager.GetShowSingleValueInt("COUNT(*)", "ID", "ItemStockOutMst", lblID.Text);
+        // clsItemTransferStock aclsItemTransferStock = aclsItemTransferStockManager.GetStockTransferInfo(lblID.Text);
+        if (CheckEntry > 0)
+        {
+            //if (per.AllowEdit == "Y")
+            //{
+            aclsItemTransferStock.ID = lblID.Text;
+            aclsItemTransferStock.Code = txtTransferCode.Text;
+            aclsItemTransferStock.StockType = ddlType.SelectedValue;
+            aclsItemTransferStock.TransferDate = txtTfDate.Text;
+            aclsItemTransferStock.LoginBy = Session["user"].ToString();
+            aclsItemTransferStock.Remark = txtRemark.Text.Replace("'", "");
+            string Parameter = "where [MstID]='" + lblID.Text + "' AND t1.DeleteBy IS NULL";
+            DataTable dtOld = aclsItemTransferStockManager.GetShowItemsStockOutDetails(Parameter);
+            //*************************** Account Entry (Update) ******************//
+            //********* Jurnal Voucher - 1 *********//
+            string ITSerial = IdManager.GetShowSingleValueString("VCH_SYS_NO",
+                "t1.PAYEE='SBStk' and SUBSTRING(t1.VCH_REF_NO,1,2)='JV' and t1.SERIAL_NO", "GL_TRANS_MST t1",
+                txtTransferCode.Text);
+            VouchMst vmst = VouchManager.GetVouchMst(ITSerial.Trim());
+            if (vmst != null)
+            {
+                vmst.FinMon = FinYearManager.getFinMonthByDate(txtTfDate.Text);
+                vmst.ValueDate = txtTfDate.Text;
+                vmst.VchCode = "03";
+                // vmst.RefFileNo = "";
+                // vmst.VolumeNo = "";
+                //vmst.SerialNo = lblID.Text;
+                vmst.Particulars = txtRemark.Text.Replace("'", "");
+                vmst.ControlAmt = "0";
+                vmst.UpdateUser = Session["user"].ToString();
+                vmst.UpdateDate = DateTime.Parse(DateTime.Now.ToString()).ToString("dd/MM/yyyy");
+                vmst.AuthoUserType = Session["userlevel"].ToString();
+            }
+            aclsItemTransferStockManager.DeleteItemnStockInfo(aclsItemTransferStock, dtOld, vmst,
+                ViewState["CurrencyRate"].ToString(), Session["UserType"].ToString());
+            //Refresh();
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Record(s) is/are updated suceessfullly!!');", true);
+            BtnSave.Enabled = false;
+            //}
+            //else
+            //{
+            //    ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('You have not enough permissoin to update this record!!');", true);
+            //}
+        }
+    }
+    protected void btnPrint_Click(object sender, EventArgs e)
+    {
+
+    }
+
+
+    //protected void chkAllItems_CheckedChanged(object sender, EventArgs e)
+    //{
+    //    if (chkAllItems.Checked)
+    //    {
+    //        DataTable dtItemsAll = _aItemManager.GetItemsInformationDetails("", "", "", "", "", 1);
+    //        dtItemsAll.Columns["TransferQty"].ColumnName = "OutQty";
+    //        ViewState["purdtl"] = dtItemsAll;
+    //        dgPODetailsDtl.DataSource = dtItemsAll;
+    //        dgPODetailsDtl.DataBind();
+    //        ShowFooterTotal();
+    //    }
+    //    else
+    //    {
+    //        dgPODetailsDtl.DataSource = null;
+    //        dgPODetailsDtl.DataBind();
+    //    }
+    //}
+    protected void dgHistory_RowDataBound(object sender, GridViewRowEventArgs e)
+    {
+        if (e.Row.RowType == DataControlRowType.DataRow | e.Row.RowType == DataControlRowType.Header | e.Row.RowType == DataControlRowType.Footer)
+        {
+            e.Row.Cells[1].Attributes.Add("style", "display:none");
+        }
+    }
+    protected void dgHistory_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        lblID.Text = dgHistory.SelectedRow.Cells[1].Text;
+        DataTable dtHistory = aclsItemTransferStockManager.GetShowItemsStockOut(lblID.Text);
+        if (dtHistory.Rows.Count > 0)
+        {
+            txtTfDate.Text = dtHistory.Rows[0]["StockOutDate"].ToString();
+            txtRemark.Text = dtHistory.Rows[0]["Remark"].ToString();
+            txtTransferCode.Text = dtHistory.Rows[0]["Code"].ToString();
+
+            string Parameter = "where [MstID]='" + lblID.Text + "' AND t1.DeleteBy IS NULL";
+            DataTable dtOld = aclsItemTransferStockManager.GetShowItemsStockOutDetails(Parameter);
+            DataRow drRow = dtOld.NewRow();
+            dtOld.Rows.Add(drRow);
+            dgPODetailsDtl.DataSource = dtOld;
+            ViewState["purdtl"] = dtOld;
+            dgPODetailsDtl.DataBind();
+            ShowFooterTotal();
+            dgTransferHistory.Visible = btnNew.Visible = false;
+            pnl.Enabled = ItemsDetails.Visible = true;
+            Up1.Update();
+        }
+    }
+    protected void dgHistory_PageIndexChanging(object sender, GridViewPageEventArgs e)
+    {
+        dgHistory.DataSource = ViewState["History"];
+        dgHistory.PageIndex = e.NewPageIndex;
+        dgHistory.DataBind();
+    }
+ 
+}

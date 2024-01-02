@@ -1,0 +1,243 @@
+﻿<%@ Page Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true" CodeFile="frmBank.aspx.cs" Inherits="frmBank" Title="Bank Setup" Theme="Themes" %>
+
+<asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
+
+<div id="frmMainDiv" style="background-color:White; width:100%;">       
+<div style="vertical-align:top;">
+<table  id="pageFooterWrapper">
+   <tr>
+   <td align="center">
+       <asp:Button ID="btnDelete" runat="server" ToolTip="Delete" onclick="btnDelete_Click"
+           
+           onclientclick="javascript:return window.confirm('are u really want to delete these data')" Text="Delete" 
+        Width="100px" Height="35px"  />
+         </td> 
+   <td align="center"> 
+       <asp:Button ID="btnFind" runat="server" ToolTip="Find"  onclick="btnFind_Click" Text="Find" 
+        Width="100px" Visible="False"  />    
+           </td> 
+   <td align="center"> 
+      <asp:Button ID="btnSave" runat="server" ToolTip="Save Record" 
+           onclick="btnSave_Click" Text="Save" 
+        Width="100px" Height="35px"  />
+        </td>  
+   <td align="center"> 
+    <asp:Button ID="btnClear" runat="server"  ToolTip="Clear" onclick="btnClear_Click" Text="Clear" 
+        Width="100px" Height="35px"  />
+      </td>            
+   </tr>
+</table>
+ </div>     
+<table style="width:100%;">
+<tr>
+<td style="width:1%;" align="center">&nbsp;</td>
+<td style="width:98%; vertical-align:top;" align="center">
+
+    &nbsp;</td>
+<td style="width:1%;" align="center">&nbsp;</td>
+</tr>
+<tr>
+<td style="width:1%;" align="center">&nbsp;</td>
+<td style="width:98%; vertical-align:top;" align="center">
+
+    <table style="width: 100%">
+        <tr>
+            <td style="width: 20%">
+                &nbsp;</td>
+            <td style="width: 60%">
+                &nbsp;</td>
+            <td style="width: 20%">
+                &nbsp;</td>
+        </tr>
+        <tr>
+            <td style="width: 20%">
+                &nbsp;</td>
+            <td style="width: 60%">
+                <fieldset style="vertical-align: top; border: solid 1px #8BB381; text-align:left;">
+                    <legend style="color: maroon;"><b>Bank Setup</b></legend>
+                    <table style="width: 100%">
+                        <tr>
+                            <td align="right" style="width: 28%; height: 27px;">
+                                ID</td>
+                            <td style="width: 3%; height: 27px;">
+                            </td>
+                            <td style="width: 75%; height: 27px;">
+<asp:TextBox SkinId="tbPlain" ID="txtBankId" runat="server" Width="30%" 
+        CssClass="tbc" Font-Size="8pt" MaxLength="2" Enabled="False" ></asp:TextBox>   
+                            </td>
+                        </tr>
+                        <tr>
+                            <td align="right" style="width: 28%; height: 26px;">
+                                Name</td>
+                            <td style="width: 3%; height: 26px;">
+                            </td>
+                            <td style="width: 75%; height: 26px;">
+<asp:TextBox SkinId="tbPlain" ID="txtBankName" runat="server" Width="99%" CssClass="tbl" Font-Size="8pt"  ></asp:TextBox>   
+                            </td>
+                        </tr>
+                    </table>
+                </fieldset></td>
+            <td style="width: 20%">
+                &nbsp;</td>
+        </tr>
+        <tr>
+            <td style="width: 20%">
+                &nbsp;</td>
+            <td style="width: 60%">
+<asp:GridView CssClass="mGrid" PagerStyle-CssClass="pgr"  AlternatingRowStyle-CssClass="alt" 
+ID="dgMst" runat="server" AutoGenerateColumns="false" Visible="false"
+        AllowPaging="True" Width="100%" BackColor="White" BorderWidth="1px" BorderStyle="Solid"
+        CellPadding="2" CellSpacing="0" BorderColor="LightGray" 
+        Font-Size="9pt"  PageSize="20" AllowSorting="true"  ForeColor="#333333" 
+        onselectedindexchanged="dgMst_SelectedIndexChanged" 
+                    onrowdatabound="dgMst_RowDataBound" >
+  <Columns>
+  <asp:CommandField ShowSelectButton="True"  ItemStyle-Width="100px" ItemStyle-HorizontalAlign="Center" ItemStyle-ForeColor="Blue" ItemStyle-Height="25px"/>
+  <asp:BoundField  HeaderText="Bank ID" DataField="bank_id" ItemStyle-Width="100px" ItemStyle-HorizontalAlign="Center"/>
+  <asp:BoundField  HeaderText="Bank Name" DataField="bank_name" ItemStyle-Width="500px" ItemStyle-HorizontalAlign="Left"/>  
+  </Columns>
+                        <RowStyle BackColor="white" />
+                        <EditRowStyle BackColor="" />
+                        <PagerStyle BackColor="" HorizontalAlign="Center" />
+                        <HeaderStyle BackColor="Silver" Font-Bold="True" ForeColor="Black" />
+                        <AlternatingRowStyle BackColor="" />
+</asp:GridView>
+            </td>
+            <td style="width: 20%">
+                &nbsp;</td>
+        </tr>
+        <tr>
+            <td style="width: 20%">
+                &nbsp;</td>
+            <td style="width: 60%">
+<asp:GridView CssClass="mGrid" PagerStyle-CssClass="pgr"  
+        AlternatingRowStyle-CssClass="alt" ID="dgBranch" runat="server" AutoGenerateColumns="False" 
+        Caption="Branch Setup" CaptionAlign="Top"
+        AllowPaging="True" Width="100%" BackColor="White" BorderWidth="1px" BorderStyle="Solid"
+        CellPadding="2" BorderColor="LightGray" Font-Size="9pt" AllowSorting="True" 
+        PageSize="20" onrowcancelingedit="dgBranch_RowCancelingEdit" 
+        onrowediting="dgBranch_RowEditing" onrowupdating="dgBranch_RowUpdating" 
+        onrowcommand="dgBranch_RowCommand" onrowdeleting="dgBranch_RowDeleting" 
+        onrowdatabound="dgBranch_RowDataBound">
+  <HeaderStyle Font-Size="10pt" ForeColor="Black" Font-Bold="True" BackColor="LightGray" HorizontalAlign="center" /> 
+  <Columns>
+  
+  <asp:TemplateField ItemStyle-Width="130px" ItemStyle-HorizontalAlign="Center">
+  <ItemTemplate>  
+  <asp:LinkButton ID="lbAddNew" runat="server" CausesValidation="False" CommandName="AddNew" Text="AddNew" Font-Size="9pt"></asp:LinkButton>
+  <asp:LinkButton ID="lbEdit" runat="server" Text="Edit" CausesValidation="false" CommandName="Edit" Font-Size="9pt"/>
+  <asp:LinkButton ID="lbDelete" runat="server" CausesValidation="False" CommandName="Delete" Text="Delete" Font-Size="9pt"></asp:LinkButton>  
+  <ajaxToolkit:ConfirmButtonExtender ID="detdeleteconfirm" runat="server" ConfirmText="Are you sure to delete??" TargetControlID="lbDelete"></ajaxToolkit:ConfirmButtonExtender>
+  </ItemTemplate>
+  <EditItemTemplate>
+  <asp:LinkButton ID="lbUpdate" runat="server" Text="Update" CausesValidation="false" CommandName="Update" Font-Size="9pt"/>
+  <asp:LinkButton ID="lbCancel" runat="server" Text="Cancel" CausesValidation="false" CommandName="Cancel" Font-Size="9pt"/>
+  </EditItemTemplate>
+  <FooterTemplate>
+  <asp:LinkButton ID="lbInsert" runat="server" Text="Insert" CausesValidation="false" CommandName="Insert" Font-Size="9pt"/>
+  <asp:LinkButton ID="lbCancel0" runat="server" Text="Cancel" 
+          CausesValidation="false" CommandName="Cancel" Font-Size="9pt"/>
+  </FooterTemplate>
+<ItemStyle HorizontalAlign="Center" Width="130px"></ItemStyle>
+  </asp:TemplateField>
+  
+  <asp:TemplateField HeaderText="Branch ID" ItemStyle-Width="80px" ItemStyle-HorizontalAlign="Left">
+  <ItemTemplate>  
+  <asp:Label ID="lblBranchId" runat="server" Text='<%#Eval("branch_id") %>' Font-Size="9pt"></asp:Label>     
+  </ItemTemplate>
+  <EditItemTemplate>  
+  <asp:TextBox SkinId="tbPlain" ID="txtBranchId" runat="server" Text='<%#Eval("branch_id") %>' Width="80px" CssClass="tbc" Font-Size="8pt" MaxLength="2" ></asp:TextBox>   
+  </EditItemTemplate>
+  <FooterTemplate>
+  <asp:TextBox SkinId="tbPlain" ID="txtBranchId0" runat="server" Text="" 
+          Font-Size="8pt" Width="80px" CssClass="tbc" MaxLength="2" ></asp:TextBox>   
+  </FooterTemplate>
+  </asp:TemplateField>
+  
+  <asp:TemplateField HeaderText="Branch Name" ItemStyle-Width="200px" ItemStyle-HorizontalAlign="Left">
+  <ItemTemplate>  
+  <asp:Label ID="lblBranchName" runat="server" Text='<%#Eval("branch_name") %>' Font-Size="9pt"></asp:Label>     
+  </ItemTemplate>
+  <EditItemTemplate>  
+  <asp:TextBox SkinId="tbPlain" ID="txtBranchName" runat="server" Text='<%#Eval("branch_name") %>' Width="200px" CssClass="tbl" Font-Size="8pt"  ></asp:TextBox>   
+  </EditItemTemplate>
+  <FooterTemplate>
+  <asp:TextBox SkinId="tbPlain" ID="txtBranchName0" runat="server" Text="" 
+          Font-Size="8pt" Width="200px" CssClass="tbl"  ></asp:TextBox>   
+  </FooterTemplate>
+  </asp:TemplateField>
+  
+  <asp:TemplateField HeaderText="Address (line1)" ItemStyle-Width="150px" ItemStyle-HorizontalAlign="Left">
+  <ItemTemplate>  
+  <asp:Label ID="lblAddr1" runat="server" Text='<%#Eval("addr1") %>' Font-Size="9pt"></asp:Label>     
+  </ItemTemplate>
+  <EditItemTemplate>  
+  <asp:TextBox SkinId="tbPlain" ID="txtAddr1" runat="server" Text='<%#Eval("addr1") %>' Width="150px" CssClass="tbl" Font-Size="8pt"  ></asp:TextBox>   
+  </EditItemTemplate>
+  <FooterTemplate>
+  <asp:TextBox SkinId="tbPlain" ID="txtAddr3" runat="server" Text="" Font-Size="8pt" 
+          Width="150px" CssClass="tbl"  ></asp:TextBox>   
+  </FooterTemplate>
+  </asp:TemplateField>
+  
+  <asp:TemplateField HeaderText="Address (line2)" ItemStyle-Width="150px" ItemStyle-HorizontalAlign="Left">
+  <ItemTemplate>  
+  <asp:Label ID="lblAddr2" runat="server" Text='<%#Eval("addr2") %>' Font-Size="9pt"></asp:Label>     
+  </ItemTemplate>
+  <EditItemTemplate>  
+  <asp:TextBox SkinId="tbPlain" ID="txtAddr2" runat="server" Text='<%#Eval("addr2") %>' Width="150px" CssClass="tbl" Font-Size="8pt"  ></asp:TextBox>   
+  </EditItemTemplate>
+  <FooterTemplate>
+  <asp:TextBox SkinId="tbPlain" ID="txtAddr4" runat="server" Text="" Font-Size="8pt" 
+          Width="150px" CssClass="tbl"  ></asp:TextBox>   
+  </FooterTemplate>
+  </asp:TemplateField>
+  
+  <asp:TemplateField HeaderText="Phone" ItemStyle-Width="100px" ItemStyle-HorizontalAlign="Center">
+  <ItemTemplate>  
+  <asp:Label ID="lblPhone" runat="server" Text='<%#Eval("phone") %>' Font-Size="9pt"></asp:Label>     
+  </ItemTemplate>
+  <EditItemTemplate>  
+  <asp:TextBox SkinId="tbPlain" ID="txtPhone" runat="server" Text='<%#Eval("phone") %>' Width="100px" CssClass="tbc" Font-Size="8pt"  ></asp:TextBox>   
+  </EditItemTemplate>
+  <FooterTemplate>
+  <asp:TextBox SkinId="tbPlain" ID="txtPhone0" runat="server" Text="" Font-Size="8pt" 
+          Width="100px" CssClass="tbc"  ></asp:TextBox>   
+  </FooterTemplate>
+  </asp:TemplateField>
+  
+</Columns>
+<RowStyle BackColor="white" />
+                        <EditRowStyle BackColor="" />
+                        <PagerStyle BackColor="" ForeColor="White" HorizontalAlign="Center" />
+                        <HeaderStyle BackColor="" Font-Bold="True" ForeColor="Black" />
+                        <AlternatingRowStyle BackColor="" />
+</asp:GridView>  
+  
+            </td>
+            <td style="width: 20%">
+                &nbsp;</td>
+        </tr>
+    </table>
+</td>
+<td style="width:1%;" align="center">&nbsp;</td>
+</tr>
+<tr>
+<td style="width:1%;" align="center">&nbsp;</td>
+<td style="width:98%; vertical-align:top;" align="center">
+
+    &nbsp;</td>
+<td style="width:1%;" align="center">&nbsp;</td>
+</tr>
+<tr>
+<td style="width:1%;" align="center"></td>
+<td style="width:98%; vertical-align:top;" align="center">
+
+<br />
+</td>
+<td style="width:1%;" align="center"></td>
+</tr>
+</table>
+</div>
+</asp:Content>
+

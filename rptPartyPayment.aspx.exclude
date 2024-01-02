@@ -1,0 +1,89 @@
+﻿<%@ Page Title="" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true" CodeFile="rptPartyPayment.aspx.cs" Inherits="rptPartyPayment" %>
+
+<asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
+<div style="background-color:White; width:100%; min-height:700px; height:auto !important; height:700px; font-family:Tahoma;">
+    <table style="width: 100%">
+        <tr>
+            <td style="width:25%">
+                &nbsp;</td>
+            <td style="width:50%">
+                &nbsp;</td>
+            <td style="width:25%">
+                &nbsp;</td>
+        </tr>
+        <tr>
+            <td style="width:25%">
+                &nbsp;</td>
+            <td style="width:50%">
+            <fieldset style="vertical-align: top; border: solid 1px #8BB381;text-align:left;"><legend style="color: maroon;">
+                <b>Party Payment Report </b></legend>
+                <table style="width: 100%">
+                    <tr>
+                        <td style="width:10%; height: 28px;">
+                            Report Type</td>
+                        <td colspan="4" style="height: 28px">
+                            <asp:DropDownList ID="ddlReportType" runat="server" Height="26px" Width="99%">
+                                <asp:ListItem></asp:ListItem>
+                                <asp:ListItem Value="PPR">Party Payment Report</asp:ListItem>
+                            </asp:DropDownList>
+                        </td>
+                    </tr>
+                    <tr id="Party" runat="server">
+                        <td style="width:10%; height: 28px;">
+                            <asp:Label ID="lblParty" runat="server" Text="Party Name "></asp:Label>
+                        </td>
+                        <td style="height: 28px;" colspan="4">
+                            <asp:DropDownList ID="ddlPartyName" runat="server" Height="26px" Width="99%">
+                            </asp:DropDownList>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="width:10%">
+                            <asp:Label ID="lblFromDate" runat="server" Text="From Date"></asp:Label>
+                        </td>
+                        <td style="width:15%">
+                            <asp:TextBox ID="txtFromdate" runat="server" placeHolder="dd/MM/yyyy" Width="99%"></asp:TextBox>
+                              <ajaxToolkit:CalendarExtender ID="Calendarextender2" runat="server" 
+                    Format="dd/MM/yyyy" TargetControlID="txtFromdate" />
+                        </td>
+                        <td style="width:2%">
+                            &nbsp;</td>
+                        <td style="width:10%" align="right">
+                            <asp:Label ID="lblToDate" runat="server"  Text="To Date"></asp:Label>
+                        </td>
+                        <td style="width:15%">
+                            <asp:TextBox ID="txtToDate" placeHolder="dd/MM/yyyy" runat="server" Width="94%"></asp:TextBox>
+                            <ajaxToolkit:CalendarExtender ID="Calendarextender1" runat="server" 
+                    Format="dd/MM/yyyy" TargetControlID="txtToDate" />
+                        </td>
+                    </tr>
+                </table></fieldset>
+            </td>
+            <td style="width:25%">
+                &nbsp;</td>
+        </tr>
+        <tr>
+            <td style="width:25%">
+                &nbsp;</td>
+            <td style="width:50%" align="center">
+                <asp:Button ID="btnShow" runat="server" Text="Show" onclick="btnShow_Click" 
+                    Width="130px" />
+&nbsp;
+                <asp:Button ID="btnClear" runat="server" Text="Clear" Width="130px" 
+                    onclick="btnClear_Click" />
+            </td>
+            <td style="width:25%">
+                &nbsp;</td>
+        </tr>
+        <tr>
+            <td style="width:25%">
+                &nbsp;</td>
+            <td style="width:50%" align="center">
+                &nbsp;</td>
+            <td style="width:25%">
+                &nbsp;</td>
+        </tr>
+    </table>
+    </div>
+</asp:Content>
+

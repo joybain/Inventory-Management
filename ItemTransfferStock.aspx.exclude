@@ -1,0 +1,372 @@
+﻿<%@ Page Title="Items Transfer-.SDL" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true" CodeFile="ItemTransfferStock.aspx.cs" Inherits="ItemTransfferStock" %>
+
+<asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
+    <div id="frmMainDiv" style="width:100%; background-color:White;">  
+
+    <table id="pageFooterWrapper">
+         <tr>
+	        <td style="vertical-align:middle; height:100%;" align="center">
+                <asp:Button  ID="BtnDelete" runat="server"  ToolTip="Delete Record"  TabIndex="903" 
+                    onclientclick="javascript:return window.confirm('are u really want to delete these data')"             
+                    Text="Delete" Width="110px" Height="35px" BorderStyle="Outset" 
+                    BorderWidth="1px" onclick="BtnDelete_Click"  /></td>
+	
+	        <td style="vertical-align:middle;" align="center">
+                <asp:Button ID="BtnSave" 
+                    runat="server" ToolTip="Save or Update Record" TabIndex="901" Text="Save"  onclientclick="javascript:return window.confirm('are u really want to save these data')"         
+                     Width="110px" Height="35px" BorderStyle="Outset" BorderWidth="1px" 
+                    onclick="BtnSave_Click" /></td>
+                    <td style="vertical-align:middle;" align="center">
+                <asp:Button ID="btnNew" 
+                    runat="server" ToolTip="New" TabIndex="901" Text="New"             
+                     Width="110px" Height="35px" BorderStyle="Outset" BorderWidth="1px" 
+                            onclick="btnNew_Click" /></td>
+	        <td style="vertical-align:middle;" align="center">
+                <asp:Button ID="BtnReset" runat="server" ToolTip="Clear Form" TabIndex="904"   
+                    Text="Clear" Width="110px" Height="35px" BorderStyle="Outset" 
+                    BorderWidth="1px" onclick="BtnReset_Click" />
+            </td> 
+            <td style="vertical-align:middle;" align="center">
+                <asp:Button ID="btnPrint" runat="server" ToolTip="Print" TabIndex="904"   
+                    Text="Print" Width="110px" Height="35px" BorderStyle="Outset" 
+                    BorderWidth="1px" onclick="btnPrint_Click"  />
+            </td>  
+               <td style="vertical-align:middle;" align="center">
+                <asp:Button ID="btnExcel" runat="server" ToolTip="Print" TabIndex="904"   
+                    Text="Excel" Width="110px" Height="35px" BorderStyle="Outset" 
+                    BorderWidth="1px" onclick="btnExcel_Click"  />
+            </td>        
+	        </tr>		
+	  </table>
+    <table style="width: 100%">
+        <tr>
+            <td style="width:5%">
+                &nbsp;</td>
+            <td style="width:90%">
+                &nbsp;</td>
+            <td style="width:5%">
+                &nbsp;</td>
+        </tr>
+        <tr>
+            <td style="width:5%;">
+                </td>
+            <td style="width:90%;">
+            <fieldset style="vertical-align: top; border: solid 1px #8BB381; text-align:left;">
+                            <legend style="color: maroon;"><b>Stock Transfer Information</b></legend>
+                            <asp:Panel ID="pnl" runat="server">
+                <table  style="width: 100%">
+                    <tr>
+                        <td style="width: 7%; height: 29px; font-weight: 700;">
+                            Code</td>
+                        <td style="width: 1%; height: 29px;">
+                            &nbsp;</td>
+                        <td style="width: 21%; height: 29px;">
+                            <asp:TextBox ID="txtCode" runat="server" CssClass="txtVisible" style="text-align: left;" Width="40%" Enabled="False"></asp:TextBox>
+                        </td>
+                        <td style="width: 10%; height: 29px;" align="right">
+                            &nbsp;</td>
+                        <td style="width: 2%; height: 29px;">
+                            &nbsp;</td>
+                        <td style="width: 10%; height: 29px;">
+                            &nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td style="width: 7%; height: 29px; font-weight: 700;">
+                            <asp:Label ID="Label5" runat="server" Text="Branch Name"></asp:Label>
+                        </td>
+                        <td style="width: 1%; height: 29px;">
+                        </td>
+                        <td style="width: 21%; height: 29px;">
+                            <asp:DropDownList ID="ddlBranch" runat="server" AutoPostBack="True" CssClass="txtVisibleAlign"
+                                Font-Size="8pt" Height="26px" 
+                                onselectedindexchanged="ddlBranch_SelectedIndexChanged" SkinId="ddlPlain" 
+                                Width="93%">
+                            </asp:DropDownList>
+                        </td>
+                        <td align="right" style="width: 10%; height: 29px;">
+                            <asp:Label ID="lblID" runat="server" Visible="False"></asp:Label>
+                            <asp:Label ID="Label6" runat="server" style="font-weight: 700" 
+                                Text="Transfer Date"></asp:Label>
+                        </td>
+                        <td style="width: 2%; height: 29px;">
+                        </td>
+                        <td style="width: 10%; height: 29px;">
+                            <asp:TextBox ID="txtTfDate" runat="server" AutoPostBack="False" CssClass="tbc" 
+                                Font-Size="8pt" PlaceHolder="dd/MM/yyyy" SkinId="tbPlain" 
+                                style="text-align:center;" Width="93%"></asp:TextBox>
+                            <ajaxToolkit:CalendarExtender ID="Calendarextender1" runat="server" 
+                                Format="dd/MM/yyyy" TargetControlID="txtTfDate" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="width: 7%; height: 29px; font-weight: 700;">
+                            <asp:Label ID="LblSuppNo0" runat="server" Font-Bold="False" Font-Size="9pt">Remarks/Particulars</asp:Label>
+                        </td>
+                        <td style="width: 1%; height: 29px;">
+                            &nbsp;</td>
+                        <td colspan="4" style="height: 29px;">
+                            <asp:TextBox ID="txtRemark" runat="server" AutoPostBack="False" Font-Size="8pt" 
+                                Height="51px" SkinID="tbGray" TextMode="MultiLine" Width="99%"></asp:TextBox>
+                            <ajaxToolkit:AutoCompleteExtender ID="autoComplete" runat="server" 
+                                CompletionInterval="20" CompletionSetCount="12" EnableCaching="true" 
+                                MinimumPrefixLength="1" ServiceMethod="GetShowRemarks" 
+                                ServicePath="AutoComplete.asmx" TargetControlID="txtRemark" />
+                        </td>
+                    </tr>
+                </table></asp:Panel></fieldset>
+            </td>
+            <td style="width:5%;">
+                            <asp:TextBox ID="txtRemark1" runat="server" AutoPostBack="False" 
+                                Font-Size="8pt" Height="51px" SkinID="tbGray" TextMode="MultiLine" 
+                                Width="97%" Visible="False"></asp:TextBox>
+                            <ajaxToolkit:AutoCompleteExtender ID="txtRemark1_AutoCompleteExtender" 
+                                runat="server" CompletionInterval="20" CompletionSetCount="12" 
+                                EnableCaching="true" MinimumPrefixLength="1" ServiceMethod="GetShowRemarks" 
+                                ServicePath="AutoComplete.asmx" TargetControlID="txtRemark1" />
+                </td>
+        </tr>
+        <tr>
+            <td colspan="3">
+            <div id="ItemsDetails" runat="server">
+            <fieldset style="vertical-align: top; border: solid 1px #8BB381; text-align:left;">
+                            <legend style="color: maroon;"><b>Items Details</b></legend>
+                <asp:UpdatePanel ID="Up1" runat="server" UpdateMode="Conditional"><ContentTemplate>
+                 <asp:GridView ID="dgPODetailsDtl" runat="server" AutoGenerateColumns="False"   
+            BorderColor="LightGray" CssClass="mGrid" Font-Size="9pt"  
+            OnRowDataBound="dgPurDtl_RowDataBound" OnRowDeleting="dgPurDtl_RowDeleting" 
+            Width="100%"><AlternatingRowStyle CssClass="alt" /><Columns>
+                         <asp:TemplateField><ItemTemplate>
+                             <asp:ImageButton ID="lbDelete" runat="server" CausesValidation="False" 
+                                 CommandName="Delete" ImageAlign="Middle" ImageUrl="~/img/delete.png" 
+                                 Text="Delete" /></ItemTemplate>
+                             <ItemStyle Font-Size="8pt" HorizontalAlign="Center" Width="4%" /></asp:TemplateField>
+                         <asp:TemplateField HeaderText="Item Code">
+                             <ItemTemplate>
+                                 <asp:TextBox ID="txtItemCode" runat="server" Height="18px" CssClass="txtVisible"
+                                     AutoPostBack="true" Font-Size="8pt" MaxLength="15"  Enabled="false"
+          SkinId="tbPlain" Text='<%#Eval("item_code")%>' Width="90%" onFocus="this.select()"></asp:TextBox>
+          </ItemTemplate>
+                             <FooterStyle HorizontalAlign="Center" />
+                             <HeaderStyle HorizontalAlign="Center" VerticalAlign="Middle" />
+                             <ItemStyle HorizontalAlign="Center" Width="12%" />
+                             </asp:TemplateField>
+                        
+                         <asp:TemplateField HeaderText="Items Name">
+                             <ItemTemplate>
+                                 <asp:TextBox ID="txtItemName" runat="server" Width="96%" placeHolder="Search Items.." Height="18px"
+                               AutoPostBack="True" Text='<%#Eval("item_desc")%>' 
+                                     ontextchanged="txtItemName_TextChanged"></asp:TextBox>                               
+                            <ajaxToolkit:AutoCompleteExtender ID="autoComplete1" runat="server" 
+                                        CompletionInterval="20" CompletionSetCount="12" EnableCaching="true" 
+                                        MinimumPrefixLength="1" ServiceMethod="GetShowShiftmentIDItems" 
+                                        ServicePath="AutoComplete.asmx" TargetControlID="txtItemName" />
+                                        <asp:Label ID="lblItemsID" runat="server" Text='<%#Eval("ItemsID")%>' style="display:none;"></asp:Label>
+                               </ItemTemplate>  
+                               <HeaderStyle HorizontalAlign="Center" VerticalAlign="Middle" />                             
+                             <ItemStyle HorizontalAlign="Center" Width="30%" />                             
+                         </asp:TemplateField>
+                         <asp:TemplateField HeaderText="Type">
+                             <ItemTemplate>
+                                 <asp:DropDownList ID="ddlType" 
+                                     runat="server" AutoPostBack="true" 
+           DataSource="<%#PopulateMeasure()%>" DataTextField="Name" DataValueField="ID" Font-Size="8pt" 
+           SelectedValue='<%#Eval("Type")%>' SkinId="ddlPlain" Width="95%" Height="26px" 
+                                     Enabled="False"></asp:DropDownList></ItemTemplate>
+                             <ItemStyle HorizontalAlign="Center" Width="8%" />
+                             <HeaderStyle HorizontalAlign="Center" VerticalAlign="Middle" />
+                             </asp:TemplateField>
+                         <asp:TemplateField HeaderText="Stock Qty">
+                             <ItemTemplate>
+                                 <asp:TextBox ID="txtStockQuantity" runat="server" placeHolder="0" Enabled="false" Height="18px"
+                                     AutoPostBack="False" CssClass="txtVisible" Font-Size="8pt" onkeypress="return isNumber(event)"
+           SkinId="tbPlain" Text='<%#Eval("StockQty")%>' Width="90%" onFocus="this.select()" style="text-align:right;">
+           </asp:TextBox>
+           </ItemTemplate>
+           <ItemStyle HorizontalAlign="Right" Width="8%" />      
+           <HeaderStyle HorizontalAlign="Center" VerticalAlign="Middle" />     
+           </asp:TemplateField>
+                         <asp:TemplateField HeaderText="Qty.">
+                             <ItemTemplate>
+                                 <asp:TextBox ID="txtTransferQuantity" runat="server" Height="18px"
+                                     onkeypress="return isNumber(event)" placeHolder="0"
+                                     AutoPostBack="true" CssClass="tbc" 
+           Font-Size="8pt"  SkinId="tbPlain" 
+           Text='<%#Eval("TransferQty")%>' Width="90%" onFocus="this.select()" style="text-align:right;" 
+                                     ontextchanged="txtTransferQuantity_TextChanged"></asp:TextBox></ItemTemplate>
+                             <ItemStyle HorizontalAlign="Center" Width="10%" />
+                             <HeaderStyle HorizontalAlign="Center" VerticalAlign="Middle" />
+                             </asp:TemplateField>
+                             <asp:TemplateField HeaderText="Trns. Price">
+                                 <ItemTemplate>
+                                     <asp:TextBox ID="txtPrice" runat="server" Height="18px"
+                                         onkeypress="return isNumber(event)" placeHolder="0.00"
+                                         AutoPostBack="true" CssClass="tbc" 
+               Font-Size="7pt"  SkinId="tbPlain" 
+               Text='<%#Eval("Price")%>' Width="90%" onFocus="this.select()" style="text-align:right;" 
+                                         ontextchanged="txtPrice_TextChanged" ></asp:TextBox>
+                                         </ItemTemplate>
+                                 <ItemStyle HorizontalAlign="Center" Width="10%" />
+                                 <HeaderStyle HorizontalAlign="Center" VerticalAlign="Middle" />
+                           </asp:TemplateField>
+                            <asp:TemplateField HeaderText="BR.S.Price">
+                                 <ItemTemplate>
+                                     <asp:TextBox ID="txtBranchSalesPrice" runat="server" Height="18px"
+                                         onkeypress="return isNumber(event)" placeHolder="0.00"
+                                         AutoPostBack="true" CssClass="tbc" 
+               Font-Size="7pt"  SkinId="tbPlain" 
+               Text='<%#Eval("BranchSalesPrice")%>' Width="90%" onFocus="this.select()" style="text-align:right;" 
+                                         ontextchanged="txtBranchSalesPrice_TextChanged" ></asp:TextBox>
+                                         </ItemTemplate>
+                                 <ItemStyle HorizontalAlign="Center" Width="10%" />
+                                 <HeaderStyle HorizontalAlign="Center" VerticalAlign="Middle" />
+                           </asp:TemplateField>
+                           <asp:TemplateField HeaderText="TTL. AMT.">
+                                 <ItemTemplate>
+                                     <asp:TextBox ID="txtTotalAmount" runat="server" Height="18px"
+                                         onkeypress="return isNumber(event)" placeHolder="0.00"
+                                         AutoPostBack="true" CssClass="txtVisible" 
+               Font-Size="7pt"  SkinId="tbPlain" 
+               Text='<%#Eval("TotalAmount")%>' Width="90%" onFocus="this.select()" style="text-align:right;"></asp:TextBox>
+                                         </ItemTemplate>
+                                 <ItemStyle HorizontalAlign="Center" Width="10%" />
+                                 <HeaderStyle HorizontalAlign="Center" VerticalAlign="Middle" />
+                           </asp:TemplateField>
+                         <asp:BoundField DataField="ReceivedQty" HeaderText="Received Qty.">
+                             <ItemStyle HorizontalAlign="Center" Width="10%" />
+                         </asp:BoundField>
+                         <asp:BoundField DataField="ID" HeaderText="ID" />
+                         </Columns>
+                     <HeaderStyle Font-Bold="True" Font-Size="9pt" ForeColor="White" />
+                     <PagerStyle CssClass="pgr" ForeColor="White" 
+                         HorizontalAlign="Center" />
+                     <RowStyle BackColor="White" />
+                     </asp:GridView>
+                       <asp:TextBox ID="txtTotal" runat="server" Visible="False"></asp:TextBox>
+                     </ContentTemplate>
+                </asp:UpdatePanel>
+                     </fieldset>
+            </div>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="3">
+            <div id="dgTransferHistoryDiv" runat="server">
+                <fieldset style="vertical-align: top; border: solid 1px #8BB381; text-align:left;">
+                  <table style="width: 100%">
+                                    <tr>
+                                        <td align="right" colspan="2">
+                                            Code</td>
+                                        <td style="width: 3%">
+                                            &nbsp;</td>
+                                        <td style="width: 15%">
+                                            <asp:TextBox ID="txtSearchCode" runat="server" Width="98%"></asp:TextBox>
+                                              <ajaxToolkit:AutoCompleteExtender ID="autoComplete3" runat="server" 
+                                CompletionInterval="1000" CompletionSetCount="12" EnableCaching="true" 
+                                MinimumPrefixLength="1" ServiceMethod="GETTransferCode" ServicePath="AutoComplete.asmx" 
+                                TargetControlID="txtSearchCode" />
+                                        </td>
+                                        <td align="right" style="width: 12%">
+                                            Branch</td>
+                                        <td style="width: 3%">
+                                            &nbsp;</td>
+                                        <td colspan="2">
+                                            <asp:DropDownList ID="ddlBranchSearch" runat="server" AutoPostBack="True" 
+                                                Font-Size="8pt" Height="26px" 
+                                                onselectedindexchanged="ddlBranch_SelectedIndexChanged" SkinId="ddlPlain" 
+                                                Width="101%">
+                                            </asp:DropDownList>
+                                        </td>
+                                        <td style="width: 15%">
+                                            &nbsp;</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width: 10%">
+                                            &nbsp;</td>
+                                        <td align="right" style="width: 12%">
+                                            <asp:Label ID="Label40" runat="server" Text="From Date" 
+                                                style="font-weight: 700"></asp:Label>
+                                        </td>
+                                        <td style="width: 3%">
+                                            &nbsp;</td>
+                                        <td style="width: 15%">
+                                            <asp:TextBox ID="txtFromDate" placeholder="dd/MM/yyyy" runat="server" Width="98%"></asp:TextBox>
+                                            <ajaxToolkit:CalendarExtender ID="CalendarExtender2" runat="server" 
+                                                Format="dd/MM/yyyy" TargetControlID="txtFromDate" />
+                                        </td>
+                                        <td align="right" style="width: 12%">
+                                            <asp:Label ID="Label41" runat="server" Text="To Date" style="font-weight: 700"></asp:Label>
+                                        </td>
+                                        <td style="width: 3%">
+                                            &nbsp;</td>
+                                        <td style="width: 15%">
+                                            <asp:TextBox ID="txtToDAte" placeholder="dd/MM/yyyy" runat="server" Width="98%"></asp:TextBox>
+                                            <ajaxToolkit:CalendarExtender ID="CalendarExtender3" runat="server" 
+                                                Format="dd/MM/yyyy" TargetControlID="txtToDAte" />
+                                        </td>
+                                        <td align="center" style="width: 15%">
+                                            <asp:LinkButton ID="lbSearch" runat="server" BorderColor="#33CCFF" 
+                                                BorderStyle="Solid" Font-Bold="True" Font-Size="12pt" Height="22px" 
+                                                onclick="lbSearch_Click" Style="text-align: center" Width="120px">Search</asp:LinkButton>
+                                        </td>
+                                        <td style="width: 15%">
+                                            <asp:LinkButton ID="lbClear" runat="server" BorderColor="#33CCFF" 
+                                                BorderStyle="Solid" Font-Bold="True" Font-Size="12pt" Height="22px" 
+                                                onclick="lbClear_Click" Style="text-align: center" Width="120px">Clear</asp:LinkButton>
+                                        </td>
+                                    </tr>
+                                </table>
+
+           
+                            <legend style="color: maroon;"><b>Items Transfer History</b></legend>
+                            <asp:GridView ID="dgHistory" runat="server" AutoGenerateColumns="False" style="text-align:center;"
+                                CssClass="mGrid" PageSize="50" 
+                                onrowdatabound="dgSundousBranch_RowDataBound" 
+                                onselectedindexchanged="dgSundousBranch_SelectedIndexChanged" 
+                    Width="100%" AllowPaging="True" onpageindexchanging="dgHistory_PageIndexChanging">
+                                <Columns>
+                                    <asp:CommandField ShowSelectButton="True">
+                                        <ItemStyle HorizontalAlign="Center" Width="5%" Font-Bold="True" 
+                                        Font-Size="Small"></ItemStyle>
+                                    </asp:CommandField>
+                                    <asp:BoundField DataField="ID" HeaderText="ID">
+                                        <ItemStyle HorizontalAlign="Center" Width="5%"></ItemStyle>
+                                    </asp:BoundField>
+                                     <asp:BoundField DataField="Code" HeaderText="Code">
+                                         <ItemStyle HorizontalAlign="Center" Width="14%"></ItemStyle>
+                                    </asp:BoundField>
+                                    <asp:BoundField DataField="BranchName" HeaderText="Branch Name">
+                                         <ItemStyle HorizontalAlign="Left" Width="20%"></ItemStyle>
+                                    </asp:BoundField>
+                                    <asp:BoundField DataField="TransferDate" HeaderText="T.Date">
+                                         <ItemStyle HorizontalAlign="Center" Width="10%"></ItemStyle>
+                                    </asp:BoundField>
+                                    <asp:BoundField DataField="Total" HeaderText="Total Amount">
+                                         <ItemStyle HorizontalAlign="Right" Width="10%"></ItemStyle>
+                                    </asp:BoundField>
+                                    <asp:BoundField DataField="Remark" HeaderText="Remark">
+                                         <ItemStyle HorizontalAlign="Left" Width="30%"></ItemStyle>
+                                    </asp:BoundField>
+                                    <asp:BoundField DataField="Received" HeaderText="Status">
+                                        <ItemStyle HorizontalAlign="Center" Width="15%" Font-Bold="True" 
+                                        Font-Size="10pt"></ItemStyle>
+                                    </asp:BoundField>
+                                </Columns>
+                            </asp:GridView></fieldset>
+            </div>
+            </td>
+        </tr>
+        <tr>
+            <td align="center" colspan="3">
+                            &nbsp;</td>
+        </tr>
+        <tr>
+            <td style="width:5%">
+                &nbsp;</td>
+            <td style="width:90%">
+                            &nbsp;</td>
+            <td style="width:5%">
+                &nbsp;</td>
+        </tr></table>
+ </div>
+</asp:Content>
+

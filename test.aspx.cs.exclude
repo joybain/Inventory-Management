@@ -1,0 +1,72 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using Delve;
+using System.Data.SqlClient;
+using System.Data;
+
+public partial class test : System.Web.UI.Page
+{
+
+    string strcon = DataManager.OraConnString();
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        if (!IsPostBack)
+        {
+            BindGridData();
+        }
+    }
+    /// <summary>
+    /// btnUpload_Click event is used to upload images into database
+    /// </summary>
+    /// <param name="sender"></param>
+    /// <param name="e"></param>
+    protected void btnUpload_Click(object sender, EventArgs e)
+    {
+        //Condition to check if the file uploaded or not
+        if (fileuploadImage.HasFile)
+        {
+            //getting length of uploaded file
+            int length = fileuploadImage.PostedFile.ContentLength;
+            //create a byte array to store the binary image data
+            byte[] imgbyte = new byte[length];
+            //store the currently selected file in memeory
+            HttpPostedFile img = fileuploadImage.PostedFile;
+            //set the binary data
+            img.InputStream.Read(imgbyte, 0, length);
+            string imagename = txtImageName.Text;
+            //use the web.config to store the connection string
+            SqlConnection connection = new SqlConnection(strcon);
+            connection.Open();
+            SqlCommand cmd = new SqlCommand("INSERT INTO TemporaryImage (ImageName,Image) VALUES (@imagename,@imagedata)", connection);
+            cmd.Parameters.Add("@imagename", SqlDbType.VarChar, 50).Value = imagename;
+            cmd.Parameters.Add("@imagedata", SqlDbType.Image).Value = imgbyte;
+            int count = cmd.ExecuteNonQuery();
+            connection.Close();
+            if (count == 1)
+            {
+                BindGridData();
+                txtImageName.Text = string.Empty;
+                ScriptManager.RegisterStartupScript(this, this.GetType(), "alertmessage", "javascript:alert('" + imagename + " image inserted successfully')", true);
+            }
+        }
+    }
+    /// <summary>
+    /// function is used to bind gridview
+    /// </summary>
+    private void BindGridData()
+    {
+        SqlConnection connection = new SqlConnection(strcon);
+        SqlCommand command = new SqlCommand("SELECT imagename,ImageID from [TemporaryImage]", connection);
+        SqlDataAdapter daimages = new SqlDataAdapter(command);
+        DataTable dt = new DataTable();
+        daimages.Fill(dt);
+        gvImages.DataSource = dt;
+        gvImages.DataBind();
+        gvImages.Attributes.Add("bordercolor", "black");
+    }
+    
+}

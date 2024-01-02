@@ -1,0 +1,326 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using Delve;
+using System.Data.SqlClient;
+using System.Data;
+
+public partial class frmCurrencySetup : System.Web.UI.Page
+{
+    clsCurrencyManager aCurrencyManager = new clsCurrencyManager();
+    private static Permis per;
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        if (Session["user"] == null)
+        {
+            if (Session.SessionID != "" | Session.SessionID != null)
+            {
+                clsSession ses = clsSessionManager.getSession(Session.SessionID);
+                if (ses != null)
+                {
+                    Session["user"] = ses.UserId;
+                    Session["book"] = "AMB";
+                    string connectionString = DataManager.OraConnString();
+                    SqlDataReader dReader;
+                    SqlConnection conn = new SqlConnection();
+                    conn.ConnectionString = connectionString;
+                    SqlCommand cmd = new SqlCommand();
+                    cmd.Connection = conn;
+                    cmd.CommandType = CommandType.Text;
+                    cmd.CommandText =
+                        "Select user_grp,[description],UserType,case when UserType=1 then 'Bangladesh' else 'Philippine' end AS[LoginCountry] from utl_userinfo where upper(user_name)=upper('" +
+                        Session["user"].ToString().ToUpper() + "') and status='A'";
+                    conn.Open();
+                    dReader = cmd.ExecuteReader();
+                    string wnot = "", userType = "";
+                    if (dReader.HasRows == true)
+                    {
+                        while (dReader.Read())
+                        {
+                            Session["userlevel"] = int.Parse(dReader["user_grp"].ToString());
+                            //Session["dept"] = dReader["dept"].ToString();
+                            wnot = "Welcome " + dReader["description"].ToString();
+                            Session["LoginCountry"] = dReader["LoginCountry"].ToString();
+                            userType = dReader["UserType"].ToString();
+                        }
+                        Session["wnote"] = wnot;
+                        cmd = new SqlCommand();
+                        cmd.Connection = conn;
+                        cmd.CommandType = CommandType.Text;
+                        //cmd.CommandText = "Select book_desc,company_address1,company_address2,separator_type from gl_set_of_books where book_name='" + Session["book"].ToString() + "' ";
+                        if (Convert.ToInt32(userType) == 2)
+                        {
+
+                            Session["bookMAN"] = "MAN";
+                        }
+                        else
+                        {
+                            Session["bookMAN"] = Session["book"].ToString();
+                        }
+                        cmd.CommandText = "Select book_desc,company_address1,company_address2,separator_type,ShotName from gl_set_of_books where book_name='" + Session["bookMAN"] + "' ";
+
+                        if (dReader.IsClosed == false)
+                        {
+                            dReader.Close();
+                        }
+                        dReader = cmd.ExecuteReader();
+                        if (dReader.HasRows == true)
+                        {
+                            while (dReader.Read())
+                            {
+                                Session["septype"] = dReader["separator_type"].ToString();
+                                Session["org"] = dReader["book_desc"].ToString();
+                                Session["add1"] = dReader["company_address1"].ToString();
+                                Session["add2"] = dReader["company_address2"].ToString();
+                            }
+                        }
+                    }
+                    dReader.Close();
+                    conn.Close();
+                }
+            }
+        }
+        try
+        {
+            string pageName = DataManager.GetCurrentPageName();
+            string modid = PermisManager.getModuleId(pageName);
+            per = PermisManager.getUsrPermis(Session["user"].ToString().Trim().ToUpper(), modid);
+            if (per != null && per.AllowView == "Y")
+            {
+                ((Label)Page.Master.FindControl("lblLogin")).Text = Session["wnote"].ToString();
+                ((Label)Page.Master.FindControl("lblCountryName")).Text = Session["LoginCountry"].ToString();
+                ((LinkButton)Page.Master.FindControl("lbLogout")).Visible = true;
+            }
+            else
+            {
+                Response.Redirect("Home.aspx?sid=sam");
+            }
+        }
+        catch
+        {
+            Response.Redirect("Default.aspx?sid=sam");
+        }
+        if (!IsPostBack)
+        {
+           
+            txtCurrencyDate.Attributes.Add("onBlur", "formatdate('" + txtCurrencyDate.ClientID + "')");
+            Refresh();
+        }
+    }
+    private void Refresh()
+    {
+        txtCurrencyDate.Text = DateTime.Now.ToString("dd/MM/yyyy");
+        txtCurrencyId.Text = txtCurrencyDate.Text = txtCurrencyRate.Text = string.Empty;
+        DataTable dt = aCurrencyManager.GetCurrencyInformation();
+        dgCurrency.DataSource = dt;
+        dgCurrency.DataBind();
+        txtCurrencyDate.Attributes.Add("onBlur", "formatdate('" + txtCurrencyDate.ClientID + "')");
+        txtCurrencyDate.Focus();
+        int CheckStatus = IdManager.GetShowSingleValueInt("COUNT(*)", " FixGlCoaCode where AutoAuthoriz=1");
+        if (CheckStatus > 0)
+        {
+            btnAutoAuthoriz.Text = "Inactive";
+        }
+        else
+        {
+            btnAutoAuthoriz.Text = "Active";
+        }
+    }
+    protected void BtnSave_Click(object sender, EventArgs e)
+    {
+        try
+        {
+            string Parameter = " ID='" + txtCurrencyId.Text + "'";
+            clsCurrency aclsCurrency = aCurrencyManager.GetCurrencyInfo(Parameter);
+            if (aclsCurrency != null)
+            {
+                if (per.AllowEdit == "Y")
+                {
+                    int Count = IdManager.GetShowSingleValueInt("COUNT(*)", " DeleteBy IS NULL AND CONVERT(Nvarchar,[CurrencyDate],103)", "CurrencySet", txtCurrencyDate.Text, Convert.ToInt32(txtCurrencyId.Text));
+                    if (Count > 0)
+                    {
+                        ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('This date Currency Rate alrady exist in database..!!');", true);
+                        return;
+                    }
+
+                    aclsCurrency.CurrencyId = txtCurrencyId.Text.Trim();
+                    aclsCurrency.Date = txtCurrencyDate.Text.Trim();
+                    aclsCurrency.Rate = txtCurrencyRate.Text.Trim();
+                    aclsCurrency.LoginBy = Session["user"].ToString();
+                    aCurrencyManager.UpdateUniversityInfo(aclsCurrency);
+                    Refresh();
+                    ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Record(s) is/are updated suceessfullly!!');", true);
+                }
+                else
+                {
+                    ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('You have not enough permissoin to update this record!!');", true);
+                }
+            }
+            else
+            {
+                if (per.AllowAdd == "Y")
+                {
+                    int Count = IdManager.GetShowSingleValueInt("COUNT(*)", " DeleteBy IS NULL AND  CONVERT(Nvarchar,[CurrencyDate],103)", "CurrencySet", txtCurrencyDate.Text);
+                    if (Count > 0)
+                    {
+                        ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('This date Currency Rate alrady exist in database..!!');", true);
+                        return;
+                    }
+                    aclsCurrency = new clsCurrency();
+                    //aUniversity.versityId = txtUniversityId.Text.Trim();
+                    aclsCurrency.Date = txtCurrencyDate.Text.Trim();
+                    aclsCurrency.Rate = txtCurrencyRate.Text.Trim();
+                    aclsCurrency.LoginBy = Session["user"].ToString();
+
+                    aCurrencyManager.SaveInformation(aclsCurrency);
+                    Refresh();
+                    ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Record(s) is/are created suceessfullly!!');", true);
+                }
+                else
+                {
+                    ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('You have not enough permissoin to update this record!!');", true);
+                }
+            }
+        }
+        catch (FormatException fex)
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('" + fex.Message + "');", true);
+        }
+        catch (Exception ex)
+        {
+            if (ex.Message.Contains("Database"))
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Database Maintain Error. Contact to the Software Provider..!!');", true);
+            else
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('There is some problem to do the task. Try again properly.!!');", true);
+        }        
+    }
+    protected void BtnDelete_Click(object sender, EventArgs e)
+    {
+        try
+        {
+            string Parameter = " ID='" + txtCurrencyId.Text + "'";
+            clsCurrency aclsCurrency = aCurrencyManager.GetCurrencyInfo(Parameter);
+            if (aclsCurrency != null)
+            {
+                if (per.AllowDelete == "Y")
+                {
+                    aclsCurrency.LoginBy = Session["user"].ToString();
+                    aCurrencyManager.DeleteInfo(aclsCurrency);
+                    Refresh();
+                    ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('Record(s) is/are Deleted suceessfullly!!');", true);
+                }
+                else
+                {
+                    ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('You have not enough permissoin to delete this record!!');", true);
+                }
+            }
+        }
+        catch (FormatException fex)
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('" + fex.Message + "');", true);
+        }
+        catch (Exception ex)
+        {
+            if (ex.Message.Contains("Database"))
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Database Maintain Error. Contact to the Software Provider..!!');", true);
+            else
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('There is some problem to do the task. Try again properly.!!');", true);
+        }
+    }
+    protected void BtnReset_Click(object sender, EventArgs e)
+    {
+        var pageName = System.IO.Path.GetFileName(Request.Url.ToString());
+        Response.Redirect(pageName);
+    }
+    protected void dgCurrency_RowDataBound(object sender, GridViewRowEventArgs e)
+    {
+        if (e.Row.RowType == DataControlRowType.DataRow | e.Row.RowType == DataControlRowType.Header | e.Row.RowType == DataControlRowType.Footer)
+        {
+            e.Row.Cells[1].Attributes.Add("style", "display:none");
+        }
+    }
+    protected void dgCurrency_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        try
+        {
+            string Parameter = " ID='" + dgCurrency.SelectedRow.Cells[1].Text + "'";
+            clsCurrency aclsCurrency = aCurrencyManager.GetCurrencyInfo(Parameter);
+            if (aclsCurrency != null)
+            {
+                txtCurrencyId.Text = aclsCurrency.CurrencyId;
+                txtCurrencyDate.Text = aclsCurrency.Date;
+                txtCurrencyRate.Text = aclsCurrency.Rate;
+            }
+        }
+        catch (FormatException fex)
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('" + fex.Message + "');", true);
+        }
+        catch (Exception ex)
+        {
+            if (ex.Message.Contains("Database"))
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Database Maintain Error. Contact to the Software Provider..!!');", true);
+            else
+                ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('There is some problem to do the task. Try again properly.!!');", true);
+        }
+
+    }
+    protected void dgCurrency_PageIndexChanging(object sender, GridViewPageEventArgs e)
+    {
+        DataTable dt = aCurrencyManager.GetCurrencyInformation();
+        dgCurrency.DataSource = dt;
+        dgCurrency.PageIndex = e.NewPageIndex;
+        dgCurrency.DataBind();
+    }
+    protected void Button1_Click(object sender, EventArgs e)
+    {
+        string Parameter = " convert(Nvarchar,[CurrencyDate],103)=convert(Nvarchar,'" + txtCurrencyDate.Text + "',103)";
+        clsCurrency aclsCurrency = aCurrencyManager.GetCurrencyInfo(Parameter);
+        if (aclsCurrency != null)
+        {
+            txtCurrencyId.Text = aclsCurrency.CurrencyId;
+            txtCurrencyDate.Text = aclsCurrency.Date;
+            txtCurrencyRate.Text = aclsCurrency.Rate;
+        }
+    }
+    protected void btnAutoAuthoriz_Click(object sender, EventArgs e)
+    {
+        if (Session["user"].ToString().Equals("mohsinph") || Session["user"].ToString().Equals("mohsin") ||
+            Session["user"].ToString().Equals("sam") || Session["user"].ToString().Equals("samph"))
+        {
+
+            int Status = 0;
+            string Message = "Auto Authoriz Inactive Successfully..!!";
+            int CheckStatus = IdManager.GetShowSingleValueInt("COUNT(*)", " FixGlCoaCode where AutoAuthoriz=1");
+            if (CheckStatus > 0)
+            {
+                Status = 0;
+
+            }
+            else
+            {
+                Status = 1;
+                Message = "Auto Authoriz Active Successfully..!!";
+            }
+            aCurrencyManager.getUpdateStatus(Status);
+            ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('" + Message + "');", true);
+            int CheckStatus1 = IdManager.GetShowSingleValueInt("COUNT(*)", " FixGlCoaCode where AutoAuthoriz=1");
+            if (CheckStatus1 > 0)
+            {
+                btnAutoAuthoriz.Text = "Inactive";
+            }
+            else
+            {
+                btnAutoAuthoriz.Text = "Active";
+            }
+        }
+        else
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Plesae do not click again...!!');", true);
+            return;
+        }
+    }
+}

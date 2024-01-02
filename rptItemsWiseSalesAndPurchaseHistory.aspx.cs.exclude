@@ -1,0 +1,295 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using Delve;
+using System.Data;
+using sales;
+using System.Data.SqlClient;
+
+
+public partial class rptItemsWiseSalesAndPurchaseHistory : System.Web.UI.Page
+{
+    private readonly SalesManager _aSalesManager=new SalesManager();
+    private readonly clsClientInfoManager _aclsClientInfoManager = new clsClientInfoManager();
+    private readonly clsBranchManager _clsBranchManager = new clsBranchManager();
+    private readonly ClsItemDetailsManager _aClsItemDetailsManager = new ClsItemDetailsManager();
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        if (Session["user"] == null)
+        {
+            if (Session.SessionID != "" | Session.SessionID != null)
+            {
+                clsSession ses = clsSessionManager.getSession(Session.SessionID);
+                if (ses != null)
+                {
+                    Session["user"] = ses.UserId;
+                    Session["book"] = "AMB";
+                    string connectionString = DataManager.OraConnString();
+                    SqlDataReader dReader;
+                    SqlConnection conn = new SqlConnection();
+                    conn.ConnectionString = connectionString;
+                    SqlCommand cmd = new SqlCommand();
+                    cmd.Connection = conn;
+                    cmd.CommandType = CommandType.Text;
+                    cmd.CommandText =
+                        "Select user_grp,[description],UserType,case when UserType=1 then 'Bangladesh' else 'Philippine' end AS[LoginCountry] from utl_userinfo where upper(user_name)=upper('" +
+                        Session["user"].ToString().ToUpper() + "') and status='A'";
+                    conn.Open();
+                    dReader = cmd.ExecuteReader();
+                    string wnot = "", userType = "";
+                    if (dReader.HasRows == true)
+                    {
+                        while (dReader.Read())
+                        {
+                            Session["userlevel"] = int.Parse(dReader["user_grp"].ToString());
+                            //Session["dept"] = dReader["dept"].ToString();
+                            wnot = "Welcome " + dReader["description"].ToString();
+                            Session["LoginCountry"] = dReader["LoginCountry"].ToString();
+                            userType = dReader["UserType"].ToString();
+                        }
+                        Session["wnote"] = wnot;
+                        cmd = new SqlCommand();
+                        cmd.Connection = conn;
+                        cmd.CommandType = CommandType.Text;
+                        //cmd.CommandText = "Select book_desc,company_address1,company_address2,separator_type from gl_set_of_books where book_name='" + Session["book"].ToString() + "' ";
+                        if (Convert.ToInt32(userType) == 2)
+                        {
+
+                            Session["bookMAN"] = "MAN";
+                        }
+                        else
+                        {
+                            Session["bookMAN"] = Session["book"].ToString();
+                        }
+                        cmd.CommandText = "Select book_desc,company_address1,company_address2,separator_type,ShotName from gl_set_of_books where book_name='" + Session["bookMAN"] + "' ";
+
+                        if (dReader.IsClosed == false)
+                        {
+                            dReader.Close();
+                        }
+                        dReader = cmd.ExecuteReader();
+                        if (dReader.HasRows == true)
+                        {
+                            while (dReader.Read())
+                            {
+                                Session["septype"] = dReader["separator_type"].ToString();
+                                Session["org"] = dReader["book_desc"].ToString();
+                                Session["add1"] = dReader["company_address1"].ToString();
+                                Session["add2"] = dReader["company_address2"].ToString();
+                            }
+                        }
+                    }
+                    dReader.Close();
+                    conn.Close();
+                }
+            }
+        }
+        ((Label)Page.Master.FindControl("lblLogin")).Text = Session["wnote"].ToString();
+        ((Label)Page.Master.FindControl("lblCountryName")).Text = Session["LoginCountry"].ToString();
+        ((LinkButton)Page.Master.FindControl("lbLogout")).Visible = true;
+        if (!IsPostBack)
+        {
+            ClearAll();
+        }
+    }
+
+    private void ClearAll()
+    {
+        rbReprtType.SelectedValue = "A";
+        txtFromDate.Attributes.Add("onBlur", "formatdate('" + txtFromDate.ClientID + "')");
+        txtToDate.Attributes.Add("onBlur", "formatdate('" + txtToDate.ClientID + "')");
+
+        txtBranchName.Visible= false;
+        txtCustomer.Visible = true;
+        txtCustomer.Text = txtFromDate.Text = txtToDate.Text =txtBranchName.Text= string.Empty;
+        hfCustomerID.Value = hfItemsID.Value = null;
+        txtName.Text = string.Empty;
+
+        txtCustomer.Visible = true;
+        txtItemNameBD.Visible = false;
+        lblCustomeSupplier.Text = "Search Customer";
+        txtName.Focus();
+    }
+
+  
+    protected void btnClear_Click(object sender, EventArgs e)
+    {
+        var pageName = System.IO.Path.GetFileName(Request.Url.ToString());
+        Response.Redirect(pageName);
+    }
+    protected void txtCustomer_TextChanged(object sender, EventArgs e)
+    {
+        DataTable dtCustomer = _aclsClientInfoManager.GetCustomerOnSearch("where UPPER(SearchName) = UPPER('" + txtCustomer.Text + "')");
+        if (dtCustomer.Rows.Count > 0)
+        {
+            hfCustomerID.Value = dtCustomer.Rows[0]["ID"].ToString();
+            txtCustomer.Text = dtCustomer.Rows[0]["ContactName"].ToString();
+            Session["Customer_COA"] = dtCustomer.Rows[0]["Gl_CoaCode"].ToString();
+        }
+        else
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('You are not Permitted this Step.!!');", true);
+            Session["Customer_COA"] = null;
+            hfCustomerID.Value = "";
+            txtCustomer.Focus();
+            return;
+        }
+    }
+    protected void txtBranchName_TextChanged(object sender, EventArgs e)
+    {
+        DataTable dtCustomer = _clsBranchManager.getBranch("where UPPER(BranchSearch) = UPPER('" + txtBranchName.Text + "')");
+        if (dtCustomer.Rows.Count > 0)
+        {
+            hfCustomerID.Value = dtCustomer.Rows[0]["ID"].ToString();
+            txtBranchName.Text = dtCustomer.Rows[0]["BranchName"].ToString();
+            
+        }
+        else
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('You are not Permitted this Step.!!');", true);
+            Session["Customer_COA"] = null;
+            hfCustomerID.Value = "";
+            return;
+        }
+    }
+    protected void rbReprtType_SelectedIndexChanged(object sender, EventArgs e)
+    {
+       // txtCustomer.Visible = 
+            txtBranchName.Visible = false;
+        if (rbReprtType.SelectedValue.Equals("PS"))
+        {
+            txtName.Visible= true;
+            txtItemNameBD.Visible = false;
+            lblCustomeSupplier.Text = "Search Customer";
+        }
+        else if (rbReprtType.SelectedValue.Equals("BS"))
+        {
+            txtName.Visible = false;
+            txtItemNameBD.Visible = true;
+            lblCustomeSupplier.Text = "Search Customer";
+        }
+        else if (rbReprtType.SelectedValue.Equals("BP"))
+        {
+            txtName.Visible = false;
+            txtItemNameBD.Visible = true;
+            lblCustomeSupplier.Text = "Search Supplier";
+        }
+        else if (rbReprtType.SelectedValue.Equals("PP"))
+        {
+            txtName.Visible = true;
+            txtItemNameBD.Visible = false;
+            lblCustomeSupplier.Text = "Search Supplier";
+        }
+        else
+        {
+            txtCustomer.Visible = true;
+            txtName.Visible = true;
+        }
+    }
+
+    protected void brnSearch_Click(object sender, EventArgs e)
+    {
+        if (rbReprtType.SelectedValue.Equals("PS"))
+        {
+            DataTable dtSalesHistory = _aSalesManager.GetShowItemsDetailsSalesHistory(hfCustomerID.Value,
+                txtFromDate.Text, txtToDate.Text, hfItemsID.Value, "", "1");
+            if (dtSalesHistory.Rows.Count > 0)
+            {
+                dgItems.DataSource = dtSalesHistory;
+                dgItems.DataBind();
+            }
+        }
+        else if (rbReprtType.SelectedValue.Equals("BS"))
+        {
+            DataTable dtSalesHistory = _aSalesManager.GetShowItemsDetailsSalesHistory(hfCustomerID.Value,
+               txtFromDate.Text, txtToDate.Text, hfItemsID.Value, "", "2");
+            if (dtSalesHistory.Rows.Count > 0)
+            {
+                dgItems.DataSource = dtSalesHistory;
+                dgItems.DataBind();
+            }
+        }
+    }
+
+    protected void dgPay_RowDataBound(object sender, GridViewRowEventArgs e)
+    {
+        if (e.Row.RowType == DataControlRowType.DataRow)
+        {
+            ((Label)e.Row.FindControl("lblCustomer")).Text = ((DataRowView)e.Row.DataItem)["CustomerName"].ToString();
+            ((Label)e.Row.FindControl("lblDate")).Text = ((DataRowView)e.Row.DataItem)["OrderDate"].ToString();
+            ((Label)e.Row.FindControl("lblInvoice")).Text = ((DataRowView)e.Row.DataItem)["InvoiceNo"].ToString();
+            //((Label)e.Row.FindControl("hfOrderID")).Text = ((DataRowView)e.Row.DataItem)["ID"].ToString();
+            ((Label)e.Row.FindControl("lblTotal")).Text =Convert.ToDouble(((DataRowView)e.Row.DataItem)["CashReceived"]).ToString("N2");
+
+            DataTable dtpay = null;
+            if (rbReprtType.SelectedValue.Equals("PS"))
+            {
+                dtpay = _aSalesManager.GetShowItemsDetailsSalesHistory("", "", "", "",
+                    ((DataRowView) e.Row.DataItem)["ID"].ToString(), "1");
+            }
+            else
+            {
+                dtpay = _aSalesManager.GetShowItemsDetailsSalesHistory("", "", "", "",
+                    ((DataRowView)e.Row.DataItem)["ID"].ToString(), "2");
+            }
+
+
+            ((GridView)e.Row.FindControl("dgStdPay")).DataSource = dtpay;
+            ((GridView)e.Row.FindControl("dgStdPay")).DataBind();
+        }
+    }
+    protected void dgPay_RowCommand(object sender, GridViewCommandEventArgs e)
+    {
+
+    }
+    protected void txtName_TextChanged(object sender, EventArgs e)
+    {
+        int ItemsID = IdManager.GetShowSingleValueInt("ID", "UPPER(ItemsName)", "View_SalesItems",
+            txtName.Text.ToUpper());
+        if (ItemsID > 0)
+        {
+            hfItemsID.Value = ItemsID.ToString();
+            lblClosingStock.Text = "Current Closing Stock : " + IdManager.GetShowSingleValueCurrency("convert(decimal(18,0),Quantity)", "ID", "ItemSalesStock", ItemsID.ToString());
+        }
+        else
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('No Items Search....!!');", true);
+            txtName.Focus();
+            return;
+        }
+    }
+    protected void txtItemNameBD_TextChanged(object sender, EventArgs e)
+    {
+        DataTable dtItem = _aClsItemDetailsManager.GetItemsDetailsOnSearch(txtItemNameBD.Text.ToUpper());
+        if (dtItem.Rows.Count > 0)
+        {
+            hfItemsID.Value = dtItem.Rows[0]["ID"].ToString();
+            lblClosingStock.Text = "Current Closing Stock : " + dtItem.Rows[0]["ClosingStock"].ToString();
+        }
+        else
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "ale", "alert('No Items Search....!!');", true);
+            txtItemNameBD.Focus();
+            return;
+        }
+    }
+    protected void txtSupplierSearch_TextChanged(object sender, EventArgs e)
+    {
+        DataTable dtSupplier = PurchaseVoucherManager.GetSupplierInfo(txtSupplierSearch.Text);
+        if (dtSupplier.Rows.Count > 0)
+        {
+            hfCustomerID.Value = dtSupplier.Rows[0]["ID"].ToString();
+            txtCustomer.Text = dtSupplier.Rows[0]["ContactName"].ToString();
+        }
+        else
+        {
+            ClientScript.RegisterStartupScript(this.GetType(), "Warning", "alert('Not Found Supplier.!!');", true);
+            hfCustomerID.Value ="";
+            txtCustomer.Text ="";
+            txtSupplierSearch.Focus();
+        }
+    }
+}

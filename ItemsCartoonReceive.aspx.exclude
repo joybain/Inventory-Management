@@ -1,0 +1,228 @@
+﻿<%@ Page Title="ItemsCartoonReceive.-SDL" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true" CodeFile="ItemsCartoonReceive.aspx.cs" Inherits="ItemsCartoonReceive" %>
+
+<asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
+    <script language="javascript" type="text/javascript" >
+        function setDecimal(abc) {
+            var dt = document.getElementById(abc).value;
+            if (dt.length > 0) {
+                document.getElementById(abc).value = parseFloat(dt).toFixed(2);
+            }
+        }
+        function isNumber(evt) {
+            evt = (evt) ? evt : window.event;
+            var charCode = (evt.which) ? evt.which : evt.keyCode;
+            if (charCode != 46 && charCode > 31
+            && (charCode < 48 || charCode > 57)) {
+                return false;
+            }
+            return true;
+        }
+</script>
+
+    <div id="frmMainDiv" style="background-color:White; width:100%;">    
+    <table style="width: 100%">
+        <tr>
+            <td style="width:5%;">
+                &nbsp;</td>
+            <td style="width:90%;">
+                <asp:Label ID="lblMasterID" runat="server" Visible="False"></asp:Label>
+&nbsp;
+                <asp:Label ID="lblItemID" runat="server" Visible="False"></asp:Label>
+            &nbsp;
+                </td>
+            <td style="width:5%;">
+                &nbsp;</td>
+        </tr>
+        <tr>
+            <td style="width:5%;">
+                &nbsp;</td>
+            <td style="width:90%;">
+             <fieldset style="vertical-align: top; border: solid 1px #8BB381; text-align:left;">
+                            <legend style="color: maroon;"><b>Search Option</b></legend>
+                <table style="width: 100%">
+                    <tr>
+                        <td style="width: 14%" align="center" valign="middle">
+                            <asp:Label ID="Label1" runat="server" Text="Carton No." 
+                                style="font-weight: 700"></asp:Label>
+                        </td>
+                        <td style="width: 3%; font-weight: 700;" valign="middle" align="center">
+                            TO</td>
+                        <td style="width: 13%" valign="middle" align="center">
+                            <asp:Label ID="Label7" runat="server" Text="Carton No." 
+                                style="font-weight: 700"></asp:Label>
+                        </td>
+                        <td style="width: 22%" align="center" valign="middle">
+                            <asp:Label ID="Label2" runat="server" Text="Shipment No." 
+                                style="font-weight: 700"></asp:Label>
+                        </td>
+                        <td style="width: 1%" valign="middle">
+                            &nbsp;</td>
+                        <td style="width: 16%" valign="middle">
+                <asp:Label ID="lblShiftmentID" runat="server" Visible="False"></asp:Label>
+                        </td>
+                        <td td style="width: 18%" valign="middle" align="center">
+                            &nbsp;</td>
+                        <td td style="width: 15%" valign="middle" align="left">
+                            &nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td style="width: 14%" align="right" valign="middle">
+                            <asp:TextBox ID="txtCartoonNo" runat="server" Width="80%" CssClass="txtVisibleAlign"
+                                placeholder="Ex. 01" Height="18px"></asp:TextBox>
+                        </td>
+                        <td style="width: 3%" valign="middle">
+                            &nbsp;</td>
+                        <td style="width: 13%" valign="middle" align="center">
+                            <asp:TextBox ID="txtCartoonNo1" runat="server" Width="80%" CssClass="txtVisibleAlign"
+                                placeholder="Ex. 02" Height="18px"></asp:TextBox>
+                        </td>
+                        <td style="width: 22%" align="center" valign="middle">
+                            <asp:TextBox ID="txtShiftmentNo" runat="server" Width="100%" CssClass="txtVisibleAlign"
+                                placeholder="Search by Shipment No." AutoPostBack="True" 
+                                ontextchanged="txtShiftmentNo_TextChanged" Height="18px"></asp:TextBox>
+                                <ajaxtoolkit:AutoCompleteExtender ID="AutoCompleteExtender2"
+                                                        runat="server" CompletionInterval="20" CompletionSetCount="30"
+                                                        EnableCaching="true" MinimumPrefixLength="2"
+                                                        ServiceMethod="GetShiftmentInfo" ServicePath="~/AutoComplete.asmx"
+                                                        TargetControlID="txtShiftmentNo">
+                                                    </ajaxtoolkit:AutoCompleteExtender>
+                                <ajaxToolkit:AutoCompleteExtender ID="AutoCompleteExtender3" runat="server" 
+                                    CompletionInterval="20" CompletionSetCount="30" EnableCaching="true" 
+                                    MinimumPrefixLength="2" ServiceMethod="GetShiftmentInfo" 
+                                    ServicePath="~/AutoComplete.asmx" TargetControlID="txtShiftmentNo">
+                                </ajaxToolkit:AutoCompleteExtender>
+                        </td>
+                        <td style="width: 1%" valign="middle">
+                            &nbsp;</td>
+                        <td style="width: 16%" valign="middle" align="right">
+                            <asp:Button ID="BtnSearch" runat="server" Text="Search" 
+                                onclick="BtnSearch_Click" Height="35px" Width="60%" />
+                        </td>
+                        <td td style="width: 18%" valign="middle" align="center">
+                            <asp:Button ID="btnRefresh" runat="server" Text="Refresh" 
+                                onclick="btnRefresh_Click" Height="35px" Width="60%" />
+                        </td>
+                        <td td style="width: 15%" valign="middle" align="left">
+                            <asp:Button ID="btnReceived" runat="server" Text="Received All" onclientclick="javascript:return window.confirm('are you really want to received this shipment.')" 
+                                onclick="btnReceived_Click" Height="35px" Width="90%" />
+                        </td>
+                    </tr>
+                </table></fieldset>
+            </td>
+            <td style="width:10%;">
+                &nbsp;</td>
+        </tr>
+        <tr>
+            <td style="width:5%;">
+                &nbsp;</td>
+            <td style="width:90%;">
+                <fieldset style="vertical-align: top; border: solid 1px #8BB381; text-align: left;">
+                    <legend style="color: maroon;"><b>Barcode ID</b></legend>
+                    <table style="width: 100%">
+                        <tr>
+                            <td align="right" style="width: 11%" valign="middle">
+                                <asp:Label ID="Label3" runat="server" Text="Barcode ID"></asp:Label>
+                            </td>
+                            <td style="width: 1%" valign="middle">
+                                &nbsp;</td>
+                            <td valign="middle">
+                                <asp:TextBox ID="txtBercodeID" runat="server" CssClass="txtVisibleAlign"
+                                    ontextchanged="txtBercodeID_TextChanged" placeholder="Search Barcode ID" 
+                                    Width="100%" AutoPostBack="True" Height="18px"></asp:TextBox>
+                            </td>
+                            <td style="width: 1%" valign="middle">
+                                &nbsp;</td>
+                            <td style="width: 15%" valign="middle">
+                                &nbsp;</td>
+                            <td align="center" style="width: 15%" td="" valign="middle">
+                                &nbsp;</td>
+                            <td align="left" style="width: 15%" td="" valign="middle">
+                                &nbsp;</td>
+                        </tr>
+                    </table>
+                </fieldset></td>
+            <td style="width:10%;">
+                &nbsp;</td>
+        </tr>
+        <tr>
+            <td style="width:5%;">
+                &nbsp;</td>
+            <td style="width:90%;">
+                <ajaxToolkit:TabContainer ID="StdTabContainer" runat="server" 
+                    ActiveTabIndex="1" style="margin-top: 0px" TabIndex="148" Width="100%">
+                    <ajaxToolkit:TabPanel ID="tab" runat="server" HeaderText="Un-Approval List">
+                        <HeaderTemplate>Goods In Transit &nbsp;</HeaderTemplate>
+                        <ContentTemplate><div id="Tab1" runat="server" style="width:100%;"><asp:GridView ID="dgShiftmentItems" runat="server" AllowPaging="True" 
+                                    AutoGenerateColumns="False" CssClass="mGrid" 
+                                    onpageindexchanging="dgShiftmentItems_PageIndexChanging" 
+                                    onselectedindexchanged="dgShiftmentItems_SelectedIndexChanged" PageSize="50" 
+                                    Width="100%" onrowcommand="dgShiftmentItems_RowCommand"><Columns><asp:CommandField HeaderText="Print" SelectText="Print" ShowSelectButton="True"><ItemStyle Font-Size="8pt" HorizontalAlign="Center" Width="8%" /></asp:CommandField><asp:BoundField DataField="ID" HeaderText="Barcode ID"><ItemStyle Font-Size="8pt" HorizontalAlign="Center" Width="10%" /></asp:BoundField><asp:BoundField DataField="AddDate" HeaderText="Date"><ItemStyle Font-Size="8pt" HorizontalAlign="Center" Width="10%" /></asp:BoundField><asp:BoundField DataField="CartoonNo" HeaderText="Carton No."><ItemStyle Font-Size="8pt" HorizontalAlign="Center" Width="10%" /></asp:BoundField><asp:BoundField DataField="ShiftmentNO" HeaderText="Shipment No."><ItemStyle Font-Size="8pt" HorizontalAlign="Center" Width="18%" /></asp:BoundField><asp:BoundField DataField="Remarks" HeaderText="Remarks"><ItemStyle Font-Size="8pt" HorizontalAlign="Left" Width="20%" /></asp:BoundField><asp:TemplateField HeaderText="Goods In Transit"><ItemTemplate><asp:LinkButton ID="lblReceive" runat="server" CommandName="R" 
+                                                    onclientclick="javascript:return window.confirm('are u really want to Received Carton')" 
+                                                    Text="( In Transit )" Font-Bold="True" Font-Size="11pt"></asp:LinkButton></ItemTemplate><ItemStyle Font-Size="8pt" HorizontalAlign="Center" Width="15%" /></asp:TemplateField></Columns></asp:GridView></div><div id="Tab2" runat="server" style="width: 100%"><table style="width: 100%"><tr><td style="width:35%;" align="center"><asp:Label ID="Label4" runat="server" Font-Bold="True" Font-Size="Small" 
+                                                Text="Items Name " Font-Underline="True" Width="95%" ForeColor="#FF9900"></asp:Label><asp:Label ID="lblID" runat="server" Visible="False"></asp:Label></td><td style="width:28%;" align="center"><asp:Label ID="lblItemsShiftID" runat="server" Visible="False"></asp:Label><asp:Label ID="Label5" runat="server" Font-Bold="True" Font-Size="Small" 
+                                                Text="Carton No." Font-Underline="True" Width="95%" ForeColor="#FF9900"></asp:Label></td><td style="width:30%;" align="center"><asp:Label ID="Label6" runat="server" Font-Bold="True" Font-Size="Small" 
+                                                Text="Shipment No." Font-Underline="True" Width="95%" ForeColor="#FF9900"></asp:Label></td></tr><tr><td style="width:35%; text-align:left;"><asp:Label ID="lblItemsName" runat="server" Width="95%" 
+                                                style="font-weight: 700"></asp:Label></td><td style="width:28%;" align="center"><asp:Label ID="lblCartoonNo" runat="server" Width="95%" 
+                                                style="font-weight: 700"></asp:Label></td><td style="width:30%;" align="center"><asp:Label ID="lblShiftmentNo" runat="server" Width="95%" 
+                                                style="font-weight: 700"></asp:Label></td></tr><tr><td colspan="3" align="center"><asp:GridView ID="dgItems" runat="server" AutoGenerateColumns="False" 
+                                                CssClass="mGrid" Width="100%"><Columns><asp:BoundField HeaderText="Color Name" DataField="ColorName"><ItemStyle Font-Size="11pt" HorizontalAlign="Left" Width="30%" /></asp:BoundField><asp:BoundField HeaderText="Send Qty." DataFormatString="{0:0}" DataField="TotalQty"><ItemStyle Font-Size="8pt" HorizontalAlign="Center" Width="8%" /></asp:BoundField><asp:TemplateField HeaderText="Reject Qty."><ItemTemplate><asp:TextBox ID="txtBadStock" onkeypress="return isNumber(event)" 
+                                                            onFocus="this.select()" style="text-align: center" runat="server" 
+                                                            Text='<%# Eval("Batstock") %>' AutoPostBack="True" 
+                                                            ontextchanged="txtBadStock_TextChanged"></asp:TextBox></ItemTemplate><ItemStyle Font-Size="8pt" HorizontalAlign="Center" Width="15%" /></asp:TemplateField><asp:TemplateField HeaderText="Short Qty."><ItemTemplate><asp:TextBox ID="txtLostQty" onkeypress="return isNumber(event)" 
+                                                            onFocus="this.select()" style="text-align: center" runat="server" 
+                                                            Text='<%# Eval("LassQty") %>' AutoPostBack="True" 
+                                                            ontextchanged="txtLostQty_TextChanged"></asp:TextBox></ItemTemplate><ItemStyle Font-Size="8pt" HorizontalAlign="Center" Width="15%" /></asp:TemplateField><asp:TemplateField HeaderText="Excess Qty."><ItemTemplate><asp:TextBox ID="txtAccessQty" onkeypress="return isNumber(event)" 
+                                                            onFocus="this.select()" style="text-align: center" runat="server" 
+                                                            Text='<%# Eval("AccessQty") %>' AutoPostBack="True" 
+                                                            ontextchanged="txtAccessQty_TextChanged"></asp:TextBox></ItemTemplate><ItemStyle Font-Size="8pt" HorizontalAlign="Center" Width="15%" /></asp:TemplateField></Columns></asp:GridView><asp:Button ID="btnSave" runat="server" Text="Save" Width="120px" 
+                                                onclick="btnSave_Click" />&nbsp;&nbsp;<asp:Button ID="btlClose" runat="server" Text="Close" Width="120px" 
+                                                onclick="btlClose_Click" /><br/></td></tr><tr><td style="width:35%;">&nbsp;</td><td style="width:28%;">&nbsp;</td><td style="width:30%;">&nbsp;</td></tr></table></div></ContentTemplate>
+                    </ajaxToolkit:TabPanel>
+                    <ajaxToolkit:TabPanel ID="TabPanel1" runat="server" HeaderText="Approval List">
+                        <HeaderTemplate>Goods Store In</HeaderTemplate>
+                        <ContentTemplate><div></div><div><asp:GridView ID="dgCartoonReceive" runat="server" AllowPaging="True" 
+                                    AutoGenerateColumns="False" CssClass="mGrid" 
+                                    OnPageIndexChanging="dgCartoonReceive_PageIndexChanging" PageSize="50" 
+                                    Width="100%" onrowcommand="dgCartoonReceive_RowCommand" 
+                                onrowdatabound="dgCartoonReceive_RowDataBound"><Columns><asp:BoundField DataField="ID" HeaderText="Barcode ID"><ItemStyle Font-Size="8pt" HorizontalAlign="Center" Width="10%" /></asp:BoundField><asp:BoundField DataField="AddDate" HeaderText="Store In Date"><ItemStyle Font-Size="8pt" HorizontalAlign="Center" Width="10%" /></asp:BoundField><asp:BoundField DataField="CartoonNo" HeaderText="Carton No."><ItemStyle Font-Size="8pt" HorizontalAlign="Center" Width="15%" /></asp:BoundField><asp:BoundField DataField="ShiftmentNO" HeaderText="Shipment No."><ItemStyle Font-Size="8pt" HorizontalAlign="Center" Width="15%" /></asp:BoundField><asp:BoundField DataField="Remarks" HeaderText="Remarks"><ItemStyle Font-Size="8pt" HorizontalAlign="Left" Width="30%" /></asp:BoundField><asp:TemplateField HeaderText="Received Cancel"><ItemTemplate><asp:Button runat="server" ID="btnCancel" CommandName="ReceivedCanceled" Text="Cancel" onclientclick="javascript:return window.confirm('are you really want to received cancel this carton.')"  /></ItemTemplate><ItemStyle Font-Size="8pt" HorizontalAlign="Center" Width="8%" /></asp:TemplateField></Columns></asp:GridView></div></ContentTemplate>
+                    </ajaxToolkit:TabPanel>
+                </ajaxToolkit:TabContainer>
+            </td>
+            <td style="width:10%;">
+                &nbsp;</td>
+        </tr>
+        <tr>
+            <td style="width:5%;">
+                &nbsp;</td>
+            <td style="width:90%;">
+                &nbsp;</td>
+            <td style="width:10%;">
+                &nbsp;</td>
+        </tr>
+        <tr>
+            <td style="width:5%;">
+                &nbsp;</td>
+            <td style="width:80%;" valign="top" ></td>
+            <td style="width:10%;">
+                &nbsp;</td>
+        </tr>
+        <tr>
+            <td style="width:5%;">
+                &nbsp;</td>
+            <td style="width:90%;">
+                            &nbsp;</td>
+            <td style="width:5%;">
+                &nbsp;</td>
+        </tr>
+        <tr>
+            <td style="width:5%;">
+                &nbsp;</td>
+            <td style="width:90%;">
+                &nbsp;</td>
+            <td style="width:5%;">
+                &nbsp;</td>
+        </tr>
+    </table>
+    </div>
+</asp:Content>
+

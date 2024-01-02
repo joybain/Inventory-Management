@@ -1,0 +1,139 @@
+﻿.darkZoomOut
+{
+    cursor:url(zoomin.cur),pointer !important;
+}
+.darkOIZ
+{
+	display:inline;
+}
+
+.darkOIZ .oizZoomPanel
+{
+    position:absolute;
+    background:transparent;
+	margin:0px;
+	padding:0px;
+}
+
+.darkOIZ .oizZoomPanel *
+{
+	margin:0px;
+	padding:0px;
+}
+
+.darkOIZ .oizLoading
+{
+    position:absolute;
+    font-family:Verdana;
+    font-size:11px;
+    background:white;
+    border:solid 1px gray;
+}
+
+.darkOIZ .oizBigImage
+{
+    border:solid 2px black;
+    border-bottom:solid 2px gray;
+	cursor:url(zoomout.cur),pointer !important;
+}
+
+
+.darkOIZ .oizBackground
+{
+	position:absolute;
+	direction:rtl;
+	background-color:black;
+}
+
+
+
+.darkOIZ .oizEffectPanel
+{
+	background-color:black;
+}
+.darkOIZ .oizEffectPanelTop
+{
+    font-size:0px;
+    height:3px;
+    background-color:Gray;
+}
+
+
+.darkOIZ .oizEffectImage
+{
+    border:solid 2px black;
+}
+
+.darkOIZ .oizTransparent
+{
+	filter:alpha(opacity=0);
+	-moz-opacity:0.0;
+	opacity:0.0;    
+}
+
+.darkOIZ .oizDescriptionCover
+{
+    font-size:0pt;
+    padding-top:4px;
+    padding-bottom:1px;
+}
+
+.darkOIZ .oizDescription
+{
+    color:White;
+    font-family:Arial;
+    font-size:12px;
+}
+
+.darkOIZ .oizCloseButton
+{
+}
+
+.darkOIZ .oizMoveButton
+{
+}
+
+.darkOIZ .oizTopLeft
+{
+	background:url(topleft.png);
+	width:9px;
+	height:8px;
+}
+.darkOIZ .oizTopCenter
+{
+	background:url(topcenter.png);
+	height:8px;
+}
+.darkOIZ .oizTopRight
+{
+	background:url(topright.png);
+	width:9px;
+	height:8px;
+}
+.darkOIZ .oizMiddleLeft
+{
+	background:url(middleleft.png);
+	width:9px;
+}
+.darkOIZ .oizMiddleRight
+{
+	background:url(middleright.png);
+	width:9px;
+}
+.darkOIZ .oizBottomLeft
+{
+	background:url(bottomleft.png);
+	width:9px;
+	height:8px;
+}
+.darkOIZ .oizBottomCenter
+{
+	background:url(bottomcenter.png);
+	height:8px;
+}
+.darkOIZ .oizBottomRight
+{
+	background:url(bottomright.png);
+	width:9px;
+	height:8px;
+}

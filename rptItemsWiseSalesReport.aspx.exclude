@@ -1,0 +1,315 @@
+﻿<%@ Page Title="Sales/ReturnTransfer Details.-SDL" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true" CodeFile="rptItemsWiseSalesReport.aspx.cs" Inherits="rptItemsWiseSalesReport" %>
+<%@ Register TagPrefix="cc" Namespace="AjaxControlToolkit" Assembly="AjaxControlToolkit, Version=3.0.30512.20315, Culture=neutral, PublicKeyToken=28f01b0e84b6d53e" %>
+
+<asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
+    <script language="javascript" type="text/javascript">
+        function onListPopulated() {
+            var completionList1 = $find("AutoCompleteEx1").get_completionList();
+            completionList1.style.width = 'auto';
+        }
+        //    function OpenWindow(Url) {
+        //        var testwindow = window.open(Url, '', 'width=800px,height=620px,top=150,left=300,scrollbars=1');
+
+        function OpenWindow(Url) {
+            var popUpObj;
+            //        var testwindow = window.open(Url, '', 'width=500px,height=420,top=200,left=500,scrollbars=1');
+            //        testwindow.blur();
+
+            popUpObj = window.open(Url, "ModalPopUp", "toolbar=no," + "scrollbars=no," + "location=no," + "statusbar=no," + "menubar=no," + "resizable=0," + "width=800px," +
+
+    "height=620px," + "left = 300," + "top=150");
+            popUpObj.focus();
+            LoadModalDiv();
+        }
+
+        function LoadModalDiv() {
+
+            var bcgDiv = document.getElementById("divBackground");
+            bcgDiv.style.display = "block";
+
+        }
+        function HideModalDiv() {
+
+            var bcgDiv = document.getElementById("divBackground");
+            bcgDiv.style.display = "none";
+
+        }
+    
+  </script>
+  <div id="frmMainDiv" style="background-color:White; width:100%;">
+    <table style="width: 100%">
+        <tr>
+            <td style="width: 15%">
+                &nbsp;</td>
+            <td style="width: 70%">
+                &nbsp;</td>
+            <td style="width: 15%">
+                &nbsp;</td>
+        </tr>
+        <tr>
+            <td style="width: 18%">
+                &nbsp;</td>
+            <td style="width: 60%">
+                
+                <fieldset style="vertical-align: top; border: solid 1px #8BB381;text-align:left;"><legend style="color: maroon;"><b>Items Wise Sales Report </b></legend>
+                
+                <table style="width: 100%">
+                           <tr>
+                        <td style="width: 16%; font-weight: 700; height: 25px;" align="right">
+                            Search Customer<asp:HiddenField ID="hfCustomerID" runat="server" />
+                               </td>
+                        <td style="width: 2%; height: 25px;">
+                               </td>
+                        <td style="height: 25px;" colspan="2">
+                <asp:TextBox ID="txtCustomer" runat="server" AutoPostBack="True" 
+                    ontextchanged="txtCustomer_TextChanged" placeHolder="Search By Customer." 
+                    style="text-align:left;" TabIndex="11" Width="100%" Height="22px"></asp:TextBox>
+                <asp:TextBox ID="txtBranchName" runat="server" AutoPostBack="True" 
+                    ontextchanged="txtBranchName_TextChanged" placeHolder="Search By Branch." 
+                    style="text-align:left;" TabIndex="11" Width="100%" Height="22px"></asp:TextBox>
+                <ajaxToolkit:AutoCompleteExtender ID="txtBranchName_AutoCompleteExtender" runat="server" 
+                    CompletionInterval="20" CompletionSetCount="12" EnableCaching="true" 
+                    MinimumPrefixLength="1" ServiceMethod="GetShowBranch" 
+                    ServicePath="AutoComplete.asmx" TargetControlID="txtBranchName" />
+
+                <ajaxToolkit:AutoCompleteExtender ID="AutoCompleteExtender2" runat="server" 
+                    CompletionInterval="20" CompletionSetCount="12" EnableCaching="true" 
+                    MinimumPrefixLength="1" ServiceMethod="GetCustomername" 
+                    ServicePath="AutoComplete.asmx" TargetControlID="txtCustomer" />
+                               </td>
+                        <td style="width: 2%; height: 25px;">
+                               </td>
+                        <td style="width: 20%; height: 25px;">
+                            <asp:RadioButtonList ID="rbReprtType" runat="server" 
+                                RepeatDirection="Horizontal" AutoPostBack="True" 
+                                onselectedindexchanged="rbReprtType_SelectedIndexChanged">
+                                <asp:ListItem Selected="True" Value="A">All</asp:ListItem>
+                                <asp:ListItem Value="S">Sales</asp:ListItem>
+                                <asp:ListItem Value="R">Return</asp:ListItem>
+                                <asp:ListItem Value="T">Transfer</asp:ListItem>
+                            </asp:RadioButtonList>
+                               </td>
+                    </tr>
+                           <tr>
+                        <td style="width: 16%; font-weight: 700; height: 26px;" align="right">
+                            Search Date</td>
+                        <td style="width: 2%; height: 26px;">
+                               </td>
+                        <td style="height: 26px;" align="center" colspan="2">
+                            <table style="width: 100%">
+                                <tr>
+                                    <td style="width: 40%;">
+                            <asp:TextBox ID="txtFromDate" runat="server" placeHolder="date form(dd/MM/yyyy)" 
+                                            Width="100%" Height="22px"></asp:TextBox>
+                            <cc:CalendarExtender ID="Calendarextender2" runat="server" Format="dd/MM/yyyy" 
+                    TargetControlID="txtFromDate" />
+                                    </td>
+                                    <td style="width: 10%; font-weight: 700;" align="center">
+                                        TO</td>
+                                    <td style="width: 40%;">
+                            <asp:TextBox ID="txtToDate" runat="server" placeHolder="date to(dd/MM/yyyy)" Width="100%" 
+                                            Height="22px"></asp:TextBox>
+                             <cc:CalendarExtender ID="Calendarextender1" runat="server" Format="dd/MM/yyyy" 
+                    TargetControlID="txtToDate" />
+                                    </td>
+                                </tr>
+                            </table>
+                               </td>
+                        <td style="width: 2%; height: 26px;">
+                               </td>
+                        <td style="width: 20%; height: 26px;">
+                            <asp:HiddenField ID="hfItemsID" runat="server" />
+                               </td>
+                    </tr>
+                           <tr>
+                        <td style="width: 16%; font-weight: 700; height: 26px;" align="right">
+                            Search Items</td>
+                        <td style="width: 2%; height: 26px;">
+                               &nbsp;</td>
+                        <td style="height: 26px;" align="center" colspan="4">
+                            <asp:TextBox ID="txtName" runat="server" Width="98%" style="width: 100%; text-indent:15px;display: inline-block;border: 1px solid #ccc;
+                      border-radius: 4px;box-sizing: border-box;background:transparent !important;"
+                        placeholder="Search By Items Code OR Item's Name or Quantity" 
+                        Height="26px" ontextchanged="txtName_TextChanged" AutoPostBack="True">
+                    </asp:TextBox>
+                        <ajaxToolkit:AutoCompleteExtender ServicePath="AutoComplete.asmx" runat="server" 
+                                     ID="autoComplete1" TargetControlID="txtName"
+                                     ServiceMethod="GetShowShiftmentID" MinimumPrefixLength="1" CompletionInterval="20"
+                                     CompletionSetCount="12" 
+                        Enabled="True"/>
+                        </td>
+                    </tr>
+                 
+                    <tr>
+                        <td style="width: 16%">
+                            &nbsp;</td>
+                        <td style="width: 2%">
+                            &nbsp;</td>
+                        <td style="width: 20%">
+                            &nbsp;</td>
+                        <td style="width: 14%" align="center">
+                            &nbsp;</td>
+                        <td style="width: 2%">
+                            &nbsp;</td>
+                        <td style="width: 20%">
+                               <table style="width: 100%">
+                                <tr align="center">
+                                    <td>
+                     <asp:Button ID="brnSearch" runat="server" Text="Search" Width="100%" 
+                                onclick="brnSearch_Click" Height="35px" />
+                                    </td>
+                                    <td>
+                     <asp:Button ID="btnClear" runat="server" Text="Clear" Width="100%" 
+                         onclick="btnClear_Click" Height="35px" />
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    </table>
+                </fieldset>
+            </td>
+            <td style="width: 15%">
+                &nbsp;</td>
+        </tr>
+        <tr>
+            <td style="width: 15%">
+                &nbsp;</td>
+            <td style="width: 70%" align="left">
+                <asp:Label ID="lblItemsDtl" runat="server" style="font-weight: 700"></asp:Label>
+            </td>
+            <td style="width: 15%">
+                &nbsp;</td>
+        </tr>
+        <tr>
+            <td colspan="3">
+                <div id="rptAll" runat="server"> 
+                    <table style="width: 100%">
+                        <tr>
+                            <td style="width: 30%" valign="top">
+                                <fieldset style="vertical-align: top; border: solid 1px #8BB381;text-align:left;"><legend style="color: maroon;"><b>Sales Details</b></legend>
+                <asp:GridView ID="dgSalesHistoryAll" runat="server" AutoGenerateColumns="False" 
+                    CssClass="mGrid" Width="100%" CaptionAlign="Top">
+                    <Columns>
+                        <asp:BoundField DataField="OrderDate" HeaderText="Date">
+                             <ItemStyle HorizontalAlign="Center" Width="15%"></ItemStyle>
+                        </asp:BoundField>
+                        <asp:BoundField DataField="CustomerName" HeaderText="Customer Name">
+                              <ItemStyle HorizontalAlign="Left" Width="30%"></ItemStyle>
+                        </asp:BoundField>
+                        <asp:BoundField DataField="Quantity" HeaderText="Sales Qty."  DataFormatString="{0:N0}">
+                              <ItemStyle HorizontalAlign="Right" Width="15%"></ItemStyle>
+                         </asp:BoundField>
+                    </Columns>
+                </asp:GridView>
+                </fieldset>
+                            </td>
+                            <td style="width: 30%" valign="top">
+                                <fieldset style="vertical-align: top; border: solid 1px #8BB381;text-align:left;"><legend style="color: maroon;"><b>Return Details</b></legend>
+                <asp:GridView ID="dgRtnHistoryAll" runat="server" AutoGenerateColumns="False" 
+                    CssClass="mGrid" Width="100%" CaptionAlign="Top">
+                    <Columns>
+                        <asp:BoundField DataField="OrderDate" HeaderText="Date">
+                             <ItemStyle HorizontalAlign="Center" Width="15%"></ItemStyle>
+                        </asp:BoundField>
+                        <asp:BoundField DataField="CustomerName" HeaderText="Customer Name">
+                              <ItemStyle HorizontalAlign="Left" Width="30%"></ItemStyle>
+                        </asp:BoundField>
+                        <asp:BoundField DataField="Quantity" HeaderText="Rtn Qty."  
+                            DataFormatString="{0:N0}">
+                              <ItemStyle HorizontalAlign="Right" Width="15%"></ItemStyle>
+                         </asp:BoundField>
+                    </Columns>
+                </asp:GridView>
+                </fieldset>
+                            </td>
+                            <td style="width: 30%" valign="top">
+                                <fieldset style="vertical-align: top; border: solid 1px #8BB381;text-align:left;"><legend style="color: maroon;"><b>Transfer Details</b></legend>
+                <asp:GridView ID="dgTransferHistoryAll" runat="server" AutoGenerateColumns="False" 
+                    CssClass="mGrid" Width="100%" CaptionAlign="Top">
+                    <Columns>
+                        <asp:BoundField DataField="OrderDate" HeaderText="Date">
+                             <ItemStyle HorizontalAlign="Center" Width="15%"></ItemStyle>
+                        </asp:BoundField>
+                        <asp:BoundField DataField="CustomerName" HeaderText="Branch Name">
+                              <ItemStyle HorizontalAlign="Left" Width="30%"></ItemStyle>
+                        </asp:BoundField>
+                        <asp:BoundField DataField="Quantity" HeaderText="Trans. Qty."  
+                            DataFormatString="{0:N0}">
+                              <ItemStyle HorizontalAlign="Right" Width="15%"></ItemStyle>
+                         </asp:BoundField>
+                    </Columns>
+                </asp:GridView>
+                </fieldset>
+                            </td>
+                        </tr>
+                    </table>
+                    
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <td style="width: 15%">
+                &nbsp;</td>
+            <td style="width: 70%" align="left">
+                
+                <asp:GridView ID="dgSalesHistory" runat="server" AutoGenerateColumns="False" 
+                    CssClass="mGrid" Width="100%" CaptionAlign="Top">
+                    <Columns>
+                        <asp:BoundField DataField="OrderDate" HeaderText="Date">
+                             <ItemStyle HorizontalAlign="Center" Width="15%"></ItemStyle>
+                        </asp:BoundField>
+                        <asp:BoundField DataField="CustomerName" HeaderText="Customer Name">
+                              <ItemStyle HorizontalAlign="Left" Width="30%"></ItemStyle>
+                        </asp:BoundField>
+                        <asp:BoundField DataField="Quantity" HeaderText="Sales Qty."  DataFormatString="{0:N0}">
+                              <ItemStyle HorizontalAlign="Right" Width="15%"></ItemStyle>
+                         </asp:BoundField>
+                    </Columns>
+                </asp:GridView>
+                <asp:GridView ID="dgRtnHistory" runat="server" AutoGenerateColumns="False" 
+                    CssClass="mGrid" Width="100%" CaptionAlign="Top">
+                    <Columns>
+                        <asp:BoundField DataField="OrderDate" HeaderText="Date">
+                             <ItemStyle HorizontalAlign="Center" Width="15%"></ItemStyle>
+                        </asp:BoundField>
+                        <asp:BoundField DataField="CustomerName" HeaderText="Customer Name">
+                              <ItemStyle HorizontalAlign="Left" Width="30%"></ItemStyle>
+                        </asp:BoundField>
+                        <asp:BoundField DataField="Quantity" HeaderText="Rtn Qty."  
+                            DataFormatString="{0:N0}">
+                              <ItemStyle HorizontalAlign="Right" Width="15%"></ItemStyle>
+                         </asp:BoundField>
+                    </Columns>
+                </asp:GridView>
+                <asp:GridView ID="dgTransferHistory" runat="server" AutoGenerateColumns="False" 
+                    CssClass="mGrid" Width="100%" CaptionAlign="Top">
+                    <Columns>
+                        <asp:BoundField DataField="OrderDate" HeaderText="Date">
+                             <ItemStyle HorizontalAlign="Center" Width="15%"></ItemStyle>
+                        </asp:BoundField>
+                        <asp:BoundField DataField="CustomerName" HeaderText="Branch Name">
+                              <ItemStyle HorizontalAlign="Left" Width="30%"></ItemStyle>
+                        </asp:BoundField>
+                        <asp:BoundField DataField="Quantity" HeaderText="Trans. Qty."  
+                            DataFormatString="{0:N0}">
+                              <ItemStyle HorizontalAlign="Right" Width="15%"></ItemStyle>
+                         </asp:BoundField>
+                    </Columns>
+                </asp:GridView>
+            </td>
+            <td style="width: 15%">
+                &nbsp;</td>
+        </tr>
+        <tr>
+            <td style="width: 15%">
+                &nbsp;</td>
+            <td style="width: 70%">
+                &nbsp;</td>
+            <td style="width: 15%">
+                &nbsp;</td>
+        </tr>
+    </table>
+    </div>
+</asp:Content>
+
